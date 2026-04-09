@@ -1,0 +1,423 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NetIQ — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background: #e8e9ed;
+  min-height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Left Panel — animated text ── */
+.left-panel {
+  flex: 1;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 60px 64px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Background pattern */
+.left-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(245,130,32,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,130,32,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+.left-panel::after {
+  content: '';
+  position: absolute;
+  bottom: -120px;
+  right: -120px;
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(circle, rgba(245,130,32,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 60px;
+  opacity: 0;
+  animation: fadeUp 0.6s ease forwards;
+  animation-delay: 0.1s;
+}
+
+.brand-icon {
+  width: 44px; height: 44px;
+  background: #f58220;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 4px 16px rgba(245,130,32,0.35);
+}
+
+.brand-name {
+  font-size: 22px;
+  font-weight: 900;
+  color: #f58220;
+  letter-spacing: -0.5px;
+}
+
+.brand-sub {
+  font-size: 10px;
+  font-weight: 600;
+  color: #8a85a5;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+/* Big animated headline */
+.headline-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+.headline-line {
+  display: block;
+  font-size: clamp(42px, 5vw, 72px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -2px;
+  color: #1a1235;
+  overflow: hidden;
+}
+
+.headline-line span {
+  display: block;
+  opacity: 0;
+  transform: translateY(100%);
+}
+
+.headline-line.l1 span { animation: slideUp 0.7s cubic-bezier(0.16,1,0.3,1) forwards; animation-delay: 0.3s; }
+.headline-line.l2 span { animation: slideUp 0.7s cubic-bezier(0.16,1,0.3,1) forwards; animation-delay: 0.5s; }
+.headline-line.l3 span { animation: slideUp 0.7s cubic-bezier(0.16,1,0.3,1) forwards; animation-delay: 0.7s; }
+
+.headline-line.orange span { color: #f58220; }
+
+@keyframes slideUp {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.headline-desc {
+  margin-top: 28px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #8a85a5;
+  line-height: 1.7;
+  max-width: 400px;
+  opacity: 0;
+  animation: fadeUp 0.7s ease forwards;
+  animation-delay: 1s;
+}
+
+/* Animated stat pills */
+.stat-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 44px;
+  opacity: 0;
+  animation: fadeUp 0.7s ease forwards;
+  animation-delay: 1.2s;
+}
+
+.stat-pill {
+  background: #f5f6fa;
+  border: 1.5px solid rgba(245,130,32,0.2);
+  border-radius: 14px;
+  padding: 14px 20px;
+}
+
+.stat-num {
+  font-size: 22px;
+  font-weight: 900;
+  color: #f58220;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.stat-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  color: #8a85a5;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 3px;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Right Panel — login form ── */
+.right-panel {
+  width: 440px;
+  flex-shrink: 0;
+  background: #f5f6fa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 44px;
+  border-left: 1px solid rgba(0,0,0,0.07);
+}
+
+.form-card {
+  width: 100%;
+  opacity: 0;
+  animation: fadeUp 0.7s ease forwards;
+  animation-delay: 0.4s;
+}
+
+.form-title {
+  font-size: 26px;
+  font-weight: 900;
+  color: #1a1235;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+
+.form-subtitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: #8a85a5;
+  margin-bottom: 32px;
+}
+
+.form-subtitle a {
+  color: #f58220;
+  font-weight: 700;
+  text-decoration: none;
+}
+.form-subtitle a:hover { text-decoration: underline; }
+
+/* Messages */
+.messages { margin-bottom: 16px; }
+.msg {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.msg.error { background: rgba(255,61,0,0.08); border: 1px solid rgba(255,61,0,0.2); color: #FF3D00; }
+.msg.success { background: rgba(0,200,83,0.08); border: 1px solid rgba(0,200,83,0.2); color: #00C853; }
+
+/* Form group */
+.form-group { margin-bottom: 18px; }
+
+.form-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a4570;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 7px;
+}
+
+.input-wrap { position: relative; }
+
+.input-ico {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.form-input {
+  width: 100%;
+  background: #ffffff;
+  border: 1.5px solid rgba(0,0,0,0.1);
+  border-radius: 10px;
+  color: #1a1235;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 12px 14px 12px 40px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-input:focus {
+  border-color: #f58220;
+  box-shadow: 0 0 0 3px rgba(245,130,32,0.12);
+}
+
+.form-input.error-field { border-color: #FF3D00; }
+
+.field-error {
+  font-size: 11px;
+  font-weight: 600;
+  color: #FF3D00;
+  margin-top: 5px;
+  display: none;
+}
+
+/* Submit button */
+.submit-btn {
+  width: 100%;
+  background: #f58220;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 13px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 6px;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 16px rgba(245,130,32,0.35);
+}
+
+.submit-btn:hover {
+  background: #e07318;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(245,130,32,0.45);
+}
+
+.submit-btn:active { transform: translateY(0); }
+
+.divider {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #8a85a5;
+  margin: 20px 0;
+  position: relative;
+}
+.divider::before, .divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 38%;
+  height: 1px;
+  background: rgba(0,0,0,0.08);
+}
+.divider::before { left: 0; }
+.divider::after  { right: 0; }
+
+.footer-note {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: #8a85a5;
+  margin-top: 28px;
+  line-height: 1.6;
+}
+
+/* Responsive */
+@media(max-width: 900px) {
+  .left-panel { display: none; }
+  .right-panel { width: 100%; border-left: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Left panel -->
+<div class="left-panel">
+  <div class="brand-row">
+    <img src="{% static 'images/logo1.jpg' %}" style="height:44px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
+  </div>
+
+  <div class="headline-wrap">
+    <div class="headline-line l1"><span>Get Your</span></div>
+    <div class="headline-line l2 orange"><span>Network</span></div>
+    <div class="headline-line l3"><span>Insights.</span></div>
+  </div>
+
+  <p class="headline-desc">
+    Real-time telecom analytics for Central B Region. Monitor revenue, activations, churn and data across every site and franchise — all in one place.
+  </p>
+
+  <div class="stat-row">
+    <div class="stat-pill">
+      <div class="stat-num">26K+</div>
+      <div class="stat-lbl">Active Sites</div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-num">11</div>
+      <div class="stat-lbl">Live Charts</div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-num">8</div>
+      <div class="stat-lbl">KPI Metrics</div>
+    </div>
+  </div>
+</div>
+
+<!-- Right panel — Login form -->
+<div class="right-panel">
+  <div class="form-card">
+    <div class="form-title">Welcome back 👋</div>
+    <div class="form-subtitle">
+      Don't have an account? <a href="{% url 'register' %}">Sign up</a>
+    </div>
+
+    <!-- Django messages -->
+    {% if messages %}
+    <div class="messages">
+      {% for message in messages %}
+      <div class="msg {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{% url 'login' %}" id="login-form">
+      {% csrf_token %}
+
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <div class="input-wrap">
+          <span class="input-ico">✉️</span>
+          <input type="email" name="email" class="form-input" placeholder="yourname@ptclgroup.com" required autocomplete="email"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="input-wrap">
+          <span class="input-ico">🔒</span>
+          <input type="password" name="password" class="form-input" placeholder="Enter your password" required autocomplete="current-password"/>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn">Sign In →</button>
+    </form>
+
+    <div class="footer-note">
+      © 2026 Ufone 5G · Central B Region · Multan<br/>
+      Developed by <strong>Muhammad Ossama Khan</strong>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

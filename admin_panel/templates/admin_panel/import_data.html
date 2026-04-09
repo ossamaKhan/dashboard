@@ -1,0 +1,149 @@
+{% extends "admin_panel/base.html" %}
+
+{% block title %}Import Data — NetIQ{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-card{
+        max-width:600px;
+        margin:auto;
+        text-align:center;
+    }
+
+    .upload-icon{
+        font-size:40px;
+        color:var(--orange);
+        margin-bottom:10px;
+    }
+
+    .file-input{
+        border:2px dashed var(--border);
+        padding:20px;
+        border-radius:12px;
+        cursor:pointer;
+        background:var(--input);
+        margin-top:15px;
+        display:block;
+    }
+
+    .file-input:hover{
+        border-color:var(--orange);
+    }
+
+    .btn-upload{
+        margin-top:20px;
+        background:var(--gradient-1);
+        border:none;
+        padding:10px 30px;
+        color:#fff;
+        font-weight:700;
+        border-radius:10px;
+    }
+
+    .btn-upload:hover{
+        transform:translateY(-2px);
+        box-shadow:0 8px 20px rgba(245,130,32,0.4);
+    }
+
+    /* Progress */
+    .progress-container{
+        margin-top:20px;
+        display:none;
+    }
+
+    .progress{
+        height:10px;
+        border-radius:10px;
+        overflow:hidden;
+        background:#eee;
+    }
+
+    .progress-bar{
+        height:100%;
+        width:0%;
+        background:var(--gradient-1);
+        transition:width 0.3s ease;
+    }
+
+    .progress-text{
+        margin-top:8px;
+        font-size:12px;
+        color:var(--muted);
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+
+<div class="page-header animate__animated animate__fadeIn">
+    <div class="page-title">Import Site Data</div>
+    <div class="page-sub">Upload Excel file to bulk insert site records</div>
+</div>
+
+<div class="section-card upload-card animate__animated animate__fadeInUp">
+
+    <div class="upload-icon">
+        <i class="fas fa-cloud-upload-alt"></i>
+    </div>
+
+    <h4 style="font-weight:800;">Upload Excel File</h4>
+    <p class="text-muted">Only .xlsx files supported</p>
+
+    <form method="POST" enctype="multipart/form-data" id="uploadForm">
+        {% csrf_token %}
+
+        <label class="file-input">
+            <input type="file" name="file" hidden required onchange="showName(this)">
+            <span id="file-name">Click to choose file</span>
+        </label>
+
+        <button type="submit" class="btn-upload">
+            <i class="fas fa-upload me-1"></i> Upload Data
+        </button>
+    </form>
+
+    <!-- Progress -->
+    <div class="progress-container" id="progressBox">
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="progress-text" id="progressText">Uploading...</div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+function showName(input){
+    const name = input.files[0]?.name || "Click to choose file";
+    document.getElementById("file-name").innerText = name;
+}
+
+// Simulated progress
+document.getElementById("uploadForm").addEventListener("submit", function(){
+    const progressBox = document.getElementById("progressBox");
+    const bar = document.getElementById("progressBar");
+    const text = document.getElementById("progressText");
+
+    progressBox.style.display = "block";
+
+    let progress = 0;
+
+    const interval = setInterval(() => {
+        if(progress < 90){
+            progress += Math.random() * 10;
+            bar.style.width = progress + "%";
+            text.innerText = "Uploading... " + Math.floor(progress) + "%";
+        } else {
+            clearInterval(interval);
+            bar.style.width = "95%";
+            text.innerText = "Processing file...";
+        }
+    }, 300);
+});
+</script>
+{% endblock %}

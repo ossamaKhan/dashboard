@@ -1,0 +1,460 @@
+{% extends 'admin_panel/base.html' %}
+{% block title %}{{ title }} — NetIQ Admin{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ title }}</h1>
+    <p class="page-sub">{% if is_create %}Add a new user to the system{% else %}Update user details and profile{% endif %}</p>
+  </div>
+  <a href="{% url 'admin_user_list' %}" class="btn-back">← Back to Users</a>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+  {% csrf_token %}
+  <div class="form-layout">
+
+    <!-- ═══════════════ LEFT COLUMN ═══════════════ -->
+    <div class="form-col">
+
+      <!-- ── RBAC / Dashboard Access Role ─────────────────── -->
+      <div class="section-card rbac-card">
+        <div class="sc-title">🔐 Dashboard Access Role</div>
+        <div class="sc-sub">Controls which data this user sees when they log in to the dashboard</div>
+
+        <!-- Three role radio buttons styled as cards -->
+        <div class="role-selector">
+
+          <label class="role-opt" id="opt-Region">
+            <input type="radio" name="category" value="Region"
+                   {% if not profile or profile.category == 'Region' %}checked{% endif %}/>
+            <div class="role-card">
+              <div class="role-icon">🌍</div>
+              <div class="role-name">Region</div>
+              <div class="role-desc">Full access — all data, all filters unlocked</div>
+            </div>
+          </label>
+
+          <label class="role-opt" id="opt-BU">
+            <input type="radio" name="category" value="BU"
+                   {% if profile and profile.category == 'BU' %}checked{% endif %}/>
+            <div class="role-card">
+              <div class="role-icon">🏗️</div>
+              <div class="role-name">Business Unit</div>
+              <div class="role-desc">Scoped to one BU — Region filter locked</div>
+            </div>
+          </label>
+
+          <label class="role-opt" id="opt-ARM">
+            <input type="radio" name="category" value="ARM"
+                   {% if profile and profile.category == 'ARM' %}checked{% endif %}/>
+            <div class="role-card">
+              <div class="role-icon">👤</div>
+              <div class="role-name">ARM</div>
+              <div class="role-desc">Scoped to one ARM — Region + BU locked</div>
+            </div>
+          </label>
+
+        </div>
+
+        <!-- BU picker — shown only when BU is selected -->
+        <div class="role-sub-field" id="bu-field"
+             style="{% if not profile or profile.category != 'BU' %}display:none{% endif %}">
+          <label class="form-label">Business Unit <span class="req">*</span></label>
+          <div class="select-wrap">
+            <span class="sel-ico">🏗️</span>
+            <select name="user_business_unit" id="bu-select" class="form-input sel-input">
+              <option value="">— Select Business Unit —</option>
+              {% for bu in bu_choices %}
+              <option value="{{ bu }}"
+                {% if profile and profile.user_business_unit == bu %}selected{% endif %}>
+                {{ bu }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field-hint">This user will only see data for the selected Business Unit</div>
+        </div>
+
+        <!-- ARM picker — shown only when ARM is selected -->
+        <div class="role-sub-field" id="arm-field"
+             style="{% if not profile or profile.category != 'ARM' %}display:none{% endif %}">
+          <label class="form-label">ARM Value <span class="req">*</span></label>
+          <div class="select-wrap">
+            <span class="sel-ico">👤</span>
+            <select name="user_arm" id="arm-select" class="form-input sel-input">
+              <option value="">— Select ARM —</option>
+              {% for arm in arm_choices %}
+              <option value="{{ arm }}"
+                {% if profile and profile.user_arm == arm %}selected{% endif %}>
+                {{ arm }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field-hint">This user will only see data for this specific ARM</div>
+        </div>
+
+        <!-- Current assignment summary (edit mode only) -->
+        {% if not is_create and profile %}
+        <div class="role-summary">
+          <span class="rsm-label">Current assignment:</span>
+          {% if profile.category == 'Region' %}
+            <span class="rsm-chip green">🌍 Region — Full Access</span>
+          {% elif profile.category == 'BU' %}
+            <span class="rsm-chip purple">🏗️ BU: {{ profile.user_business_unit|default:"Not set" }}</span>
+          {% elif profile.category == 'ARM' %}
+            <span class="rsm-chip orange">👤 ARM: {{ profile.user_arm|default:"Not set" }}</span>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- ── Account Details ─────────────────────────────── -->
+      <div class="section-card">
+        <div class="sc-title">Account Details</div>
+        <div class="sc-sub">Login credentials and permissions</div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Username *</label>
+            <input type="text" name="username" class="form-input" required
+                   placeholder="e.g. john.doe"
+                   value="{% if edit_user %}{{ edit_user.username }}{% endif %}"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email *</label>
+            <input type="email" name="email" class="form-input" required
+                   placeholder="user@ptclgroup.com"
+                   value="{% if edit_user %}{{ edit_user.email }}{% endif %}"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">First Name</label>
+            <input type="text" name="first_name" class="form-input" placeholder="First name"
+                   value="{% if edit_user %}{{ edit_user.first_name }}{% endif %}"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name</label>
+            <input type="text" name="last_name" class="form-input" placeholder="Last name"
+                   value="{% if edit_user %}{{ edit_user.last_name }}{% endif %}"/>
+          </div>
+        </div>
+
+        <div class="divider">
+          {% if is_create %}Password{% else %}Change Password (leave blank to keep current){% endif %}
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">{% if is_create %}Password *{% else %}New Password{% endif %}</label>
+            <div class="pw-wrap">
+              <input type="password"
+                     name="{% if is_create %}password{% else %}new_password{% endif %}"
+                     id="pw-field" class="form-input"
+                     placeholder="{% if is_create %}Min. 8 characters{% else %}Leave blank to keep current{% endif %}"
+                     {% if is_create %}required{% endif %}/>
+              <button type="button" class="pw-eye" onclick="togglePw('pw-field',this)">👁️</button>
+            </div>
+            <div style="margin-top:5px">
+              <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden">
+                <div id="pw-bar" style="height:100%;width:0;border-radius:2px;transition:width .3s,background .3s"></div>
+              </div>
+              <div id="pw-lbl" style="font-size:10px;font-weight:600;color:var(--muted);margin-top:3px"></div>
+            </div>
+          </div>
+          <div class="form-group" style="align-self:start">
+            <label class="form-label">Permissions</label>
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" name="is_active"
+                       {% if is_create or edit_user.is_active %}checked{% endif %}/>
+                <span>Active Account</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="is_staff"
+                       {% if edit_user and edit_user.is_staff %}checked{% endif %}/>
+                <span>Admin / Staff</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Profile Info ───────────────────────────────── -->
+      <div class="section-card">
+        <div class="sc-title">Profile Information</div>
+        <div class="sc-sub">Professional details and contact</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" name="phone" class="form-input" placeholder="03XX-XXXXXXX"
+                   value="{% if profile %}{{ profile.phone }}{% endif %}"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Employee ID</label>
+            <input type="text" name="employee_id" class="form-input" placeholder="e.g. PTCL-12345"
+                   value="{% if profile %}{{ profile.employee_id }}{% endif %}"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Designation</label>
+            <select name="designation" class="form-input no-ico" id="desig-select">
+              <option value="">— Select —</option>
+              <option value="RD">RD</option>
+              <option value="ARM">ARM</option>
+              <option value="Manager">Manager</option>
+              <option value="Executive">Executive</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Department</label>
+            <input type="text" name="department" class="form-input" placeholder="e.g. Network Operations"
+                   value="{% if profile %}{{ profile.department }}{% endif %}"/>
+          </div>
+          <div class="form-group form-full">
+            <label class="form-label">Region</label>
+            <input type="text" name="region" class="form-input" placeholder="e.g. Central B"
+                   value="{% if profile %}{{ profile.region }}{% endif %}"/>
+          </div>
+          {% if not is_create %}
+          <div class="form-group form-full">
+            <label class="form-label">Bio</label>
+            <textarea name="bio" class="form-input" style="min-height:70px;padding-left:12px"
+                      placeholder="Brief description...">{% if profile %}{{ profile.bio }}{% endif %}</textarea>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div><!-- /form-col -->
+
+    <!-- ═══════════════ RIGHT SIDEBAR ═══════════════ -->
+    <div class="form-sidebar">
+
+      <!-- User preview card -->
+      <div class="section-card preview-card">
+        <div class="sc-title">Preview</div>
+        <div class="preview-avatar" id="preview-avatar">
+          {% if not is_create and edit_user %}
+            {{ edit_user.first_name|first|upper }}{{ edit_user.last_name|first|upper }}
+          {% else %}👤{% endif %}
+        </div>
+        <div class="preview-name" id="preview-name">
+          {% if not is_create and edit_user %}{{ edit_user.get_full_name|default:edit_user.username }}{% else %}New User{% endif %}
+        </div>
+        <div class="preview-email" id="preview-email">
+          {% if not is_create and edit_user %}{{ edit_user.email }}{% else %}user@ptclgroup.com{% endif %}
+        </div>
+
+        <!-- Live role badge -->
+        <div style="margin-top:12px;text-align:center">
+          <div id="preview-role-badge" class="prev-role-badge"></div>
+        </div>
+
+        {% if not is_create and profile %}
+        <div style="margin-top:14px">
+          <div class="prev-info"><span>📱</span> {{ profile.phone|default:"No phone" }}</div>
+          <div class="prev-info"><span>🗺️</span> {{ profile.region|default:"No region" }}</div>
+          <div class="prev-info"><span>📅</span> Joined {{ edit_user.date_joined|date:"M Y" }}</div>
+        </div>
+        <div style="margin-top:16px">
+          <label class="form-label">Profile Picture</label>
+          {% if profile.picture %}
+          <img src="{{ profile.picture.url }}"
+               style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid #f58220;display:block;margin:8px auto"/>
+          {% endif %}
+          <input type="file" name="picture" accept="image/*" class="form-input"
+                 style="padding:6px;font-size:11px;margin-top:6px"/>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Action buttons -->
+      <div class="section-card">
+        <div class="sc-title">Actions</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+          <button type="submit" class="save-btn">
+            {% if is_create %}✅ Create User{% else %}💾 Save Changes{% endif %}
+          </button>
+          <a href="{% url 'admin_user_list' %}" class="cancel-btn">Cancel</a>
+          {% if not is_create and edit_user %}
+          <a href="{% url 'admin_user_delete' edit_user.pk %}" class="delete-btn">🗑️ Delete User</a>
+          {% endif %}
+        </div>
+      </div>
+
+    </div><!-- /form-sidebar -->
+  </div>
+</form>
+
+<style>
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px}
+.page-title{font-size:22px;font-weight:800;color:var(--text)}
+.page-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.btn-back{background:var(--input);border:1.5px solid var(--border);border-radius:9px;padding:9px 18px;font-size:12px;font-weight:700;color:var(--text2);text-decoration:none;transition:all .2s}
+.btn-back:hover{border-color:#f58220;color:#f58220}
+.form-layout{display:grid;grid-template-columns:1fr 280px;gap:20px;align-items:start}
+.form-col{display:flex;flex-direction:column;gap:18px}
+.form-sidebar{display:flex;flex-direction:column;gap:18px}
+
+/* Section cards */
+.section-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:20px 22px}
+.section-card::before{content:'';display:block;height:3px;background:#f58220;border-radius:14px 14px 0 0;margin:-20px -22px 16px}
+.rbac-card::before{background:linear-gradient(90deg,#f58220,#AB1DFE)}
+.sc-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:3px}
+.sc-sub{font-size:11px;color:var(--muted);margin-bottom:18px}
+
+/* Role selector */
+.role-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.role-opt{cursor:pointer}
+.role-opt input[type=radio]{display:none}
+.role-card{border:2px solid var(--border);border-radius:12px;padding:14px 10px;text-align:center;transition:all .2s;background:var(--input)}
+.role-opt:hover .role-card{border-color:#f58220;background:rgba(245,130,32,0.05)}
+#opt-Region input:checked+.role-card{border-color:#00C853;background:rgba(0,200,83,0.07);box-shadow:0 0 0 3px rgba(0,200,83,0.12)}
+#opt-BU    input:checked+.role-card{border-color:#AB1DFE;background:rgba(171,29,254,0.07);box-shadow:0 0 0 3px rgba(171,29,254,0.12)}
+#opt-ARM   input:checked+.role-card{border-color:#f58220;background:rgba(245,130,32,0.08);box-shadow:0 0 0 3px rgba(245,130,32,0.12)}
+.role-icon{font-size:24px;margin-bottom:6px}
+.role-name{font-size:12px;font-weight:800;color:var(--text);margin-bottom:3px}
+.role-desc{font-size:10px;font-weight:500;color:var(--muted);line-height:1.4}
+
+/* Sub-field (BU/ARM picker) */
+.role-sub-field{background:var(--input);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:4px}
+.req{color:#FF3D00}
+.select-wrap{position:relative;margin-top:5px}
+.sel-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;z-index:1}
+.sel-input{padding-left:32px!important;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238a85a5' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;cursor:pointer}
+.field-hint{font-size:10px;font-weight:600;color:var(--muted);margin-top:6px}
+
+/* Current assignment summary */
+.role-summary{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap}
+.rsm-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+.rsm-chip{display:inline-flex;align-items:center;gap:5px;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700}
+.rsm-chip.green {background:rgba(0,200,83,0.1);border:1.5px solid rgba(0,200,83,0.3);color:#00C853}
+.rsm-chip.purple{background:rgba(171,29,254,0.1);border:1.5px solid rgba(171,29,254,0.3);color:#AB1DFE}
+.rsm-chip.orange{background:rgba(245,130,32,0.1);border:1.5px solid rgba(245,130,32,0.3);color:#f58220}
+
+/* Preview role badge */
+.prev-role-badge{display:inline-flex;align-items:center;gap:5px;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700}
+
+/* Form fields */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-full{grid-column:span 2}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px}
+.form-input{width:100%;background:var(--input);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:12px;font-weight:500;padding:9px 12px;outline:none;transition:border-color .2s}
+.form-input:focus{border-color:#f58220;box-shadow:0 0 0 3px rgba(245,130,32,0.1)}
+.form-input.no-ico{padding-left:12px}
+select.form-input{appearance:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238a85a5' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.pw-wrap{position:relative}
+.pw-eye{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:14px;color:var(--muted);padding:0}
+.divider{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid var(--border);padding-bottom:8px;margin:18px 0 14px}
+.checkbox-group{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.checkbox-label{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer}
+.checkbox-label input{width:15px;height:15px;accent-color:#f58220}
+
+/* Preview card */
+.preview-card{text-align:center}
+.preview-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#f58220,#AB1DFE);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;margin:10px auto 12px;border:2px solid rgba(245,130,32,0.3)}
+.preview-name{font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px}
+.preview-email{font-size:11px;color:var(--muted);word-break:break-all}
+.prev-info{font-size:11px;color:var(--text2);font-weight:500;display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid var(--border)}
+.prev-info:last-child{border-bottom:none}
+
+/* Buttons */
+.save-btn{background:#f58220;color:#fff;border:none;border-radius:9px;padding:11px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;width:100%;box-shadow:0 4px 14px rgba(245,130,32,0.3)}
+.save-btn:hover{background:#e07318;transform:translateY(-1px)}
+.cancel-btn{display:block;text-align:center;background:var(--input);border:1.5px solid var(--border);border-radius:9px;padding:10px;font-size:12px;font-weight:700;color:var(--text2);text-decoration:none;transition:all .2s}
+.cancel-btn:hover{border-color:var(--muted);color:var(--text)}
+.delete-btn{display:block;text-align:center;background:rgba(255,61,0,0.07);border:1.5px solid rgba(255,61,0,0.2);border-radius:9px;padding:10px;font-size:12px;font-weight:700;color:#FF3D00;text-decoration:none;transition:all .2s}
+.delete-btn:hover{background:rgba(255,61,0,0.14)}
+
+@media(max-width:900px){.form-layout{grid-template-columns:1fr}.form-sidebar{order:-1}}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}.form-full{grid-column:span 1}.role-selector{grid-template-columns:1fr}}
+</style>
+
+<script>
+// Set designation dropdown to saved value
+{% if profile and profile.designation %}
+document.getElementById('desig-select').value = "{{ profile.designation }}";
+{% endif %}
+
+// Password visibility toggle
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁️' : '🙈';
+}
+
+// Password strength
+document.getElementById('pw-field').addEventListener('input', function() {
+  const val = this.value;
+  let s = 0;
+  if (val.length >= 8) s++;
+  if (/[A-Z]/.test(val)) s++;
+  if (/[0-9]/.test(val)) s++;
+  if (/[^A-Za-z0-9]/.test(val)) s++;
+  const m = {
+    0:{w:'0%',  c:'#FF3D00',l:'Too short'},
+    1:{w:'25%', c:'#FF3D00',l:'Weak'},
+    2:{w:'50%', c:'#FFD600',l:'Fair'},
+    3:{w:'75%', c:'#00BCD4',l:'Good'},
+    4:{w:'100%',c:'#00C853',l:'Strong 💪'},
+  };
+  document.getElementById('pw-bar').style.width      = m[s].w;
+  document.getElementById('pw-bar').style.background = m[s].c;
+  document.getElementById('pw-lbl').textContent      = m[s].l;
+  document.getElementById('pw-lbl').style.color      = m[s].c;
+});
+
+// Live preview
+document.querySelector('[name="first_name"]').addEventListener('input', updatePreview);
+document.querySelector('[name="last_name"]').addEventListener('input', updatePreview);
+document.querySelector('[name="email"]').addEventListener('input', function() {
+  document.getElementById('preview-email').textContent = this.value || 'user@ptclgroup.com';
+});
+function updatePreview() {
+  const fn = document.querySelector('[name="first_name"]').value;
+  const ln = document.querySelector('[name="last_name"]').value;
+  document.getElementById('preview-name').textContent = (fn + ' ' + ln).trim() || 'New User';
+  const initials = (fn[0]||'') + (ln[0]||'');
+  if (initials) document.getElementById('preview-avatar').textContent = initials.toUpperCase();
+}
+
+// ── RBAC role switcher ─────────────────────────────────────────
+const buField  = document.getElementById('bu-field');
+const armField = document.getElementById('arm-field');
+const buSelect  = document.getElementById('bu-select');
+const armSelect = document.getElementById('arm-select');
+const badge    = document.getElementById('preview-role-badge');
+
+const ROLE_CFG = {
+  Region: {label:'🌍 Full Access',    bg:'rgba(0,200,83,0.1)',   border:'rgba(0,200,83,0.3)',   color:'#00C853'},
+  BU:     {label:'🏗️ Business Unit',  bg:'rgba(171,29,254,0.1)', border:'rgba(171,29,254,0.3)', color:'#AB1DFE'},
+  ARM:    {label:'👤 ARM Scoped',     bg:'rgba(245,130,32,0.1)', border:'rgba(245,130,32,0.3)', color:'#f58220'},
+};
+
+function applyRole(val) {
+  // Show/hide sub-pickers
+  buField.style.display  = (val === 'BU')  ? '' : 'none';
+  armField.style.display = (val === 'ARM') ? '' : 'none';
+  // Clear unused fields so they aren't submitted with stale values
+  if (val !== 'BU')  buSelect.value  = '';
+  if (val !== 'ARM') armSelect.value = '';
+  // Update preview badge
+  const cfg = ROLE_CFG[val] || ROLE_CFG.Region;
+  badge.textContent      = cfg.label;
+  badge.style.background = cfg.bg;
+  badge.style.border     = `1.5px solid ${cfg.border}`;
+  badge.style.color      = cfg.color;
+}
+
+document.querySelectorAll('input[name="category"]').forEach(r => {
+  r.addEventListener('change', () => applyRole(r.value));
+});
+
+// Run on load to restore saved state
+(function(){
+  const checked = document.querySelector('input[name="category"]:checked');
+  applyRole(checked ? checked.value : 'Region');
+})();
+</script>
+
+{% endblock %}
