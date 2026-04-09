@@ -1,0 +1,16 @@
+# Web Frameworks
+Django==6.0.3
+Flask
+
+# Database Drivers
+mysqlclient
+PyMySQL
+psycopg2-binary
+pyodbc
+
+# Data Science Libraries
+pandas
+numpy
+matplotlib
+scipy
+scikit-learn
