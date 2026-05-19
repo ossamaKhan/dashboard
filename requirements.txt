@@ -11,3 +11,4 @@ Pillow==11.2.1
 
 dj-database-url==3.0.1
 psycopg2-binary==2.9.10
+reportlab==4.4.1
