@@ -761,6 +761,8 @@ function initMap(){
     subdomains:'abcd',maxZoom:19,updateWhenIdle:true,keepBuffer:1,
   }).addTo(map);
   map.setView([30.5,71.5],7);
+  // Prevent map clicks from closing popups on mobile
+  map.on('click', function(e){ L.DomEvent.stopPropagation(e); });
   markerLayer=L.markerClusterGroup({
     chunkedLoading:true,chunkInterval:50,chunkDelay:10,
     maxClusterRadius:50,spiderfyOnMaxZoom:true,
@@ -878,8 +880,24 @@ function fetchMapData(){
 
       const popupW = Math.min(260, window.innerWidth - 40);
       const marker=L.marker([m.lat,m.lng],{icon});
-      marker.bindPopup(popup,{maxWidth:popupW,autoPan:true,autoPanPadding:[20,20],closeButton:true,autoClose:false,closeOnClick:false,closeOnEscapeKey:true});
-      // Click only — no mouseover
+      // Use manual click handler instead of bindPopup to fix mobile tap-closes-immediately bug
+      // The bug: on touch devices, tap fires → popup opens → touch bubbles to map → popup closes
+      // Fix: stop propagation + use a standalone popup not bound to the marker
+      marker.on('click', function(e){
+        L.DomEvent.stopPropagation(e);
+        const p = L.popup({
+          maxWidth: popupW,
+          autoPan: true,
+          autoPanPadding: [20, 20],
+          closeButton: true,
+          autoClose: false,
+          closeOnClick: false,
+          closeOnEscapeKey: true,
+        })
+        .setLatLng(e.latlng)
+        .setContent(popup)
+        .openOn(map);
+      });
       marker.addTo(markerLayer);
     });
 
