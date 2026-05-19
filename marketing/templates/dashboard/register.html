@@ -8,282 +8,82 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-
-body {
-  font-family: 'Poppins', sans-serif;
-  background: #e8e9ed;
-  min-height: 100vh;
-  display: flex;
-  overflow: hidden;
-}
+body{font-family:'Poppins',sans-serif;background:#e8e9ed;min-height:100vh;display:flex;overflow:hidden}
 
 /* ── Left Panel ── */
-.left-panel {
-  flex: 1;
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 60px 64px;
-  position: relative;
-  overflow: hidden;
+.left-panel{flex:1;background:#ffffff;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:60px 64px;position:relative;overflow:hidden}
+.left-panel::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(245,130,32,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(245,130,32,0.04) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+.left-panel::after{content:'';position:absolute;top:-100px;left:-100px;width:400px;height:400px;background:radial-gradient(circle,rgba(171,29,254,0.06) 0%,transparent 70%);pointer-events:none}
+.brand-row{display:flex;align-items:center;gap:12px;margin-bottom:52px;opacity:0;animation:fadeUp .6s ease forwards;animation-delay:.1s}
+.headline-wrap{position:relative;z-index:1}
+.headline-line{display:block;font-size:clamp(34px,4.5vw,66px);font-weight:900;line-height:1.05;letter-spacing:-2px;color:#1a1235;overflow:hidden}
+.headline-line span{display:block;opacity:0;transform:translateY(100%)}
+.headline-line.l1 span{animation:slideUp .7s cubic-bezier(.16,1,.3,1) forwards;animation-delay:.3s}
+.headline-line.l2 span{animation:slideUp .7s cubic-bezier(.16,1,.3,1) forwards;animation-delay:.5s}
+.headline-line.l3 span{animation:slideUp .7s cubic-bezier(.16,1,.3,1) forwards;animation-delay:.7s}
+.headline-line.orange span{color:#f58220}
+@keyframes slideUp{to{opacity:1;transform:translateY(0)}}
+.headline-desc{margin-top:24px;font-size:14px;font-weight:500;color:#8a85a5;line-height:1.7;max-width:400px;opacity:0;animation:fadeUp .7s ease forwards;animation-delay:1s}
+.steps{margin-top:36px;display:flex;flex-direction:column;gap:14px;opacity:0;animation:fadeUp .7s ease forwards;animation-delay:1.2s}
+.step{display:flex;align-items:center;gap:14px}
+.step-num{width:30px;height:30px;background:#f58220;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
+.step-text{font-size:13px;font-weight:600;color:#4a4570}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Right Panel ── */
+.right-panel{width:480px;flex-shrink:0;background:#f5f6fa;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:36px 44px;border-left:1px solid rgba(0,0,0,0.07);overflow-y:auto}
+.form-card{width:100%;opacity:0;animation:fadeUp .7s ease forwards;animation-delay:.4s}
+.form-title{font-size:24px;font-weight:900;color:#1a1235;letter-spacing:-.5px;margin-bottom:5px}
+.form-subtitle{font-size:12px;font-weight:500;color:#8a85a5;margin-bottom:22px}
+.form-subtitle a{color:#f58220;font-weight:700;text-decoration:none}
+.form-subtitle a:hover{text-decoration:underline}
+.messages{margin-bottom:14px}
+.msg{padding:10px 14px;border-radius:8px;font-size:12px;font-weight:600;margin-bottom:8px}
+.msg.error{background:rgba(255,61,0,0.08);border:1px solid rgba(255,61,0,0.2);color:#FF3D00}
+.msg.success{background:rgba(0,200,83,0.08);border:1px solid rgba(0,200,83,0.2);color:#00C853}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:10px;font-weight:700;color:#4a4570;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+.input-wrap{position:relative}
+.input-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none}
+.form-input{width:100%;background:#ffffff;border:1.5px solid rgba(0,0,0,0.1);border-radius:10px;color:#1a1235;font-family:'Poppins',sans-serif;font-size:16px;font-weight:500;padding:11px 13px 11px 38px;outline:none;transition:border-color .2s,box-shadow .2s}
+.form-input:focus{border-color:#f58220;box-shadow:0 0 0 3px rgba(245,130,32,0.12)}
+.form-input.error-field{border-color:#FF3D00!important}
+.field-error{font-size:11px;font-weight:600;color:#FF3D00;margin-top:4px}
+.email-hint{font-size:10px;font-weight:600;color:#AB1DFE;margin-top:4px;display:flex;align-items:center;gap:4px}
+.pw-strength{margin-top:5px}
+.pw-bar-wrap{height:3px;background:rgba(0,0,0,0.08);border-radius:2px;overflow:hidden}
+.pw-bar{height:100%;width:0%;border-radius:2px;transition:width .3s,background .3s}
+.pw-label{font-size:10px;font-weight:600;color:#8a85a5;margin-top:3px}
+.submit-btn{width:100%;background:#f58220;color:#fff;border:none;border-radius:10px;padding:13px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;margin-top:4px;letter-spacing:.3px;box-shadow:0 4px 16px rgba(245,130,32,0.35)}
+.submit-btn:hover{background:#e07318;transform:translateY(-1px);box-shadow:0 6px 20px rgba(245,130,32,0.45)}
+.submit-btn:active{transform:translateY(0)}
+.footer-note{text-align:center;font-size:11px;font-weight:500;color:#8a85a5;margin-top:20px;line-height:1.6}
+
+/* Mobile brand header (shown only on mobile) */
+.mobile-brand{display:none;align-items:center;justify-content:center;gap:10px;margin-bottom:24px}
+.mobile-brand img{height:38px;width:auto;border-radius:8px}
+.mobile-brand-name{font-size:17px;font-weight:900;color:#f58220}
+
+/* ── Responsive ── */
+@media(max-width:1100px){
+  .left-panel{padding:48px 40px}
+  .right-panel{width:440px}
 }
-
-.left-panel::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(245,130,32,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(245,130,32,0.04) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
+@media(max-width:860px){
+  body{flex-direction:column;overflow:auto;min-height:100vh}
+  .left-panel{display:none}
+  .right-panel{width:100%;flex:1;border-left:none;padding:36px 28px;justify-content:flex-start;min-height:100vh;padding-top:48px}
+  .mobile-brand{display:flex}
+  .form-row{grid-template-columns:1fr}
 }
-
-.left-panel::after {
-  content: '';
-  position: absolute;
-  top: -100px;
-  left: -100px;
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, rgba(171,29,254,0.06) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.brand-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 60px;
-  opacity: 0;
-  animation: fadeUp 0.6s ease forwards;
-  animation-delay: 0.1s;
-}
-
-.brand-icon {
-  width: 44px; height: 44px;
-  background: #f58220;
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px;
-  box-shadow: 0 4px 16px rgba(245,130,32,0.35);
-}
-
-.brand-name { font-size: 22px; font-weight: 900; color: #f58220; letter-spacing: -0.5px; }
-.brand-sub { font-size: 10px; font-weight: 600; color: #8a85a5; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 1px; }
-
-.headline-wrap { position: relative; z-index: 1; }
-
-.headline-line {
-  display: block;
-  font-size: clamp(38px, 4.5vw, 66px);
-  font-weight: 900;
-  line-height: 1.05;
-  letter-spacing: -2px;
-  color: #1a1235;
-  overflow: hidden;
-}
-
-.headline-line span {
-  display: block;
-  opacity: 0;
-  transform: translateY(100%);
-}
-
-.headline-line.l1 span { animation: slideUp 0.7s cubic-bezier(0.16,1,0.3,1) forwards; animation-delay: 0.3s; }
-.headline-line.l2 span { animation: slideUp 0.7s cubic-bezier(0.16,1,0.3,1) forwards; animation-delay: 0.5s; }
-.headline-line.l3 span { animation: slideUp 0.7s cubic-bezier(0.16,1,0.3,1) forwards; animation-delay: 0.7s; }
-.headline-line.orange span { color: #f58220; }
-
-@keyframes slideUp { to { opacity:1; transform: translateY(0); } }
-
-.headline-desc {
-  margin-top: 28px;
-  font-size: 15px;
-  font-weight: 500;
-  color: #8a85a5;
-  line-height: 1.7;
-  max-width: 400px;
-  opacity: 0;
-  animation: fadeUp 0.7s ease forwards;
-  animation-delay: 1s;
-}
-
-/* Steps list */
-.steps {
-  margin-top: 44px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  opacity: 0;
-  animation: fadeUp 0.7s ease forwards;
-  animation-delay: 1.2s;
-}
-
-.step {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.step-num {
-  width: 32px; height: 32px;
-  background: #f58220;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 800; color: #fff;
-  flex-shrink: 0;
-}
-
-.step-text {
-  font-size: 13px;
-  font-weight: 600;
-  color: #4a4570;
-}
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ── Right Panel — registration form ── */
-.right-panel {
-  width: 480px;
-  flex-shrink: 0;
-  background: #f5f6fa;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 44px;
-  border-left: 1px solid rgba(0,0,0,0.07);
-  overflow-y: auto;
-}
-
-.form-card {
-  width: 100%;
-  opacity: 0;
-  animation: fadeUp 0.7s ease forwards;
-  animation-delay: 0.4s;
-}
-
-.form-title { font-size: 26px; font-weight: 900; color: #1a1235; letter-spacing: -0.5px; margin-bottom: 6px; }
-.form-subtitle { font-size: 13px; font-weight: 500; color: #8a85a5; margin-bottom: 28px; }
-.form-subtitle a { color: #f58220; font-weight: 700; text-decoration: none; }
-.form-subtitle a:hover { text-decoration: underline; }
-
-/* Messages */
-.messages { margin-bottom: 16px; }
-.msg { padding: 10px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; margin-bottom: 8px; }
-.msg.error   { background: rgba(255,61,0,0.08); border: 1px solid rgba(255,61,0,0.2); color: #FF3D00; }
-.msg.success { background: rgba(0,200,83,0.08); border: 1px solid rgba(0,200,83,0.2); color: #00C853; }
-
-/* Row for two fields side by side */
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-
-.form-group { margin-bottom: 16px; }
-
-.form-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  color: #4a4570;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 6px;
-}
-
-.input-wrap { position: relative; }
-
-.input-ico {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 13px;
-  pointer-events: none;
-}
-
-.form-input {
-  width: 100%;
-  background: #ffffff;
-  border: 1.5px solid rgba(0,0,0,0.1);
-  border-radius: 10px;
-  color: #1a1235;
-  font-family: 'Poppins', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 11px 13px 11px 38px;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.form-input:focus {
-  border-color: #f58220;
-  box-shadow: 0 0 0 3px rgba(245,130,32,0.12);
-}
-
-.form-input.error-field { border-color: #FF3D00 !important; }
-
-.field-error {
-  font-size: 11px;
-  font-weight: 600;
-  color: #FF3D00;
-  margin-top: 4px;
-}
-
-/* Email domain hint */
-.email-hint {
-  font-size: 10px;
-  font-weight: 600;
-  color: #AB1DFE;
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-/* Password strength */
-.pw-strength { margin-top: 6px; }
-.pw-bar-wrap { height: 3px; background: rgba(0,0,0,0.08); border-radius: 2px; overflow: hidden; }
-.pw-bar { height: 100%; width: 0%; border-radius: 2px; transition: width 0.3s, background 0.3s; }
-.pw-label { font-size: 10px; font-weight: 600; color: #8a85a5; margin-top: 3px; }
-
-.submit-btn {
-  width: 100%;
-  background: #f58220;
-  color: #ffffff;
-  border: none;
-  border-radius: 10px;
-  padding: 13px;
-  font-family: 'Poppins', sans-serif;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-top: 4px;
-  letter-spacing: 0.3px;
-  box-shadow: 0 4px 16px rgba(245,130,32,0.35);
-}
-
-.submit-btn:hover { background: #e07318; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(245,130,32,0.45); }
-.submit-btn:active { transform: translateY(0); }
-
-.footer-note {
-  text-align: center;
-  font-size: 11px;
-  font-weight: 500;
-  color: #8a85a5;
-  margin-top: 24px;
-  line-height: 1.6;
-}
-
-@media(max-width: 900px) {
-  .left-panel { display: none; }
-  .right-panel { width: 100%; border-left: none; }
-  .form-row { grid-template-columns: 1fr; }
+@media(max-width:480px){
+  .right-panel{padding:28px 18px;padding-top:40px}
+  .form-title{font-size:21px}
+  .form-subtitle{font-size:12px;margin-bottom:18px}
+  .form-input{font-size:16px;padding:10px 12px 10px 36px}
+  .submit-btn{font-size:13px;padding:12px}
+  .form-group{margin-bottom:12px}
 }
 </style>
 </head>
@@ -294,40 +94,29 @@ body {
   <div class="brand-row">
     <img src="{% static 'images/logo1.jpg' %}" style="height:44px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
   </div>
-
   <div class="headline-wrap">
     <div class="headline-line l1"><span>Join the</span></div>
     <div class="headline-line l2 orange"><span>Intelligence</span></div>
     <div class="headline-line l3"><span>Network.</span></div>
   </div>
-
-  <p class="headline-desc">
-    Create your PTCL Group account to access real-time network analytics, franchise insights, and regional performance data.
-  </p>
-
+  <p class="headline-desc">Create your PTCL Group account to access real-time network analytics, franchise insights, and regional performance data.</p>
   <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <div class="step-text">Fill in your PTCL Group details</div>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div class="step-text">Verify your @ptclgroup.com email</div>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div class="step-text">Access the full Ufone 5G dashboard</div>
-    </div>
+    <div class="step"><div class="step-num">1</div><div class="step-text">Fill in your PTCL Group details</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text">Verify your @ptclgroup.com email</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text">Access the full Ufone 5G dashboard</div></div>
   </div>
 </div>
 
-<!-- Right Panel — Registration form -->
+<!-- Right Panel -->
 <div class="right-panel">
+  <div class="mobile-brand">
+    <img src="{% static 'images/logo1.jpg' %}" alt="Ufone 5G"/>
+    <div class="mobile-brand-name">Ufone 5G</div>
+  </div>
+
   <div class="form-card">
     <div class="form-title">Create Account</div>
-    <div class="form-subtitle">
-      Already have an account? <a href="{% url 'login' %}">Sign in</a>
-    </div>
+    <div class="form-subtitle">Already have an account? <a href="{% url 'login' %}">Sign in</a></div>
 
     {% if messages %}
     <div class="messages">
@@ -340,74 +129,54 @@ body {
     <form method="POST" action="{% url 'register' %}" id="register-form" novalidate>
       {% csrf_token %}
 
-      <!-- Full Name -->
       <div class="form-group">
         <label class="form-label">Full Name</label>
         <div class="input-wrap">
           <span class="input-ico">👤</span>
-          <input type="text" name="full_name" class="form-input" placeholder="Muhammad Ali Khan" required
-                 value="{{ form_data.full_name|default:'' }}"/>
+          <input type="text" name="full_name" class="form-input" placeholder="Muhammad Ali Khan" required value="{{ form_data.full_name|default:'' }}"/>
         </div>
+        {% if errors.full_name %}<div class="field-error">{{ errors.full_name }}</div>{% endif %}
       </div>
 
-      <!-- Phone + Email row -->
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Phone Number</label>
-          <div class="input-wrap">
-            <span class="input-ico">📱</span>
-            <input type="tel" name="phone" class="form-input" placeholder="03XX-XXXXXXX" required
-                   value="{{ form_data.phone|default:'' }}"/>
-          </div>
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <div class="input-wrap">
+          <span class="input-ico">📱</span>
+          <input type="tel" name="phone" class="form-input" placeholder="03XX-XXXXXXX" required value="{{ form_data.phone|default:'' }}"/>
         </div>
-        <div class="form-group" style="grid-column: span 1">
-          <!-- placeholder to keep layout -->
-        </div>
+        {% if errors.phone %}<div class="field-error">{{ errors.phone }}</div>{% endif %}
       </div>
 
-      <!-- Email — full width -->
       <div class="form-group">
         <label class="form-label">Email Address</label>
         <div class="input-wrap">
           <span class="input-ico">✉️</span>
-          <input type="email" name="email" id="email-input" class="form-input"
-                 placeholder="yourname@ptclgroup.com" required
-                 value="{{ form_data.email|default:'' }}"/>
+          <input type="email" name="email" id="email-input" class="form-input" placeholder="yourname@ptclgroup.com" required value="{{ form_data.email|default:'' }}"/>
         </div>
         <div class="email-hint" id="email-hint">🔒 Must be a @ptclgroup.com address</div>
-        {% if errors.email %}
-        <div class="field-error">{{ errors.email }}</div>
-        {% endif %}
+        {% if errors.email %}<div class="field-error">{{ errors.email }}</div>{% endif %}
       </div>
 
-      <!-- Password -->
       <div class="form-group">
         <label class="form-label">Password</label>
         <div class="input-wrap">
           <span class="input-ico">🔒</span>
-          <input type="password" name="password" id="pw-input" class="form-input"
-                 placeholder="Min. 8 characters" required autocomplete="new-password"/>
+          <input type="password" name="password" id="pw-input" class="form-input" placeholder="Min. 8 characters" required autocomplete="new-password"/>
         </div>
         <div class="pw-strength">
           <div class="pw-bar-wrap"><div class="pw-bar" id="pw-bar"></div></div>
           <div class="pw-label" id="pw-label">Enter a password</div>
         </div>
-        {% if errors.password %}
-        <div class="field-error">{{ errors.password }}</div>
-        {% endif %}
+        {% if errors.password %}<div class="field-error">{{ errors.password }}</div>{% endif %}
       </div>
 
-      <!-- Confirm Password -->
       <div class="form-group">
         <label class="form-label">Confirm Password</label>
         <div class="input-wrap">
           <span class="input-ico">✅</span>
-          <input type="password" name="confirm_password" id="confirm-pw" class="form-input"
-                 placeholder="Repeat your password" required autocomplete="new-password"/>
+          <input type="password" name="confirm_password" id="confirm-pw" class="form-input" placeholder="Repeat your password" required autocomplete="new-password"/>
         </div>
-        {% if errors.confirm_password %}
-        <div class="field-error">{{ errors.confirm_password }}</div>
-        {% endif %}
+        {% if errors.confirm_password %}<div class="field-error">{{ errors.confirm_password }}</div>{% endif %}
       </div>
 
       <button type="submit" class="submit-btn">Create Account →</button>
@@ -421,77 +190,28 @@ body {
 </div>
 
 <script>
-// Password strength meter
-const pwInput = document.getElementById('pw-input');
-const pwBar   = document.getElementById('pw-bar');
-const pwLabel = document.getElementById('pw-label');
-
-pwInput.addEventListener('input', () => {
-  const val = pwInput.value;
-  let strength = 0;
-  if (val.length >= 8) strength++;
-  if (/[A-Z]/.test(val)) strength++;
-  if (/[0-9]/.test(val)) strength++;
-  if (/[^A-Za-z0-9]/.test(val)) strength++;
-
-  const map = {
-    0: { w:'0%',   c:'#FF3D00', l:'Too short' },
-    1: { w:'25%',  c:'#FF3D00', l:'Weak' },
-    2: { w:'50%',  c:'#FFD600', l:'Fair' },
-    3: { w:'75%',  c:'#00BCD4', l:'Good' },
-    4: { w:'100%', c:'#00C853', l:'Strong 💪' },
-  };
-  pwBar.style.width      = map[strength].w;
-  pwBar.style.background = map[strength].c;
-  pwLabel.textContent    = map[strength].l;
-  pwLabel.style.color    = map[strength].c;
+const pwInput=document.getElementById('pw-input'),pwBar=document.getElementById('pw-bar'),pwLabel=document.getElementById('pw-label');
+pwInput.addEventListener('input',()=>{
+  const val=pwInput.value;let s=0;
+  if(val.length>=8)s++;if(/[A-Z]/.test(val))s++;if(/[0-9]/.test(val))s++;if(/[^A-Za-z0-9]/.test(val))s++;
+  const m={0:{w:'0%',c:'#FF3D00',l:'Too short'},1:{w:'25%',c:'#FF3D00',l:'Weak'},2:{w:'50%',c:'#FFD600',l:'Fair'},3:{w:'75%',c:'#00BCD4',l:'Good'},4:{w:'100%',c:'#00C853',l:'Strong 💪'}};
+  pwBar.style.width=m[s].w;pwBar.style.background=m[s].c;pwLabel.textContent=m[s].l;pwLabel.style.color=m[s].c;
 });
-
-// Email domain validation — live feedback
-const emailInput = document.getElementById('email-input');
-const emailHint  = document.getElementById('email-hint');
-
-emailInput.addEventListener('input', () => {
-  const val = emailInput.value;
-  if (val.includes('@') && !val.endsWith('@ptclgroup.com')) {
-    emailHint.textContent = '❌ Only @ptclgroup.com emails are allowed';
-    emailHint.style.color = '#FF3D00';
-    emailInput.classList.add('error-field');
-  } else if (val.endsWith('@ptclgroup.com')) {
-    emailHint.textContent = '✅ Valid PTCL Group email';
-    emailHint.style.color = '#00C853';
-    emailInput.classList.remove('error-field');
-  } else {
-    emailHint.textContent = '🔒 Must be a @ptclgroup.com address';
-    emailHint.style.color = '#AB1DFE';
-    emailInput.classList.remove('error-field');
-  }
+const emailInput=document.getElementById('email-input'),emailHint=document.getElementById('email-hint');
+emailInput.addEventListener('input',()=>{
+  const val=emailInput.value;
+  if(val.includes('@')&&!val.endsWith('@ptclgroup.com')){emailHint.textContent='❌ Only @ptclgroup.com emails are allowed';emailHint.style.color='#FF3D00';emailInput.classList.add('error-field');}
+  else if(val.endsWith('@ptclgroup.com')){emailHint.textContent='✅ Valid PTCL Group email';emailHint.style.color='#00C853';emailInput.classList.remove('error-field');}
+  else{emailHint.textContent='🔒 Must be a @ptclgroup.com address';emailHint.style.color='#AB1DFE';emailInput.classList.remove('error-field');}
 });
-
-// Confirm password match check
-const confirmPw = document.getElementById('confirm-pw');
-confirmPw.addEventListener('input', () => {
-  if (confirmPw.value && confirmPw.value !== pwInput.value) {
-    confirmPw.classList.add('error-field');
-  } else {
-    confirmPw.classList.remove('error-field');
-  }
+const confirmPw=document.getElementById('confirm-pw');
+confirmPw.addEventListener('input',()=>{
+  if(confirmPw.value&&confirmPw.value!==pwInput.value)confirmPw.classList.add('error-field');
+  else confirmPw.classList.remove('error-field');
 });
-
-// Block submission if email wrong
-document.getElementById('register-form').addEventListener('submit', function(e) {
-  const email = emailInput.value;
-  if (!email.endsWith('@ptclgroup.com')) {
-    e.preventDefault();
-    emailInput.classList.add('error-field');
-    emailHint.textContent = '❌ Only @ptclgroup.com emails are allowed';
-    emailHint.style.color = '#FF3D00';
-    emailInput.focus();
-  }
-  if (confirmPw.value !== pwInput.value) {
-    e.preventDefault();
-    confirmPw.classList.add('error-field');
-  }
+document.getElementById('register-form').addEventListener('submit',function(e){
+  if(!emailInput.value.endsWith('@ptclgroup.com')){e.preventDefault();emailInput.classList.add('error-field');emailHint.textContent='❌ Only @ptclgroup.com emails are allowed';emailHint.style.color='#FF3D00';emailInput.focus();}
+  if(confirmPw.value!==pwInput.value){e.preventDefault();confirmPw.classList.add('error-field');}
 });
 </script>
 </body>

@@ -102,7 +102,7 @@ def site_data_list(request):
         sites = sites.filter(
             Q(franchise__icontains=search_query) |
             Q(region__icontains=search_query) |
-            Q(pta_district__icontains=search_query) |
+            Q(commercial_district__icontains=search_query) |
             Q(technology__icontains=search_query)
         )
     if region_filter:
@@ -185,7 +185,6 @@ def site_data_delete(request, pk):
 # ── Helper: pull distinct BU and ARM lists from SiteData ─────
 
 def _get_bu_choices():
-    """Distinct business_unit values from SiteData, sorted."""
     return list(
         SiteData.objects.exclude(business_unit__isnull=True)
         .exclude(business_unit='')
@@ -195,7 +194,6 @@ def _get_bu_choices():
     )
 
 def _get_arm_choices():
-    """Distinct arm values from SiteData, sorted."""
     return list(
         SiteData.objects.exclude(arm__isnull=True)
         .exclude(arm='')
@@ -211,9 +209,8 @@ def _get_arm_choices():
 def user_list(request):
     users = User.objects.all().select_related('profile').order_by('-date_joined')
 
-    search_query  = request.GET.get('search', '').strip()
-    status_filter = request.GET.get('status', '')
-    # NEW: filter by category
+    search_query    = request.GET.get('search', '').strip()
+    status_filter   = request.GET.get('status', '')
     category_filter = request.GET.get('category', '')
 
     if search_query:
@@ -230,7 +227,6 @@ def user_list(request):
     elif status_filter == 'admin':
         users = users.filter(is_staff=True)
 
-    # Filter by RBAC category via related profile
     if category_filter in ('Region', 'BU', 'ARM'):
         users = users.filter(profile__category=category_filter)
 
@@ -238,27 +234,22 @@ def user_list(request):
     users_page = paginator.get_page(request.GET.get('page', 1))
 
     return render(request, 'admin_panel/user_list.html', {
-        'users':          users_page,
-        'search_query':   search_query,
-        'status_filter':  status_filter,
+        'users':           users_page,
+        'search_query':    search_query,
+        'status_filter':   status_filter,
         'category_filter': category_filter,
-        'total_count':    User.objects.count(),
-        'active_count':   User.objects.filter(is_active=True).count(),
-        'admin_count':    User.objects.filter(is_staff=True).count(),
-        # Category counts for the header chips
-        'region_count':   UserProfile.objects.filter(category='Region').count(),
+        'total_count':     User.objects.count(),
+        'active_count':    User.objects.filter(is_active=True).count(),
+        'admin_count':     User.objects.filter(is_staff=True).count(),
+        'region_count':    UserProfile.objects.filter(category='Region').count(),
         'bu_count':        UserProfile.objects.filter(category='BU').count(),
         'arm_count':       UserProfile.objects.filter(category='ARM').count(),
-        'active_tab':     'users',
+        'active_tab':      'users',
     })
 
 
 @admin_required
 def user_create(request):
-    """
-    Create a brand new user (admin-initiated).
-    Includes category, user_business_unit, user_arm assignment.
-    """
     bu_choices  = _get_bu_choices()
     arm_choices = _get_arm_choices()
 
@@ -271,7 +262,6 @@ def user_create(request):
         is_active  = request.POST.get('is_active') == 'on'
         is_staff   = request.POST.get('is_staff') == 'on'
 
-        # ── RBAC fields ──
         category           = request.POST.get('category', 'Region')
         user_business_unit = request.POST.get('user_business_unit', '').strip()
         user_arm           = request.POST.get('user_arm', '').strip()
@@ -307,7 +297,6 @@ def user_create(request):
             profile.department         = request.POST.get('department', '').strip()
             profile.region             = request.POST.get('region', '').strip()
             profile.employee_id        = request.POST.get('employee_id', '').strip()
-            # ── RBAC ──
             profile.category           = category
             profile.user_business_unit = user_business_unit if category == 'BU'  else ''
             profile.user_arm           = user_arm           if category == 'ARM' else ''
@@ -333,9 +322,6 @@ def user_create(request):
 
 @admin_required
 def user_edit(request, pk):
-    """
-    Edit an existing user — updates User model, UserProfile, and RBAC category.
-    """
     user       = get_object_or_404(User, pk=pk)
     profile, _ = UserProfile.objects.get_or_create(user=user)
     bu_choices  = _get_bu_choices()
@@ -351,7 +337,6 @@ def user_edit(request, pk):
         if User.objects.filter(email=new_email).exclude(pk=pk).exists():
             errors.append('This email is already used by another account.')
 
-        # ── RBAC fields ──
         category           = request.POST.get('category', 'Region')
         user_business_unit = request.POST.get('user_business_unit', '').strip()
         user_arm           = request.POST.get('user_arm', '').strip()
@@ -379,7 +364,6 @@ def user_edit(request, pk):
             profile.region             = request.POST.get('region', '').strip()
             profile.employee_id        = request.POST.get('employee_id', '').strip()
             profile.bio                = request.POST.get('bio', '').strip()
-            # ── RBAC ──
             profile.category           = category
             profile.user_business_unit = user_business_unit if category == 'BU'  else ''
             profile.user_arm           = user_arm           if category == 'ARM' else ''
@@ -452,15 +436,8 @@ def user_toggle_active(request, pk):
     return redirect('admin_user_list')
 
 
-# ── NEW: Quick category assignment via AJAX/POST ──────────────
-
 @admin_required
 def user_set_category(request, pk):
-    """
-    Quick-assign category without going to the full edit page.
-    POST: category, user_business_unit (if BU), user_arm (if ARM)
-    Returns JSON for use with fetch().
-    """
     user    = get_object_or_404(User, pk=pk)
     profile, _ = UserProfile.objects.get_or_create(user=user)
 
@@ -526,71 +503,147 @@ def to_str(val):
     except:
         return None
 
+def parse_month_year(val):
+    """Parse the Month column which contains a date like '1/1/2025' or '2025-01-01'.
+    Returns (month_int, year_int) or (None, None)."""
+    try:
+        if pd.isna(val):
+            return None, None
+        s = str(val).strip()
+        if not s or s in ('nan', 'None', ''):
+            return None, None
+        # Try common date formats
+        for fmt in ('%m/%d/%Y', '%Y-%m-%d', '%d/%m/%Y', '%m-%d-%Y', '%Y/%m/%d',
+                    '%m/%d/%y', '%d-%m-%Y', '%d/%m/%y'):
+            try:
+                dt = datetime.strptime(s, fmt)
+                return dt.month, dt.year
+            except ValueError:
+                continue
+        # Try pandas Timestamp
+        ts = pd.Timestamp(val)
+        if not pd.isna(ts):
+            return ts.month, ts.year
+        return None, None
+    except:
+        return None, None
+
+
 @admin_required
 def import_data(request):
+    """
+    Import Excel data with the NEW column layout (no bisp_type, region_main,
+    total_recharge, digi_recharge columns).
+
+    New column order (0-indexed):
+     0  Month (date → parsed to month + year)
+     1  Key
+     2  2G ID
+     3  3G ID
+     4  4G ID
+     5  Technology
+     6  Business Unit
+     7  Region
+     8  Commercial District
+     9  CL Status
+    10  USF/Non-USF
+    11  latitude
+    12  longitude
+    13  PTA District
+    14  Site Status
+    15  Type
+    16  FR (franchise)
+    17  ARM.ARM Name
+    18  BVS.
+    19  FCA.
+    20  Act 90D
+    21  Act 30D
+    22  Act 90D (4G)
+    23  HVC Base
+    24  Total Rev Amt
+    25  BVS Retailer
+    26  EVC Retailer
+    27  Outgoing Minutes
+    28  Incoming Minutes
+    29  Volume (GBs)
+    30  DATA (4G)
+    31  FCA (Adjusted)
+    32  Total Revival
+    33  Gross Churn
+    34  Net Adds
+    35  Avg. Daily Active
+    36  Active Rechargers
+    37  MO Revenue
+    38  MNP FCA
+    39  Handset 4G
+    40  RCHRG_FACE_VALUE
+    41  PP_RECHAR_FACE_VAL
+    42  Prepaid Digital Amount
+    43  Postpaid Digital Amount
+    44  Conventional Recharge
+    """
     if request.method == 'POST' and request.FILES.get('file'):
         try:
             file = request.FILES['file']
             df = pd.read_excel(file, header=None)
             df.columns = range(len(df.columns))
+            # Skip header row
             df = df.iloc[1:].reset_index(drop=True)
+            # Drop rows where column 0 (Month/date) is empty
             df = df[df[0].notna()]
 
             objects = []
             total_rows = len(df)
 
             for i, row in df.iterrows():
+                m, y = parse_month_year(row[0])
                 obj = SiteData(
-                    region_main            = to_str(row[0]),
-                    bisp_type              = to_str(row[1]),
-                    month                  = to_int(row[2]),
-                    year                   = to_int(row[3]),
-                    key                    = to_int(row[4]),
-                    id_2g                  = to_str(row[5]),
-                    id_3g                  = to_str(row[6]),
-                    id_4g                  = to_str(row[7]),
-                    technology             = to_str(row[8]),
-                    business_unit          = to_str(row[9]),
-                    region                 = to_str(row[10]),
-                    commercial_district    = to_str(row[11]),
-                    cl_status              = to_str(row[12]),
-                    usf_status             = to_str(row[13]),
-                    latitude               = to_float(row[14]),
-                    longitude              = to_float(row[15]),
-                    pta_district           = to_str(row[16]),
-                    site_status            = to_str(row[17]),
-                    site_type              = to_str(row[18]),
-                    franchise              = to_str(row[19]),
-                    arm                    = to_str(row[20]),
-                    fca                    = to_dec(row[21]),
-                    bvs                    = to_dec(row[22]),
-                    act_90d                = to_int(row[23]),
-                    act_30d                = to_int(row[24]),
-                    act_90d_4g             = to_int(row[25]),
-                    hvc_base               = to_int(row[26]),
-                    tot_revn_amt           = to_dec(row[27]),
-                    bvs_retailer           = to_int(row[28]),
-                    evc_retailer           = to_int(row[29]),
-                    minutes_outgoing       = to_dec(row[30]),
-                    minutes_incoming       = to_dec(row[31]),
-                    volume_gbs             = to_dec(row[32]),
-                    data_ntwrk_vol_4g      = to_dec(row[33]),
-                    fca_adjusted           = to_dec(row[34]),
-                    tot_revival            = to_int(row[35]),
-                    gross_churn            = to_int(row[36]),
-                    net_add                = to_int(row[37]),
-                    avg_dly_act            = to_dec(row[38]),
-                    act_recharger          = to_int(row[39]),
-                    m0_revn                = to_dec(row[40]),
-                    mnp_fca                = to_int(row[41]),
-                    handset_4g             = to_int(row[42]),
-                    rchrg_face_value_mtd   = to_dec(row[43]),
-                    pp_rechar_face_val_mtd = to_dec(row[44]),
-                    prepaid_dgtl_amount    = to_dec(row[45]),
-                    postpaid_dgtl_amount   = to_dec(row[46]),
-                    conventional_recharge  = to_dec(row[47]),
-                    total_recharge         = to_dec(row[48]),
-                    digi_recharge          = to_dec(row[49]),
+                    month                  = m,
+                    year                   = y,
+                    key                    = to_str(row[1]),
+                    id_2g                  = to_str(row[2]),
+                    id_3g                  = to_str(row[3]),
+                    id_4g                  = to_str(row[4]),
+                    technology             = to_str(row[5]),
+                    business_unit          = to_str(row[6]),
+                    region                 = to_str(row[7]),
+                    commercial_district    = to_str(row[8]),
+                    cl_status              = to_str(row[9]),
+                    usf_status             = to_str(row[10]),
+                    latitude               = to_float(row[11]),
+                    longitude              = to_float(row[12]),
+                    pta_district           = to_str(row[13]),
+                    site_status            = to_str(row[14]),
+                    site_type              = to_str(row[15]),
+                    franchise              = to_str(row[16]),
+                    arm                    = to_str(row[17]),
+                    bvs                    = to_dec(row[18]),
+                    fca                    = to_dec(row[19]),
+                    act_90d                = to_int(row[20]),
+                    act_30d                = to_int(row[21]),
+                    act_90d_4g             = to_int(row[22]),
+                    hvc_base               = to_int(row[23]),
+                    tot_revn_amt           = to_dec(row[24]),
+                    bvs_retailer           = to_int(row[25]),
+                    evc_retailer           = to_int(row[26]),
+                    minutes_outgoing       = to_dec(row[27]),
+                    minutes_incoming       = to_dec(row[28]),
+                    volume_gbs             = to_dec(row[29]),
+                    data_ntwrk_vol_4g      = to_dec(row[30]),
+                    fca_adjusted           = to_dec(row[31]),
+                    tot_revival            = to_int(row[32]),
+                    gross_churn            = to_int(row[33]),
+                    net_add                = to_int(row[34]),
+                    avg_dly_act            = to_dec(row[35]),
+                    act_recharger          = to_int(row[36]),
+                    m0_revn                = to_dec(row[37]),
+                    mnp_fca                = to_int(row[38]),
+                    handset_4g             = to_int(row[39]),
+                    rchrg_face_value_mtd   = to_dec(row[40]),
+                    pp_rechar_face_val_mtd = to_dec(row[41]),
+                    prepaid_dgtl_amount    = to_dec(row[42]),
+                    postpaid_dgtl_amount   = to_dec(row[43]),
+                    conventional_recharge  = to_dec(row[44]),
                 )
                 objects.append(obj)
                 if len(objects) == 500:
@@ -598,7 +651,12 @@ def import_data(request):
                     objects = []
             if objects:
                 SiteData.objects.bulk_create(objects)
-            messages.success(request, f'🎉 Successfully uploaded {total_rows} records!')
+
+            AdminLog.objects.create(
+                user=request.user, action='import', model_name='SiteData',
+                details=f'Imported {total_rows} records from {file.name}'
+            )
+            messages.success(request, f'Successfully uploaded {total_rows} records!')
         except Exception as e:
             messages.error(request, f'Error: {str(e)}')
         return redirect('import_data')

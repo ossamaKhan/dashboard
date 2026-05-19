@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'marketing',
     'admin_panel',
+    'exports',
+    'channel',
 ]
 
 MIDDLEWARE = [
@@ -69,7 +71,8 @@ TEMPLATES = [
 WSGI_APPLICATION = 'dashboard.wsgi.application'
 
 STATICFILES_DIRS = [BASE_DIR / 'static']
-
+MEDIA_URL  = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 LOGIN_URL = '/' 
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/'    
@@ -82,6 +85,12 @@ DATABASES = {
     }
 }
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'TIMEOUT': 300,  # cache for 5 minutes
+    }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {

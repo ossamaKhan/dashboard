@@ -1,12 +1,15 @@
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-from django.db.models import Sum, Avg, Count
+from django.db.models import Sum, Avg, Count, F, Value, DecimalField, Case, When, FloatField, Q
+from django.db.models.functions import Coalesce
 from django.contrib.auth.models import User
-from .models import SiteData, UserProfile
+from .models import SiteData, UserProfile, ChatMessage
 from django.http import JsonResponse
 from collections import defaultdict
 from django.contrib import messages
+from django.utils import timezone
+from datetime import timedelta
 import math
 import os
 
@@ -185,320 +188,45 @@ def dashboard(request):
     return render(request, 'dashboard/index.html', {'profile': profile, 'locked': locked})
 
 
-# ── Filters ───────────────────────────────────────────────────
-
 @login_required(login_url='login')
-def filter_options(request):
-    region = request.GET.get('region')
-    pta    = request.GET.get('pta_district')
-
-    base = get_scoped_qs(request.user)
-
-    pta_qs = base
-    if region:
-        pta_qs = pta_qs.filter(region=region)
-
-    fr_qs = base
-    if region:
-        fr_qs = fr_qs.filter(region=region)
-    if pta:
-        fr_qs = fr_qs.filter(pta_district=pta)
-
-    years_list  = list(base.filter(year__isnull=False).values_list('year', flat=True).distinct().order_by('year'))
-    latest_year = max(years_list) if years_list else None
-
-    return JsonResponse({
-        'regions':        list(base.filter(region__isnull=False).exclude(region='').values_list('region', flat=True).distinct().order_by('region')),
-        'pta_districts':  list(pta_qs.filter(pta_district__isnull=False).exclude(pta_district='').values_list('pta_district', flat=True).distinct().order_by('pta_district')),
-        'franchises':     list(fr_qs.filter(franchise__isnull=False).exclude(franchise='').values_list('franchise', flat=True).distinct().order_by('franchise')),
-        'technologies':   list(base.filter(technology__isnull=False).exclude(technology='').values_list('technology', flat=True).distinct().order_by('technology')),
-        'business_units': list(base.filter(business_unit__isnull=False).exclude(business_unit='').values_list('business_unit', flat=True).distinct().order_by('business_unit')),
-        'site_statuses':  list(base.filter(site_status__isnull=False).exclude(site_status='').values_list('site_status', flat=True).distinct().order_by('site_status')),
-        'months':         list(base.filter(month__isnull=False).values_list('month', flat=True).distinct().order_by('month')),
-        'years':          years_list,
-        'latest_year':    latest_year,
-        # ── FIX 1: Return actual bisp_type values from DB so dropdown uses exact strings ──
-        'bisp_types':     list(base.filter(bisp_type__isnull=False).exclude(bisp_type='').values_list('bisp_type', flat=True).distinct().order_by('bisp_type')),
-    })
-
-
-# ── Map Data ──────────────────────────────────────────────────
-
-@login_required(login_url='login')
-def map_data(request):
-    region        = request.GET.get('region')
-    pta           = request.GET.get('pta_district')
-    key           = request.GET.get('key')
-    technology    = request.GET.get('technology')
-    business_unit = request.GET.get('business_unit')
-    site_status   = request.GET.get('site_status')
-    month         = request.GET.get('month')
-    year          = request.GET.get('year')
-    bisp_type     = request.GET.get('bisp_type')  # ── FIX 2: was missing, caused NameError ──
-
-    qs = get_scoped_qs(request.user)
-
-    if region:        qs = qs.filter(region=region)
-    if pta:           qs = qs.filter(pta_district=pta)
-    if key:           qs = qs.filter(key=key)
-    if technology:    qs = qs.filter(technology=technology)
-    if business_unit: qs = qs.filter(business_unit=business_unit)
-    if site_status:   qs = qs.filter(site_status=site_status)
-    if bisp_type:     qs = qs.filter(bisp_type=bisp_type)
-    if month:         qs = qs.filter(month=month)
-    if year:          qs = qs.filter(year=year)
-
-    qs = qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
-
-    franchises = qs.values(
-        'key', 'latitude', 'longitude', 'region', 'pta_district', 'technology', 'site_status'
-    ).annotate(
-        total_revenue=Sum('tot_revn_amt'),
-        site_count=Count('id'),
-        total_activations=Sum('act_90d'),
-    ).order_by('key')
-
-    markers = []
-    for f in franchises:
-        lat = f['latitude']
-        lng = f['longitude']
-        if lat is None or lng is None: continue
-        try:
-            lat = float(lat); lng = float(lng)
-        except: continue
-        if not (20 <= lat <= 40 and 60 <= lng <= 80): continue
-        def safe(val):
-            if val is None: return 0
-            try: return float(val)
-            except: return 0
-        markers.append({
-            'key':         f['key'] or 'Unknown',
-            'lat':         lat,
-            'lng':         lng,
-            'region':      f['region'] or '',
-            'district':    f['pta_district'] or '',
-            'technology':  f['technology'] or '',
-            'site_status': f['site_status'] or '',
-            'revenue':     safe(f['total_revenue']),
-            'activations': safe(f['total_activations']),
-        })
-
-    return JsonResponse({'markers': markers, 'total': len(markers)})
-
-
-# ── Dashboard Data ────────────────────────────────────────────
-
-from django.shortcuts import render, redirect
-from django.http import JsonResponse
-from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout, update_session_auth_hash
-from django.contrib.auth.models import User
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.db.models import Sum, Avg, Count
-from .models import SiteData, UserProfile
-from collections import defaultdict
-import os
-
-
-def get_or_create_profile(user):
-    profile, _ = UserProfile.objects.get_or_create(user=user)
-    return profile
-
-
-# ── Role helpers ──────────────────────────────────────────────
-
-def get_scoped_qs(user):
-    profile = get_or_create_profile(user)
-    qs = SiteData.objects.all()
-    if profile.category == 'BU' and profile.user_business_unit:
-        qs = qs.filter(business_unit=profile.user_business_unit)
-    elif profile.category == 'ARM' and profile.user_arm:
-        qs = qs.filter(arm=profile.user_arm)
-    return qs
-
-
-def get_locked_filters(user):
-    profile = get_or_create_profile(user)
-    locked = {
-        'category': profile.category,
-        'region':   {'locked': False},
-        'bu':       {'locked': False},
-    }
-    if profile.category == 'BU':
-        locked['bu'] = {'locked': True, 'value': profile.user_business_unit}
-    elif profile.category == 'ARM':
-        locked['region'] = {'locked': True, 'value': ''}
-        locked['bu']     = {'locked': True, 'value': ''}
-    return locked
-
-
-# ── Auth ──────────────────────────────────────────────────────
-
-def login_view(request):
-    if request.user.is_authenticated:
-        return redirect('dashboard')
-    if request.method == 'POST':
-        email    = request.POST.get('email', '').strip().lower()
-        password = request.POST.get('password', '')
-        try:
-            user_obj = User.objects.get(email=email)
-            username = user_obj.username
-        except User.DoesNotExist:
-            messages.error(request, 'No account found with that email address.')
-            return render(request, 'dashboard/login.html')
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            auth_login(request, user)
-            return redirect('dashboard')
-        messages.error(request, 'Incorrect password. Please try again.')
-        return render(request, 'dashboard/login.html')
-    return render(request, 'dashboard/login.html')
-
-
-def register_view(request):
-    if request.user.is_authenticated:
-        return redirect('dashboard')
-    errors = {}
-    form_data = {}
-    if request.method == 'POST':
-        full_name        = request.POST.get('full_name', '').strip()
-        phone            = request.POST.get('phone', '').strip()
-        email            = request.POST.get('email', '').strip().lower()
-        password         = request.POST.get('password', '')
-        confirm_password = request.POST.get('confirm_password', '')
-        form_data = {'full_name': full_name, 'phone': phone, 'email': email}
-        if not email.endswith('@ptclgroup.com'):
-            errors['email'] = 'Only @ptclgroup.com email addresses are allowed.'
-        elif User.objects.filter(email=email).exists():
-            errors['email'] = 'An account with this email already exists.'
-        if len(password) < 8:
-            errors['password'] = 'Password must be at least 8 characters.'
-        if password != confirm_password:
-            errors['confirm_password'] = 'Passwords do not match.'
-        if not full_name:
-            errors['full_name'] = 'Full name is required.'
-        if not phone:
-            errors['phone'] = 'Phone number is required.'
-        if not errors:
-            username = email.split('@')[0]
-            base = username; c = 1
-            while User.objects.filter(username=username).exists():
-                username = f"{base}{c}"; c += 1
-            user = User.objects.create_user(
-                username=username, email=email, password=password,
-                first_name=full_name.split()[0] if full_name else '',
-                last_name=' '.join(full_name.split()[1:]) if len(full_name.split()) > 1 else '',
-            )
-            profile = get_or_create_profile(user)
-            profile.phone = phone
-            profile.save()
-            auth_login(request, user)
-            return redirect('dashboard')
-    return render(request, 'dashboard/register.html', {'errors': errors, 'form_data': form_data})
-
-
-def logout_view(request):
-    auth_logout(request)
-    return redirect('login')
-
-
-# ── Profile ───────────────────────────────────────────────────
-
-@login_required(login_url='login')
-def profile_view(request):
-    profile = get_or_create_profile(request.user)
-    if request.method == 'POST':
-        action = request.POST.get('action', 'profile')
-        if action == 'profile':
-            request.user.first_name = request.POST.get('first_name', '').strip()
-            request.user.last_name  = request.POST.get('last_name', '').strip()
-            request.user.save()
-            profile.phone       = request.POST.get('phone', '').strip()
-            profile.designation = request.POST.get('designation', '').strip()
-            profile.department  = request.POST.get('department', '').strip()
-            profile.region      = request.POST.get('region', '').strip()
-            profile.employee_id = request.POST.get('employee_id', '').strip()
-            profile.bio         = request.POST.get('bio', '').strip()[:300]
-            if 'picture' in request.FILES:
-                pic = request.FILES['picture']
-                if pic.content_type.startswith('image/'):
-                    if profile.picture:
-                        try:
-                            if os.path.isfile(profile.picture.path):
-                                os.remove(profile.picture.path)
-                        except Exception:
-                            pass
-                    profile.picture = pic
-                else:
-                    messages.error(request, 'Please upload a valid image file.')
-                    return redirect('profile')
-            profile.save()
-            messages.success(request, 'Profile updated successfully!')
-            return redirect('profile')
-        elif action == 'password':
-            current_pw = request.POST.get('current_password', '')
-            new_pw     = request.POST.get('new_password', '')
-            confirm_pw = request.POST.get('confirm_new_password', '')
-            if not request.user.check_password(current_pw):
-                messages.error(request, 'Current password is incorrect.')
-            elif len(new_pw) < 8:
-                messages.error(request, 'New password must be at least 8 characters.')
-            elif new_pw != confirm_pw:
-                messages.error(request, 'New passwords do not match.')
-            else:
-                request.user.set_password(new_pw)
-                request.user.save()
-                update_session_auth_hash(request, request.user)
-                messages.success(request, 'Password changed successfully!')
-            return redirect('profile')
-        elif action == 'remove_picture':
-            if profile.picture:
-                try:
-                    if os.path.isfile(profile.picture.path):
-                        os.remove(profile.picture.path)
-                except Exception:
-                    pass
-                profile.picture = None
-                profile.save()
-            messages.success(request, 'Profile picture removed.')
-            return redirect('profile')
-    return render(request, 'dashboard/profile.html', {'profile': profile})
-
-
-# ── Dashboard ─────────────────────────────────────────────────
-
-@login_required(login_url='login')
-def dashboard(request):
+def base_page(request):
     profile = get_or_create_profile(request.user)
     locked  = get_locked_filters(request.user)
-    return render(request, 'dashboard/index.html', {'profile': profile, 'locked': locked})
+    return render(request, 'dashboard/base_page.html', {'profile': profile, 'locked': locked})
+
+
+@login_required(login_url='login')
+def revenue_page(request):
+    profile = get_or_create_profile(request.user)
+    locked  = get_locked_filters(request.user)
+    return render(request, 'dashboard/revenue_page.html', {'profile': profile, 'locked': locked})
 
 
 # ── Filters ───────────────────────────────────────────────────
+# CHANGED: franchise dropdown now filters by business_unit instead of pta_district.
+# The frontend sends ?region=X&business_unit=Y; franchises are scoped to that BU.
 
 @login_required(login_url='login')
 def filter_options(request):
-    region = request.GET.get('region')
-    pta    = request.GET.get('pta_district')
+    region        = request.GET.get('region')
+    business_unit = request.GET.get('business_unit')
+    arm           = request.GET.get('arm')
 
     base = get_scoped_qs(request.user)
 
-    pta_qs = base
-    if region:
-        pta_qs = pta_qs.filter(region=region)
+    arm_qs = base
+    if region:        arm_qs = arm_qs.filter(region=region)
+    if business_unit: arm_qs = arm_qs.filter(business_unit=business_unit)
 
-    fr_qs = base
-    if region:
-        fr_qs = fr_qs.filter(region=region)
-    if pta:
-        fr_qs = fr_qs.filter(pta_district=pta)
+    fr_qs = arm_qs
+    if arm:           fr_qs = fr_qs.filter(arm=arm)
 
     years_list  = list(base.filter(year__isnull=False).values_list('year', flat=True).distinct().order_by('year'))
     latest_year = max(years_list) if years_list else None
 
     return JsonResponse({
         'regions':        list(base.filter(region__isnull=False).exclude(region='').values_list('region', flat=True).distinct().order_by('region')),
-        'pta_districts':  list(pta_qs.filter(pta_district__isnull=False).exclude(pta_district='').values_list('pta_district', flat=True).distinct().order_by('pta_district')),
+        'arms':           list(arm_qs.filter(arm__isnull=False).exclude(arm='').values_list('arm', flat=True).distinct().order_by('arm')),
         'franchises':     list(fr_qs.filter(franchise__isnull=False).exclude(franchise='').values_list('franchise', flat=True).distinct().order_by('franchise')),
         'technologies':   list(base.filter(technology__isnull=False).exclude(technology='').values_list('technology', flat=True).distinct().order_by('technology')),
         'business_units': list(base.filter(business_unit__isnull=False).exclude(business_unit='').values_list('business_unit', flat=True).distinct().order_by('business_unit')),
@@ -506,8 +234,7 @@ def filter_options(request):
         'months':         list(base.filter(month__isnull=False).values_list('month', flat=True).distinct().order_by('month')),
         'years':          years_list,
         'latest_year':    latest_year,
-        # ── FIX 1: Return actual bisp_type values from DB so dropdown uses exact strings ──
-        'bisp_types':     list(base.filter(bisp_type__isnull=False).exclude(bisp_type='').values_list('bisp_type', flat=True).distinct().order_by('bisp_type')),
+        'bisp_types':     [],
     })
 
 
@@ -517,93 +244,600 @@ def filter_options(request):
 def map_data(request):
     region        = request.GET.get('region')
     pta           = request.GET.get('pta_district')
+    franchise     = request.GET.get('franchise')
+    arm           = request.GET.get('arm')
     key           = request.GET.get('key')
     technology    = request.GET.get('technology')
     business_unit = request.GET.get('business_unit')
     site_status   = request.GET.get('site_status')
     month         = request.GET.get('month')
     year          = request.GET.get('year')
-    bisp_type     = request.GET.get('bisp_type')  # ── FIX 2: was missing, caused NameError ──
 
     qs = get_scoped_qs(request.user)
 
     if region:        qs = qs.filter(region=region)
-    if pta:           qs = qs.filter(pta_district=pta)
+    if pta:           qs = qs.filter(commercial_district=pta)
+    if arm:           qs = qs.filter(arm=arm)
+    if franchise:     qs = qs.filter(franchise=franchise)
     if key:           qs = qs.filter(key=key)
     if technology:    qs = qs.filter(technology=technology)
     if business_unit: qs = qs.filter(business_unit=business_unit)
     if site_status:   qs = qs.filter(site_status=site_status)
-    if bisp_type:     qs = qs.filter(bisp_type=bisp_type)
     if month:         qs = qs.filter(month=month)
     if year:          qs = qs.filter(year=year)
 
     qs = qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
 
     franchises = qs.values(
-        'key', 'latitude', 'longitude', 'region', 'pta_district', 'technology', 'site_status'
+        'key', 'latitude', 'longitude', 'region', 'commercial_district',
+        'technology', 'site_status', 'business_unit'
     ).annotate(
         total_revenue=Sum('tot_revn_amt'),
         site_count=Count('id'),
         total_activations=Sum('act_90d'),
+        total_evc=Sum('evc_retailer'),
+        total_bvs=Sum('bvs_retailer'),
+        total_conv_recharge=Sum('conventional_recharge'),
+        total_prepaid_digi=Sum('prepaid_dgtl_amount'),
+        total_postpaid_digi=Sum('postpaid_dgtl_amount'),
     ).order_by('key')
 
+    def safe(val):
+        if val is None: return 0
+        try: return float(val)
+        except: return 0
+
     markers = []
+    bu_points = defaultdict(list)
+    seen_keys = set()
+
     for f in franchises:
-        lat = f['latitude']
-        lng = f['longitude']
-        if lat is None or lng is None: continue
+        lat = f['latitude']; lng = f['longitude']
+        if lat is None or lng is None:
+            continue
         try:
             lat = float(lat); lng = float(lng)
-        except: continue
-        if not (20 <= lat <= 40 and 60 <= lng <= 80): continue
-        def safe(val):
-            if val is None: return 0
-            try: return float(val)
-            except: return 0
+        except:
+            continue
+        if not (20 <= lat <= 40 and 60 <= lng <= 80):
+            continue
+
+        bu = f['business_unit'] if f['business_unit'] else 'Unknown'
+        digi = safe(f.get('total_prepaid_digi')) + safe(f.get('total_postpaid_digi'))
         markers.append({
-            'key':         f['key'] or 'Unknown',
-            'lat':         lat,
-            'lng':         lng,
-            'region':      f['region'] or '',
-            'district':    f['pta_district'] or '',
-            'technology':  f['technology'] or '',
-            'site_status': f['site_status'] or '',
-            'revenue':     safe(f['total_revenue']),
-            'activations': safe(f['total_activations']),
+            'key':           f['key'] or 'Unknown',
+            'lat':           lat,
+            'lng':           lng,
+            'region':        f['region'] or '',
+            'district':      f['commercial_district'] or '',
+            'technology':    f['technology'] or '',
+            'site_status':   f['site_status'] or '',
+            'business_unit': bu,
+            'revenue':       safe(f['total_revenue']),
+            'activations':   safe(f['total_activations']),
+            'evc_base':      safe(f.get('total_evc')),
+            'bvs_base':      safe(f.get('total_bvs')),
+            'conv_recharge': safe(f.get('total_conv_recharge')),
+            'digi_recharge': digi,
+        })
+        bu_points[bu].append((lng, lat))
+        if f['key']:
+            seen_keys.add(f['key'])
+
+    def convex_hull(points):
+        pts = sorted(set(points))
+        if len(pts) < 3:
+            return pts
+        def cross(o, a, b):
+            return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+        lower = []
+        for p in pts:
+            while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+                lower.pop()
+            lower.append(p)
+        upper = []
+        for p in reversed(pts):
+            while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+                upper.pop()
+            upper.append(p)
+        return lower[:-1] + upper[:-1]
+
+    bu_boundaries = []
+    for bu, pts in bu_points.items():
+        if len(set(pts)) < 3:
+            continue
+        hull = convex_hull(pts)
+        if len(hull) < 3:
+            continue
+        bu_boundaries.append({
+            'business_unit': bu,
+            'polygon': [[lat, lng] for (lng, lat) in hull],
+            'site_count': len(pts),
         })
 
-    return JsonResponse({'markers': markers, 'total': len(markers)})
+    return JsonResponse({
+        'markers':       markers,
+        'total':         len(seen_keys),
+        'bu_boundaries': bu_boundaries,
+    })
 
+
+# ── KML Export (Google Earth) ─────────────────────────────────
+
+# BU colour palette — mirrors the JS COLORS array in the frontend
+_BU_COLORS = [
+    'ff2082f5',  # orange   #f58220  (KML is aabbggrr)
+    'fffе1dab',  # purple   #AB1DFE
+    'ffb1355e',  # purple2  #5E35B1
+    'ffd4bc00',  # teal     #00BCD4
+    'ff53c800',  # green    #00C853
+    'ff0003ff',  # red      #FF3D00
+    'ff00d6ff',  # yellow   #FFD600
+    'ff8c1ee9',  # magenta  #E91E8C
+    'ffff4d7c',  # violet   #7C4DFF
+    'ffff9a45',  # amber    #ff9a45
+]
+
+def _bu_color(bu_name, color_map={}):
+    """Return a stable KML hex colour for a given BU name."""
+    if bu_name not in color_map:
+        color_map[bu_name] = _BU_COLORS[len(color_map) % len(_BU_COLORS)]
+    return color_map[bu_name]
+
+
+def _fmt(val):
+    """Format a number for KML description tables."""
+    try:
+        n = float(val or 0)
+        if n >= 1_000_000_000: return f'{n/1e9:.2f}B'
+        if n >= 1_000_000:     return f'{n/1e6:.2f}M'
+        if n >= 1_000:         return f'{n/1e3:.1f}K'
+        return str(int(round(n)))
+    except Exception:
+        return '—'
+
+
+@login_required(login_url='login')
+def export_kml(request):
+    """
+    GET /api/sites.kml/
+    Accepts the same filter params as /api/map/ (region, business_unit,
+    franchise, site_status, month, year).
+    Returns a KML file ready to open in Google Earth Pro.
+
+    Each site is a colour-coded Placemark with a rich HTML description
+    showing all KPIs.  A shared StyleMap per BU drives the icon colour.
+    """
+    region        = request.GET.get('region')
+    franchise     = request.GET.get('franchise')
+    arm           = request.GET.get('arm')
+    business_unit = request.GET.get('business_unit')
+    site_status   = request.GET.get('site_status')
+    month         = request.GET.get('month')
+    year          = request.GET.get('year')
+
+    qs = get_scoped_qs(request.user)
+    if region:        qs = qs.filter(region=region)
+    if arm:           qs = qs.filter(arm=arm)
+    if franchise:     qs = qs.filter(franchise=franchise)
+    if business_unit: qs = qs.filter(business_unit=business_unit)
+    if site_status:   qs = qs.filter(site_status=site_status)
+    if month:         qs = qs.filter(month=month)
+    if year:          qs = qs.filter(year=year)
+
+    qs = qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
+
+    sites = qs.values(
+        'key', 'latitude', 'longitude', 'region', 'commercial_district',
+        'franchise', 'business_unit', 'technology', 'site_status',
+    ).annotate(
+        revenue      = Sum('tot_revn_amt'),
+        base_90d     = Sum('act_90d'),
+        base_4g      = Sum('act_90d_4g'),
+        base_30d     = Sum('act_30d'),
+        net_add      = Sum('net_add'),
+        gross_churn  = Sum('gross_churn'),
+        hvc_base     = Sum('hvc_base'),
+        evc_retailer = Sum('evc_retailer'),
+        bvs_retailer = Sum('bvs_retailer'),
+        digi_recharge= Sum('prepaid_dgtl_amount') + Sum('postpaid_dgtl_amount'),
+        conv_recharge= Sum('conventional_recharge'),
+    ).order_by('business_unit', 'key')
+
+    # ── Collect BUs so we can emit one StyleMap per BU ────────
+    bu_set = sorted(set(
+        (s['business_unit'] or 'Unknown') for s in sites
+    ))
+
+    def row(label, value):
+        return (
+            f'<tr>'
+            f'<td style="color:#888;padding:3px 8px 3px 0;font-size:11px">{label}</td>'
+            f'<td style="font-weight:700;font-size:11px;padding:3px 0">{value}</td>'
+            f'</tr>'
+        )
+
+    def placemark_desc(s):
+        bu   = s['business_unit'] or 'Unknown'
+        rev  = float(s['revenue']  or 0)
+        digi = float(s['digi_recharge'] or 0)
+        conv = float(s['conv_recharge'] or 0)
+        total_rech = digi + conv
+        digi_share = f'{digi/total_rech*100:.1f}%' if total_rech else '—'
+        return (
+            '<![CDATA['
+            '<div style="font-family:Arial,sans-serif;min-width:240px">'
+            f'<div style="background:#f58220;color:#fff;padding:8px 12px;'
+            f'font-size:13px;font-weight:700;border-radius:6px 6px 0 0">📡 {s["key"] or "Unknown"}</div>'
+            '<table style="width:100%;border-collapse:collapse;padding:8px">'
+            + row('Business Unit',  bu)
+            + row('Region',         s['region'] or '—')
+            + row('District',       s['commercial_district'] or '—')
+            + row('Franchise',      s['franchise'] or '—')
+            + row('Technology',     s['technology'] or '—')
+            + row('Status',         s['site_status'] or '—')
+            + '<tr><td colspan="2" style="padding:6px 0 2px;font-size:10px;'
+              'font-weight:800;color:#f58220;text-transform:uppercase;'
+              'letter-spacing:1px">─── KPIs ───</td></tr>'
+            + row('Revenue',        f'PKR {_fmt(rev)}')
+            + row('90D Base',       _fmt(s['base_90d']))
+            + row('4G Base',        _fmt(s['base_4g']))
+            + row('30D Base',       _fmt(s['base_30d']))
+            + row('Net Adds',       _fmt(s['net_add']))
+            + row('Gross Churn',    _fmt(s['gross_churn']))
+            + row('HVC Base',       _fmt(s['hvc_base']))
+            + row('EVC Retailer',   _fmt(s['evc_retailer']))
+            + row('BVS Retailer',   _fmt(s['bvs_retailer']))
+            + row('Digital Rech.',  f'PKR {_fmt(digi)} ({digi_share})')
+            + row('Conv. Rech.',    f'PKR {_fmt(conv)}')
+            + '</table></div>'
+            ']]>'
+        )
+
+    # ── Build KML string ──────────────────────────────────────
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<kml xmlns="http://www.opengis.net/kml/2.2"'
+        '     xmlns:gx="http://www.google.com/kml/ext/2.2">',
+        '<Document>',
+        f'  <name>Ufone 5G — Central B Sites</name>',
+        f'  <description>Auto-generated from live database. '
+        f'Filters: region={region or "all"}, bu={business_unit or "all"}, '
+        f'month={month or "all"}, year={year or "all"}</description>',
+        '',
+    ]
+
+    # One Style + StyleMap per BU
+    for bu in bu_set:
+        color  = _bu_color(bu)
+        safe_id = bu.replace(' ', '_').replace('/', '_')
+        lines += [
+            f'  <!-- ── {bu} ── -->',
+            f'  <Style id="style_{safe_id}_normal">',
+            f'    <IconStyle>',
+            f'      <color>{color}</color>',
+            f'      <scale>0.9</scale>',
+            f'      <Icon><href>https://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href></Icon>',
+            f'    </IconStyle>',
+            f'    <LabelStyle><scale>0</scale></LabelStyle>',
+            f'    <BalloonStyle>',
+            f'      <text>$[description]</text>',
+            f'    </BalloonStyle>',
+            f'  </Style>',
+            f'  <Style id="style_{safe_id}_highlight">',
+            f'    <IconStyle>',
+            f'      <color>{color}</color>',
+            f'      <scale>1.3</scale>',
+            f'      <Icon><href>https://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href></Icon>',
+            f'    </IconStyle>',
+            f'    <LabelStyle><scale>0.9</scale></LabelStyle>',
+            f'    <BalloonStyle>',
+            f'      <text>$[description]</text>',
+            f'    </BalloonStyle>',
+            f'  </Style>',
+            f'  <StyleMap id="stylemap_{safe_id}">',
+            f'    <Pair><key>normal</key><styleUrl>#style_{safe_id}_normal</styleUrl></Pair>',
+            f'    <Pair><key>highlight</key><styleUrl>#style_{safe_id}_highlight</styleUrl></Pair>',
+            f'  </StyleMap>',
+            '',
+        ]
+
+    # One Folder per BU, Placemark per site
+    current_bu = None
+    for s in sites:
+        bu = s['business_unit'] or 'Unknown'
+        safe_id = bu.replace(' ', '_').replace('/', '_')
+
+        try:
+            lat = float(s['latitude'])
+            lng = float(s['longitude'])
+        except (TypeError, ValueError):
+            continue
+        if not (20 <= lat <= 40 and 60 <= lng <= 80):
+            continue
+
+        if bu != current_bu:
+            if current_bu is not None:
+                lines.append('  </Folder>')
+            lines += [
+                f'  <Folder>',
+                f'    <name>{bu}</name>',
+                f'    <open>0</open>',
+            ]
+            current_bu = bu
+
+        lines += [
+            f'    <Placemark>',
+            f'      <name>{s["key"] or "Unknown"}</name>',
+            f'      <styleUrl>#stylemap_{safe_id}</styleUrl>',
+            f'      <description>{placemark_desc(s)}</description>',
+            f'      <Point><coordinates>{lng},{lat},0</coordinates></Point>',
+            f'    </Placemark>',
+        ]
+
+    if current_bu is not None:
+        lines.append('  </Folder>')
+
+    lines += ['</Document>', '</kml>']
+
+    kml_content = '\n'.join(lines)
+
+    # Build a descriptive filename
+    parts = ['ufone_sites']
+    if region:        parts.append(region.replace(' ', '_'))
+    if business_unit: parts.append(business_unit.replace(' ', '_'))
+    if year:          parts.append(str(year))
+    if month:         parts.append(f'm{month}')
+    filename = '_'.join(parts) + '.kml'
+
+    from django.http import HttpResponse
+    response = HttpResponse(kml_content, content_type='application/vnd.google-earth.kml+xml')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+# ── BU Boundaries GeoJSON ─────────────────────────────────────
+
+@login_required(login_url='login')
+def bu_boundaries_json(request):
+    """
+    GET /api/bu-boundaries/
+    Serves BU district boundaries as GeoJSON.
+    Priority:
+      1. bu_boundaries_auto.geojson  — generated by: python manage.py fetch_bu_boundaries
+      2. bu_boundaries.py            — hardcoded fallback coordinates
+    """
+    from django.http import JsonResponse
+    import os, json as _json
+
+    # 1 — Try auto-fetched file first (official OSM boundaries)
+    auto_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'bu_boundaries_auto.geojson')
+    if os.path.exists(auto_path):
+        with open(auto_path, encoding='utf-8') as f:
+            return JsonResponse(_json.load(f))
+
+    # 2 — Fall back to hardcoded coordinates
+    try:
+        from .bu_boundaries import BU_GEOJSON
+        return JsonResponse(BU_GEOJSON)
+    except ImportError:
+        return JsonResponse({'type': 'FeatureCollection', 'features': []})
+
+
+# ── Site Performance Table ────────────────────────────────────
+
+@login_required(login_url='login')
+def site_performance_table(request):
+    """
+    GET /api/site-table/
+    Dynamic grouping based on active filters:
+      - No filter / Region filter  → group by BU
+      - BU filter                  → group by Franchise
+      - Franchise filter           → group by Site Key
+    Params: region, franchise, business_unit, site_status, month, year,
+            sort_by, order (top/bottom), page, page_size
+    """
+    region        = request.GET.get('region')
+    franchise     = request.GET.get('franchise')
+    arm           = request.GET.get('arm')
+    business_unit = request.GET.get('business_unit')
+    site_status   = request.GET.get('site_status')
+    month         = request.GET.get('month')
+    year          = request.GET.get('year')
+    sort_by       = request.GET.get('sort_by', 'revenue_ytd')
+    order         = request.GET.get('order', 'top')
+    page          = int(request.GET.get('page', 1))
+    page_size     = int(request.GET.get('page_size', 10))
+
+    qs_base = get_scoped_qs(request.user)
+    if region:        qs_base = qs_base.filter(region=region)
+    if business_unit: qs_base = qs_base.filter(business_unit=business_unit)
+    if arm:           qs_base = qs_base.filter(arm=arm)
+    if franchise:     qs_base = qs_base.filter(franchise=franchise)
+    if site_status:   qs_base = qs_base.filter(site_status=site_status)
+
+    qs_for_latest = qs_base
+    if year:  qs_for_latest = qs_for_latest.filter(year=year)
+    if month: qs_for_latest = qs_for_latest.filter(month=month)
+    qs = qs_base
+
+    def safe(v):
+        try: return float(v or 0)
+        except: return 0
+
+    # ── Determine grouping level ──────────────────────────────
+    if franchise:
+        group_field = 'key'
+        group_label = 'Site'
+    elif arm:
+        group_field = 'franchise'
+        group_label = 'Franchise'
+    elif business_unit:
+        group_field = 'arm'
+        group_label = 'ARM'
+    elif region:
+        group_field = 'business_unit'
+        group_label = 'BU'
+    else:
+        group_field = 'region'
+        group_label = 'Region'
+
+    # ── Determine latest period ───────────────────────────────
+    latest = qs_for_latest.order_by('-year', '-month').values('year', 'month').first()
+    if not latest:
+        return JsonResponse({'rows': [], 'total': 0, 'page': 1, 'pages': 0,
+                             'group_label': group_label})
+
+    ly, lm   = latest['year'], latest['month']
+    prev_y   = ly - 1
+    mom_m    = lm - 1 if lm > 1 else 12
+    mom_y    = ly     if lm > 1 else prev_y
+
+    # ── Single-query conditional aggregation ─────────────────
+    all_rows = (
+        qs.values(group_field)
+        .annotate(
+            rev_ytd_c   = Sum(Case(When(year=ly, month__lte=lm, then='tot_revn_amt'),         default=0, output_field=FloatField())),
+            rech_ytd_c  = Sum(Case(When(year=ly, month__lte=lm, then='prepaid_dgtl_amount'),  default=0, output_field=FloatField()))
+                        + Sum(Case(When(year=ly, month__lte=lm, then='postpaid_dgtl_amount'), default=0, output_field=FloatField()))
+                        + Sum(Case(When(year=ly, month__lte=lm, then='conventional_recharge'),default=0, output_field=FloatField())),
+            base_ytd_c  = Sum(Case(When(year=ly, month=lm,      then='act_90d'),              default=0, output_field=FloatField())),
+            churn_ytd_c = Sum(Case(When(year=ly, month__lte=lm, then='gross_churn'),          default=0, output_field=FloatField())),
+            netadd_ytd_c= Sum(Case(When(year=ly, month__lte=lm, then='net_add'),              default=0, output_field=FloatField())),
+            rev_ytd_p   = Sum(Case(When(year=prev_y, month__lte=lm, then='tot_revn_amt'),     default=0, output_field=FloatField())),
+            rech_ytd_p  = Sum(Case(When(year=prev_y, month__lte=lm, then='prepaid_dgtl_amount'), default=0, output_field=FloatField()))
+                        + Sum(Case(When(year=prev_y, month__lte=lm, then='postpaid_dgtl_amount'),default=0, output_field=FloatField()))
+                        + Sum(Case(When(year=prev_y, month__lte=lm, then='conventional_recharge'),default=0, output_field=FloatField())),
+            base_ytd_p  = Sum(Case(When(year=prev_y, month=lm,  then='act_90d'),              default=0, output_field=FloatField())),
+            churn_ytd_p = Sum(Case(When(year=prev_y, month__lte=lm, then='gross_churn'),      default=0, output_field=FloatField())),
+            netadd_ytd_p= Sum(Case(When(year=prev_y, month__lte=lm, then='net_add'),          default=0, output_field=FloatField())),
+            rev_cm      = Sum(Case(When(year=ly,     month=lm,   then='tot_revn_amt'),         default=0, output_field=FloatField())),
+            rech_cm     = Sum(Case(When(year=ly,     month=lm,   then='prepaid_dgtl_amount'),  default=0, output_field=FloatField()))
+                        + Sum(Case(When(year=ly,     month=lm,   then='postpaid_dgtl_amount'), default=0, output_field=FloatField()))
+                        + Sum(Case(When(year=ly,     month=lm,   then='conventional_recharge'),default=0, output_field=FloatField())),
+            base_cm     = Sum(Case(When(year=ly,     month=lm,   then='act_90d'),              default=0, output_field=FloatField())),
+            churn_cm    = Sum(Case(When(year=ly,     month=lm,   then='gross_churn'),          default=0, output_field=FloatField())),
+            netadd_cm   = Sum(Case(When(year=ly,     month=lm,   then='net_add'),              default=0, output_field=FloatField())),
+            rev_yoy_p   = Sum(Case(When(year=prev_y, month=lm,   then='tot_revn_amt'),         default=0, output_field=FloatField())),
+            rech_yoy_p  = Sum(Case(When(year=prev_y, month=lm,   then='prepaid_dgtl_amount'),  default=0, output_field=FloatField()))
+                        + Sum(Case(When(year=prev_y, month=lm,   then='postpaid_dgtl_amount'), default=0, output_field=FloatField()))
+                        + Sum(Case(When(year=prev_y, month=lm,   then='conventional_recharge'),default=0, output_field=FloatField())),
+            base_yoy_p  = Sum(Case(When(year=prev_y, month=lm,   then='act_90d'),              default=0, output_field=FloatField())),
+            churn_yoy_p = Sum(Case(When(year=prev_y, month=lm,   then='gross_churn'),          default=0, output_field=FloatField())),
+            netadd_yoy_p= Sum(Case(When(year=prev_y, month=lm,   then='net_add'),              default=0, output_field=FloatField())),
+            rev_mp      = Sum(Case(When(year=mom_y,  month=mom_m, then='tot_revn_amt'),         default=0, output_field=FloatField())),
+            rech_mp     = Sum(Case(When(year=mom_y,  month=mom_m, then='prepaid_dgtl_amount'),  default=0, output_field=FloatField()))
+                        + Sum(Case(When(year=mom_y,  month=mom_m, then='postpaid_dgtl_amount'), default=0, output_field=FloatField()))
+                        + Sum(Case(When(year=mom_y,  month=mom_m, then='conventional_recharge'),default=0, output_field=FloatField())),
+            base_mp     = Sum(Case(When(year=mom_y,  month=mom_m, then='act_90d'),              default=0, output_field=FloatField())),
+            churn_mp    = Sum(Case(When(year=mom_y,  month=mom_m, then='gross_churn'),          default=0, output_field=FloatField())),
+            netadd_mp   = Sum(Case(When(year=mom_y,  month=mom_m, then='net_add'),              default=0, output_field=FloatField())),
+        )
+    )
+
+    def pct(curr, prev):
+        if not prev: return 0
+        return round((curr - prev) / prev * 100, 1)
+
+    rows = []
+    for r in all_rows:
+        group_val = r.get(group_field) or '—'
+        rev_ytd   = safe(r['rev_ytd_c']);  rech_ytd  = safe(r['rech_ytd_c']);  base_ytd  = safe(r['base_ytd_c'])
+        if rev_ytd == 0 and rech_ytd == 0 and base_ytd == 0:
+            continue
+        rev_ytd_p  = safe(r['rev_ytd_p']);  rech_ytd_p = safe(r['rech_ytd_p']); base_ytd_p = safe(r['base_ytd_p'])
+        rev_cm     = safe(r['rev_cm']);      rech_cm    = safe(r['rech_cm']);     base_cm    = safe(r['base_cm'])
+        rev_yoy_p  = safe(r['rev_yoy_p']);  rech_yoy_p = safe(r['rech_yoy_p']); base_yoy_p = safe(r['base_yoy_p'])
+        rev_mp     = safe(r['rev_mp']);      rech_mp    = safe(r['rech_mp']);     base_mp    = safe(r['base_mp'])
+
+        churn_ytd  = safe(r['churn_ytd_c']); churn_ytd_p = safe(r['churn_ytd_p'])
+        netadd_ytd = safe(r['netadd_ytd_c']);netadd_ytd_p= safe(r['netadd_ytd_p'])
+        churn_cm   = safe(r['churn_cm']);    churn_yoy_p = safe(r['churn_yoy_p'])
+        netadd_cm  = safe(r['netadd_cm']);   netadd_yoy_p= safe(r['netadd_yoy_p'])
+        churn_mp   = safe(r['churn_mp']);    netadd_mp   = safe(r['netadd_mp'])
+        rows.append({
+            'group':          group_val,
+            'group_label':    group_label,
+            'rev_ytd':        rev_ytd,       'rev_ytd_pct':   pct(rev_ytd,  rev_ytd_p),   'rev_ytd_prev':  rev_ytd_p,
+            'rev_yoy_curr':   rev_cm,        'rev_yoy_pct':   pct(rev_cm,   rev_yoy_p),   'rev_yoy_prev':  rev_yoy_p,
+            'rev_mom_curr':   rev_cm,        'rev_mom_pct':   pct(rev_cm,   rev_mp),       'rev_mom_prev':  rev_mp,
+            'rech_ytd':       rech_ytd,      'rech_ytd_pct':  pct(rech_ytd, rech_ytd_p),  'rech_ytd_prev': rech_ytd_p,
+            'rech_yoy_curr':  rech_cm,       'rech_yoy_pct':  pct(rech_cm,  rech_yoy_p),  'rech_yoy_prev': rech_yoy_p,
+            'rech_mom_curr':  rech_cm,       'rech_mom_pct':  pct(rech_cm,  rech_mp),      'rech_mom_prev': rech_mp,
+            'base_ytd':       base_ytd,      'base_ytd_pct':  pct(base_ytd, base_ytd_p),  'base_ytd_prev': base_ytd_p,
+            'base_yoy_curr':  base_cm,       'base_yoy_pct':  pct(base_cm,  base_yoy_p),  'base_yoy_prev': base_yoy_p,
+            'base_mom_curr':  base_cm,       'base_mom_pct':  pct(base_cm,  base_mp),      'base_mom_prev': base_mp,
+            'churn_ytd':      churn_ytd,     'churn_ytd_pct': pct(churn_ytd,churn_ytd_p), 'churn_ytd_prev':churn_ytd_p,
+            'churn_yoy_curr': churn_cm,      'churn_yoy_pct': pct(churn_cm, churn_yoy_p), 'churn_yoy_prev':churn_yoy_p,
+            'churn_mom_curr': churn_cm,      'churn_mom_pct': pct(churn_cm, churn_mp),     'churn_mom_prev':churn_mp,
+            'netadd_ytd':     netadd_ytd,    'netadd_ytd_pct':pct(netadd_ytd,netadd_ytd_p),'netadd_ytd_prev':netadd_ytd_p,
+            'netadd_yoy_curr':netadd_cm,     'netadd_yoy_pct':pct(netadd_cm,netadd_yoy_p),'netadd_yoy_prev':netadd_yoy_p,
+            'netadd_mom_curr':netadd_cm,     'netadd_mom_pct':pct(netadd_cm,netadd_mp),   'netadd_mom_prev':netadd_mp,
+        })
+
+    sort_key = {
+        'revenue_ytd':   lambda r: r['rev_ytd_pct'],
+        'recharge_ytd':  lambda r: r['rech_ytd_pct'],
+        'base_ytd':      lambda r: r['base_ytd_pct'],
+        'churn_ytd':     lambda r: r['churn_ytd_pct'],
+        'netadd_ytd':    lambda r: r['netadd_ytd_pct'],
+        'revenue_mom':   lambda r: r['rev_mom_pct'],
+        'recharge_mom':  lambda r: r['rech_mom_pct'],
+        'base_mom':      lambda r: r['base_mom_pct'],
+        'churn_mom':     lambda r: r['churn_mom_pct'],
+        'netadd_mom':    lambda r: r['netadd_mom_pct'],
+        'revenue_yoy':   lambda r: r['rev_yoy_pct'],
+        'recharge_yoy':  lambda r: r['rech_yoy_pct'],
+        'base_yoy':      lambda r: r['base_yoy_pct'],
+        'churn_yoy':     lambda r: r['churn_yoy_pct'],
+        'netadd_yoy':    lambda r: r['netadd_yoy_pct'],
+    }.get(sort_by, lambda r: r['rev_ytd_pct'])
+
+    rows.sort(key=sort_key, reverse=(order == 'top'))
+
+    total  = len(rows)
+    pages  = max(1, (total + page_size - 1) // page_size)
+    page   = max(1, min(page, pages))
+    start  = (page - 1) * page_size
+    paged  = rows[start:start + page_size]
+
+    return JsonResponse({
+        'rows':        paged,
+        'total':       total,
+        'page':        page,
+        'pages':       pages,
+        'page_size':   page_size,
+        'period':      {'year': ly, 'month': lm},
+        'group_label': group_label,
+    })
 
 # ── Dashboard Data ────────────────────────────────────────────
+
 @login_required(login_url='login')
 def dashboard_data(request):
     region        = request.GET.get('region')
     pta           = request.GET.get('pta_district')
     franchise     = request.GET.get('franchise')
+    arm           = request.GET.get('arm')
     technology    = request.GET.get('technology')
     business_unit = request.GET.get('business_unit')
     site_status   = request.GET.get('site_status')
     month         = request.GET.get('month')
     year          = request.GET.get('year')
-    bisp_type     = request.GET.get('bisp_type')  # exact DB string e.g. 'BISP', 'Non BISP'
 
     role_base = get_scoped_qs(request.user)
 
-    # ── Fully filtered queryset — used for KPIs, charts, and growth ──
     qs = role_base
     if region:        qs = qs.filter(region=region)
-    if pta:           qs = qs.filter(pta_district=pta)
+    if pta:           qs = qs.filter(commercial_district=pta)
+    if arm:           qs = qs.filter(arm=arm)
     if franchise:     qs = qs.filter(franchise=franchise)
     if technology:    qs = qs.filter(technology=technology)
     if business_unit: qs = qs.filter(business_unit=business_unit)
     if site_status:   qs = qs.filter(site_status=site_status)
-    if bisp_type:     qs = qs.filter(bisp_type=bisp_type)
 
-    # ── Growth base — same as qs but WITHOUT month/year filters ──
     growth_base = qs
 
-    # Apply month/year only to the main qs
     qs_kpi = qs
     if month: qs_kpi = qs_kpi.filter(month=month)
     if year:  qs_kpi = qs_kpi.filter(year=year)
@@ -616,33 +850,111 @@ def dashboard_data(request):
             return 100.0 if curr != 0 else 0.0
         return round(((curr - prev) / prev) * 100, 1)
 
-    # KPIs — fully filtered (including month/year)
-    kpis = qs_kpi.aggregate(
-        total_revenue=Sum('tot_revn_amt'),
-        total_activations=Sum('act_90d'),
-        total_net_add=Sum('net_add'),
-        total_recharge=Sum('total_recharge'),
-        avg_revenue=Avg('tot_revn_amt'),
-        total_sites=Count('key'),
-        total_churn=Sum('gross_churn'),
-        total_hvc=Sum('hvc_base'),
-        total_base_90d=Sum('act_90d'),
-        total_base_4g=Sum('act_90d_4g'),
-        total_digi_recharge=Sum('digi_recharge'),
-        total_conv_recharge=Sum('conventional_recharge'),
-        total_base_30d=Sum('act_30d'),
-    )
-    # ARPU = total revenue / total activations (derived, not a DB field)
-    _rev = safe(kpis.get('total_revenue'))
-    _act = safe(kpis.get('total_activations'))
-    kpis['total_arpu'] = (_rev / _act) if _act else 0
+    def distinct_site_count(queryset):
+        return queryset.exclude(key__isnull=True).exclude(key='').values('key').distinct().count()
 
-    # 4G Penetration = 4G base / 90D base
+    # ── Stock vs Flow field classification ────────────────────
+    # STOCK fields are point-in-time snapshots (e.g. act_90d as of month-end).
+    # Summing across months gives a nonsense inflated number — the correct value
+    # is the Sum across sites within the LATEST month of the period only.
+    # FLOW fields (revenue, churn, recharge, fca, etc.) accumulate legitimately.
+    STOCK_FIELDS = [
+        'act_90d', 'act_90d_4g', 'act_30d', 'hvc_base',
+        'evc_retailer', 'bvs_retailer', 'handset_4g', 'act_recharger',
+    ]
+
+    def latest_month_of(qs):
+        """Return the (year, month) of the most recent record in qs, or None."""
+        return qs.order_by('-year', '-month').values('year', 'month').first()
+
+    def aggregate_with_stock_fix(qs):
+        """
+        Aggregate a period queryset correctly:
+        - FLOW fields: Sum across all rows in qs (all months of the period).
+        - STOCK fields: Sum across sites in the LATEST month of qs only.
+        Returns a single merged dict identical in shape to a plain .aggregate() call.
+        """
+        # ── Flow aggregate (all months) ───────────────────────
+        flow_agg = qs.aggregate(
+            total_revenue=Sum('tot_revn_amt'),
+            total_net_add=Sum('net_add'),
+            total_churn=Sum('gross_churn'),
+            avg_revenue=Avg('tot_revn_amt'),
+            _prepaid_digi=Sum('prepaid_dgtl_amount'),
+            _postpaid_digi=Sum('postpaid_dgtl_amount'),
+            total_conv_recharge=Sum('conventional_recharge'),
+            total_fca=Sum('fca'),
+            total_revival=Sum('tot_revival'),
+        )
+
+        # ── Stock aggregate (latest month of this period only) ─
+        lp = latest_month_of(qs)
+        if lp:
+            stock_qs = qs.filter(year=lp['year'], month=lp['month'])
+        else:
+            stock_qs = qs.none()
+
+        stock_agg = stock_qs.aggregate(
+            total_activations=Sum('act_90d'),
+            total_hvc=Sum('hvc_base'),
+            total_base_90d=Sum('act_90d'),
+            total_base_4g=Sum('act_90d_4g'),
+            total_base_30d=Sum('act_30d'),
+            total_act_recharge=Sum('act_recharger'),
+            total_bvs=Sum('bvs_retailer'),
+            total_evc=Sum('evc_retailer'),
+            total_handset_4g=Sum('handset_4g'),
+            total_revenue_lm=Sum('tot_revn_amt'),  # latest-month revenue for ARPU
+        )
+
+        return {**flow_agg, **stock_agg}
+
+    # ── KPIs ──────────────────────────────────────────────────
+    kpis = aggregate_with_stock_fix(qs_kpi)
+
+    _digi = safe(kpis.get('_prepaid_digi')) + safe(kpis.get('_postpaid_digi'))
+    kpis['total_digi_recharge'] = _digi
+    _conv = safe(kpis.get('total_conv_recharge'))
+    kpis['total_recharge'] = _digi + _conv
+    kpis['total_sites'] = distinct_site_count(qs_kpi)
+    kpis.pop('_postpaid_digi', None)
+    kpis.pop('_prepaid_digi', None)
+
+    _rev_lm = safe(kpis.get('total_revenue_lm'))  # revenue of latest month only
+    _b90 = safe(kpis.get('total_base_90d'))
+    kpis['total_arpu'] = (_rev_lm / _b90) if _b90 else 0
+
     _b90 = safe(kpis.get('total_base_90d'))
     _b4g = safe(kpis.get('total_base_4g'))
     kpis['penetration_4g'] = ((_b4g / _b90) * 100) if _b90 else 0
 
-    # ── Growth — anchored to filtered scope ──
+    kpis['total_gross_churn'] = safe(kpis.get('total_churn'))
+    kpis['computed_net_adds'] = safe(kpis.get('total_net_add'))
+
+    # ── Technology site count breakdown ───────────────────────
+    # Count distinct sites per technology generation
+    # A site with "2G+3G+4G" counts toward 4G; "2G+3G" toward 3G; "2G" toward 2G
+    sites_4g = (qs_kpi.filter(technology__icontains='4G')
+                .exclude(key__isnull=True).exclude(key='')
+                .values('key').distinct().count())
+    sites_3g = (qs_kpi.filter(technology__icontains='3G')
+                .exclude(technology__icontains='4G')  # exclude sites already counted in 4G
+                .exclude(key__isnull=True).exclude(key='')
+                .values('key').distinct().count())
+    sites_2g = (qs_kpi.exclude(technology__icontains='3G')
+                .exclude(technology__icontains='4G')
+                .exclude(key__isnull=True).exclude(key='')
+                .values('key').distinct().count())
+    kpis['sites_4g'] = sites_4g
+    kpis['sites_3g'] = sites_3g
+    kpis['sites_2g'] = sites_2g
+
+    # ── Revenue to Recharge ratio ─────────────────────────────
+    _rev   = safe(kpis.get('total_revenue'))
+    _rech  = safe(kpis.get('total_recharge'))
+    kpis['rev_rech_ratio'] = round(_rev / _rech, 2) if _rech else 0
+
+    # ── Growth ────────────────────────────────────────────────
     growth = {}
     if year:
         latest_period = (
@@ -665,55 +977,61 @@ def dashboard_data(request):
         mom_month    = latest_month - 1 if latest_month > 1 else 12
         mom_year     = latest_year      if latest_month > 1 else prev_year
 
-        agg_kwargs = dict(
-            total_revenue=Sum('tot_revn_amt'),
-            total_activations=Sum('act_90d'),
-            total_net_add=Sum('net_add'),
-            total_recharge=Sum('total_recharge'),
-            total_churn=Sum('gross_churn'),
-            total_hvc=Sum('hvc_base'),
-            total_sites=Count('key'),
-            avg_revenue=Avg('tot_revn_amt'),
-            total_base_90d=Sum('act_90d'),
-            total_base_4g=Sum('act_90d_4g'),
-            total_digi_recharge=Sum('digi_recharge'),
-            total_conv_recharge=Sum('conventional_recharge'),
-            total_base_30d=Sum('act_30d'),
-        )
+        # Each period queryset — flow fields sum across all months in the range,
+        # stock fields will be pulled from the latest month of each period.
+        ytd_curr_qs = growth_base.filter(year=latest_year, month__lte=latest_month)
+        ytd_prev_qs = growth_base.filter(year=prev_year,   month__lte=latest_month)
+        yoy_curr_qs = growth_base.filter(year=latest_year, month=latest_month)
+        yoy_prev_qs = growth_base.filter(year=prev_year,   month=latest_month)
+        mom_prev_qs = growth_base.filter(year=mom_year,    month=mom_month)
 
-        ytd_curr_agg = growth_base.filter(year=latest_year, month__lte=latest_month).aggregate(**agg_kwargs)
-        ytd_prev_agg = growth_base.filter(year=prev_year,   month__lte=latest_month).aggregate(**agg_kwargs)
-        yoy_curr_agg = growth_base.filter(year=latest_year, month=latest_month).aggregate(**agg_kwargs)
-        yoy_prev_agg = growth_base.filter(year=prev_year,   month=latest_month).aggregate(**agg_kwargs)
-        mom_prev_agg = growth_base.filter(year=mom_year,    month=mom_month).aggregate(**agg_kwargs)
+        ytd_curr_agg = aggregate_with_stock_fix(ytd_curr_qs)
+        ytd_prev_agg = aggregate_with_stock_fix(ytd_prev_qs)
+        yoy_curr_agg = aggregate_with_stock_fix(yoy_curr_qs)
+        yoy_prev_agg = aggregate_with_stock_fix(yoy_prev_qs)
+        mom_prev_agg = aggregate_with_stock_fix(mom_prev_qs)
 
-        # ── DEBUG ──
-        MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-        print("\n" + "="*70)
-        print("  GROWTH CALCULATION — PERIOD ANCHORS (filtered scope)")
-        print("="*70)
-        print(f"  Filters: region={region} pta={pta} franchise={franchise} bu={business_unit} bisp={bisp_type}")
-        print(f"  Latest period  : {MONTH_NAMES[latest_month-1]} {latest_year}  (month {latest_month})")
-        print(f"  YTD compares   : Jan–{MONTH_NAMES[latest_month-1]} {latest_year}  vs  Jan–{MONTH_NAMES[latest_month-1]} {prev_year}")
-        print(f"  YOY compares   : {MONTH_NAMES[latest_month-1]} {latest_year}       vs  {MONTH_NAMES[latest_month-1]} {prev_year}")
-        print(f"  MOM compares   : {MONTH_NAMES[latest_month-1]} {latest_year}       vs  {MONTH_NAMES[mom_month-1]} {mom_year}")
-        print("="*70)
+        for agg in [ytd_curr_agg, ytd_prev_agg, yoy_curr_agg, yoy_prev_agg, mom_prev_agg]:
+            digi = safe(agg.get('_prepaid_digi')) + safe(agg.get('_postpaid_digi'))
+            agg['total_digi_recharge'] = digi
+            agg['total_recharge'] = digi + safe(agg.get('total_conv_recharge'))
+            agg['total_gross_churn'] = safe(agg.get('total_churn'))
+            agg['computed_net_adds'] = safe(agg.get('total_net_add'))
+            # Rev / Recharge ratio (×100 for % display)
+            _r = safe(agg.get('total_revenue'))
+            _rch = safe(agg.get('total_recharge'))
+            agg['rev_rech_ratio'] = round((_r / _rch) * 100, 1) if _rch else 0
 
-        # Derived-metric helpers
+        ytd_curr_agg['total_sites'] = distinct_site_count(ytd_curr_qs)
+        ytd_prev_agg['total_sites'] = distinct_site_count(ytd_prev_qs)
+        yoy_curr_agg['total_sites'] = distinct_site_count(yoy_curr_qs)
+        yoy_prev_agg['total_sites'] = distinct_site_count(yoy_prev_qs)
+        mom_prev_agg['total_sites'] = distinct_site_count(mom_prev_qs)
+
         def arpu_from(agg):
-            rev = safe(agg.get('total_revenue'))
-            act = safe(agg.get('total_activations'))
-            return (rev / act) if act else 0
+            # ARPU = latest-month revenue / latest-month 90D base
+            # total_revenue_lm is the revenue from the latest month of that period
+            rev_lm = safe(agg.get('total_revenue_lm'))
+            b90    = safe(agg.get('total_base_90d'))
+            return (rev_lm / b90) if b90 else 0
 
         def pen_from(agg):
             b90 = safe(agg.get('total_base_90d'))
             b4g = safe(agg.get('total_base_4g'))
             return ((b4g / b90) * 100) if b90 else 0
 
-        # Build list of metrics — includes derived ARPU and 4G penetration
-        growth_metrics = list(agg_kwargs.keys()) + ['total_arpu', 'penetration_4g']
+        growth_metric_keys = [
+            'total_revenue', 'total_activations', 'total_net_add',
+            'total_recharge', 'total_churn', 'total_hvc', 'avg_revenue',
+            'total_base_90d', 'total_base_4g', 'total_base_30d',
+            'total_digi_recharge', 'total_conv_recharge',
+            'total_sites', 'total_arpu', 'penetration_4g',
+            'total_act_recharge', 'total_bvs', 'total_evc', 'total_handset_4g',
+            'computed_net_adds', 'total_gross_churn', 'total_revival',
+            'rev_rech_ratio',
+        ]
 
-        for k in growth_metrics:
+        for k in growth_metric_keys:
             if k == 'total_arpu':
                 ytd_curr = arpu_from(ytd_curr_agg)
                 ytd_prev = arpu_from(ytd_prev_agg)
@@ -734,80 +1052,126 @@ def dashboard_data(request):
                 mom_prev = safe(mom_prev_agg.get(k))
             mom_curr = yoy_curr
 
-            ytd_pct = growth_pct(ytd_curr, ytd_prev)
-            yoy_pct = growth_pct(yoy_curr, yoy_prev)
-            mom_pct = growth_pct(mom_curr, mom_prev)
-
-            label = k.replace('_', ' ').upper()
-            print(f"  [{label:<22}] YTD {ytd_pct:+6.1f}%  YOY {yoy_pct:+6.1f}%  MOM {mom_pct:+6.1f}%")
-
             growth[k] = {
-                'ytd_pct': ytd_pct,
-                'yoy_pct': yoy_pct,
-                'mtd_pct': mom_pct,
+                'ytd_pct':  growth_pct(ytd_curr, ytd_prev),
+                'yoy_pct':  growth_pct(yoy_curr, yoy_prev),
+                'mtd_pct':  growth_pct(mom_curr, mom_prev),
+                'ytd_curr': ytd_curr,  'ytd_prev': ytd_prev,
+                'yoy_curr': yoy_curr,  'yoy_prev': yoy_prev,
+                'mtd_curr': mom_curr,  'mtd_prev': mom_prev,
             }
 
-        print("="*70 + "\n")
-
-    # ── Chart data — all on fully filtered qs_kpi ────────────────
+    # ── Chart data ────────────────────────────────────────────
     def sl(lst, key):
         return [safe(i[key]) for i in lst]
 
     revenue_by_region = list(qs_kpi.exclude(region__isnull=True).values('region').annotate(revenue=Sum('tot_revn_amt')).order_by('-revenue')[:10])
     act_by_tech       = list(qs_kpi.exclude(technology__isnull=True).values('technology').annotate(activations=Sum('act_90d')).order_by('-activations'))
     rev_by_bu         = list(qs_kpi.exclude(business_unit__isnull=True).values('business_unit').annotate(revenue=Sum('tot_revn_amt')).order_by('-revenue'))
-    recharge          = qs_kpi.aggregate(
+
+    recharge = qs_kpi.aggregate(
         prepaid_digital=Sum('prepaid_dgtl_amount'),
         postpaid_digital=Sum('postpaid_dgtl_amount'),
         conventional=Sum('conventional_recharge'),
-        digi=Sum('digi_recharge'),
     )
+    # Override with combined totals for the breakdown chart
+    recharge['digital'] = safe(recharge['prepaid_digital']) + safe(recharge['postpaid_digital'])
+    recharge['total']   = recharge['digital'] + safe(recharge['conventional'])
 
-    # Net Add Trend
     net_qs = (
-        qs_kpi.exclude(net_add__isnull=True)
+        qs_kpi.exclude(net_add__isnull=True).exclude(year__isnull=True).exclude(month__isnull=True)
         .values('year', 'month')
         .annotate(value=Sum('net_add'))
         .order_by('year', 'month')
     )
     months_range = list(range(1, 13))
-    years_net    = sorted(set(r['year'] for r in net_qs))
-    series_net   = defaultdict(lambda: [0] * 12)
+    years_net    = sorted(set(r['year'] for r in net_qs if r['year'] is not None))
+    series_net   = defaultdict(lambda: [None] * 12)
     for r in net_qs:
-        series_net[r['year']][r['month'] - 1] = safe(r['value'])
+        if r['year'] is not None and r['month'] is not None:
+            series_net[r['year']][r['month'] - 1] = safe(r['value'])
     net_add_chart = {
         'labels':   months_range,
         'datasets': [{'label': str(y), 'data': series_net[y]} for y in years_net],
     }
 
-    traffic          = list(qs_kpi.exclude(region__isnull=True).values('region').annotate(outgoing=Sum('minutes_outgoing'), incoming=Sum('minutes_incoming')).order_by('-outgoing')[:8])
-    data_vol         = list(qs_kpi.exclude(technology__isnull=True).values('technology').annotate(volume=Sum('volume_gbs')).order_by('-volume'))
-    site_status_data = list(qs_kpi.exclude(site_status__isnull=True).values('site_status').annotate(count=Count('key')).order_by('-count'))
-    top_districts    = list(qs_kpi.exclude(pta_district__isnull=True).values('pta_district').annotate(revenue=Sum('tot_revn_amt')).order_by('-revenue'))
-
-    # Avg Daily Active Trend
-    avg_qs = (
-        qs_kpi.exclude(avg_dly_act__isnull=True)
+    # ── Monthly Revenue trend (multi-year, None for missing months) ───
+    rev_chart_qs = qs
+    if year: rev_chart_qs = rev_chart_qs.filter(year=year)
+    rev_month_qs = (
+        rev_chart_qs.exclude(tot_revn_amt__isnull=True).exclude(year__isnull=True).exclude(month__isnull=True)
         .values('year', 'month')
-        .annotate(value=Sum('avg_dly_act'))
+        .annotate(value=Sum('tot_revn_amt'))
         .order_by('year', 'month')
     )
-    years_avg  = sorted(set(r['year'] for r in avg_qs))
-    series_avg = defaultdict(lambda: [0] * 12)
-    for r in avg_qs:
-        series_avg[r['year']][r['month'] - 1] = safe(r['value'])
-    avg_daily_active_chart = {
+    years_rev_m  = sorted(set(r['year'] for r in rev_month_qs if r['year'] is not None))
+    series_rev_m = defaultdict(lambda: [None] * 12)
+    for r in rev_month_qs:
+        if r['year'] is not None and r['month'] is not None:
+            series_rev_m[r['year']][r['month'] - 1] = safe(r['value'])
+    rev_monthly_chart = {
         'labels':   months_range,
-        'datasets': [{'label': str(y), 'data': series_avg[y]} for y in years_avg],
+        'datasets': [{'label': str(y), 'data': series_rev_m[y]} for y in years_rev_m],
     }
 
-    # Churn vs FCA — monthly
-    churn_by_month   = []
-    revival_by_month = []
-    for m in months_range:
-        md = qs_kpi.filter(month=m)
-        churn_by_month.append(safe(md.aggregate(val=Sum('gross_churn'))['val']))
-        revival_by_month.append(safe(md.aggregate(val=Sum('fca'))['val']))
+    # ── Monthly Total Recharge trend ──────────────────────────
+    # Use qs (not qs_kpi) so the monthly trend is NOT filtered by month/year selection
+    # This ensures all 12 months always display correctly in the chart
+    rech_chart_qs = qs
+    if year: rech_chart_qs = rech_chart_qs.filter(year=year)
+    rech_month_qs = (
+        rech_chart_qs.exclude(year__isnull=True).exclude(month__isnull=True)
+        .values('year', 'month')
+        .annotate(
+            prepaid=Sum('prepaid_dgtl_amount'),
+            postpaid=Sum('postpaid_dgtl_amount'),
+            conv=Sum('conventional_recharge'),
+        )
+        .order_by('year', 'month')
+    )
+    years_rech_m  = sorted(set(r['year'] for r in rech_month_qs if r['year'] is not None))
+    series_rech_m = defaultdict(lambda: [None] * 12)
+    series_digi_m = defaultdict(lambda: [None] * 12)
+    series_conv_m = defaultdict(lambda: [None] * 12)
+    for r in rech_month_qs:
+        if r['year'] is not None and r['month'] is not None:
+            idx_m = r['month'] - 1
+            pre  = safe(r.get('prepaid'))
+            post = safe(r.get('postpaid'))
+            cv   = safe(r.get('conv'))
+            digi = pre + post
+            total = digi + cv
+            series_rech_m[r['year']][idx_m] = total if (total > 0) else None
+            series_digi_m[r['year']][idx_m] = digi  if (digi  > 0) else None
+            series_conv_m[r['year']][idx_m] = cv     if (cv    > 0) else None
+
+    rech_monthly_chart = {
+        'labels':   months_range,
+        'datasets': [{'label': str(y), 'data': series_rech_m[y]} for y in years_rech_m],
+    }
+    digi_monthly_chart = {
+        'labels':   months_range,
+        'datasets': [{'label': str(y), 'data': series_digi_m[y]} for y in years_rech_m],
+    }
+    conv_monthly_chart = {
+        'labels':   months_range,
+        'datasets': [{'label': str(y), 'data': series_conv_m[y]} for y in years_rech_m],
+    }
+
+    traffic          = list(qs_kpi.exclude(region__isnull=True).values('region').annotate(outgoing=Sum('minutes_outgoing'), incoming=Sum('minutes_incoming')).order_by('-outgoing')[:8])
+    data_vol         = list(qs_kpi.exclude(technology__isnull=True).values('technology').annotate(volume=Sum('volume_gbs')).order_by('-volume'))
+    site_status_data = list(qs_kpi.exclude(site_status__isnull=True).values('site_status').annotate(count=Count('key', distinct=True)).order_by('-count'))
+    top_districts    = list(qs_kpi.exclude(commercial_district__isnull=True).values('commercial_district').annotate(revenue=Sum('tot_revn_amt')).order_by('-revenue'))
+
+    churn_monthly_qs = (
+        qs_kpi.exclude(month__isnull=True)
+        .values('month')
+        .annotate(churn=Sum('gross_churn'), revival=Sum('fca'))
+        .order_by('month')
+    )
+    churn_map = {r['month']: r for r in churn_monthly_qs}
+    churn_by_month   = [safe(churn_map.get(m, {}).get('churn')) for m in months_range]
+    revival_by_month = [safe(churn_map.get(m, {}).get('revival')) for m in months_range]
     churn_revival_by_month = {
         'labels':  months_range,
         'churn':   churn_by_month,
@@ -821,56 +1185,167 @@ def dashboard_data(request):
         .order_by('-churn')[:8]
     )
 
+    # ── Base KPI monthly trends — multi-year ──────────────────
+    # base_trend_raw groups by (year, month), so each row = one month.
+    # Stock fields (b90, b4g, etc.) are summed across SITES within that month —
+    # this is correct because we're not summing across months here.
+    # Flow fields (fca, churn, revival) also sum correctly per month.
+    trend_base_qs = qs
+    if year:
+        trend_base_qs = trend_base_qs.filter(year=year)
+
+    base_trend_raw = (
+        trend_base_qs
+        .exclude(month__isnull=True)
+        .exclude(year__isnull=True)
+        .values('year', 'month')
+        .annotate(
+            b90=Sum('act_90d'),
+            b4g=Sum('act_90d_4g'),
+            b30=Sum('act_30d'),
+            hvc=Sum('hvc_base'),
+            act_rch=Sum('act_recharger'),
+            bvs=Sum('bvs_retailer'),
+            evc=Sum('evc_retailer'),
+            hs4g=Sum('handset_4g'),
+            fca=Sum('fca'),
+            revival=Sum('tot_revival'),
+            churn=Sum('gross_churn'),
+            net_add=Sum('net_add'),
+        )
+        .order_by('year', 'month')
+    )
+
+    trend_years        = sorted(set(r['year'] for r in base_trend_raw if r['year'] is not None))
+    trend_months_range = list(range(1, 13))
+    trend_rows         = list(base_trend_raw)
+
+    def build_series(rows, fn):
+        series = defaultdict(lambda: [None] * 12)
+        for r in rows:
+            if r['year'] is not None and r['month'] is not None:
+                series[r['year']][r['month'] - 1] = fn(r)
+        return series
+
+    s_b90    = build_series(trend_rows, lambda r: safe(r.get('b90'))     if r.get('b90')     is not None else None)
+    s_b30    = build_series(trend_rows, lambda r: safe(r.get('b30'))     if r.get('b30')     is not None else None)
+    s_hvc    = build_series(trend_rows, lambda r: safe(r.get('hvc'))     if r.get('hvc')     is not None else None)
+    s_b4g    = build_series(trend_rows, lambda r: safe(r.get('b4g'))     if r.get('b4g')     is not None else None)
+    s_actrch = build_series(trend_rows, lambda r: safe(r.get('act_rch')) if r.get('act_rch') is not None else None)
+    s_bvs    = build_series(trend_rows, lambda r: safe(r.get('bvs'))     if r.get('bvs')     is not None else None)
+    s_evc    = build_series(trend_rows, lambda r: safe(r.get('evc'))     if r.get('evc')     is not None else None)
+    s_hs4g   = build_series(trend_rows, lambda r: safe(r.get('hs4g'))    if r.get('hs4g')    is not None else None)
+    s_net_adds = build_series(trend_rows, lambda r: safe(r.get('net_add')) if r.get('net_add') is not None else None)
+    s_churn    = build_series(trend_rows, lambda r: safe(r.get('churn'))   if r.get('churn')   is not None else None)
+    s_revival  = build_series(trend_rows, lambda r: safe(r.get('revival')) if r.get('revival') is not None else None)
+    s_pen4g    = build_series(trend_rows, lambda r: round(safe(r.get('b4g')) / safe(r.get('b90')) * 100, 2) if safe(r.get('b90')) else None)
+    s_hvc_pct  = build_series(trend_rows, lambda r: round(safe(r.get('hvc')) / safe(r.get('b90')) * 100, 2) if safe(r.get('b90')) else None)
+
+    avg_qs = (
+        trend_base_qs
+        .exclude(avg_dly_act__isnull=True)
+        .exclude(year__isnull=True)
+        .exclude(month__isnull=True)
+        .values('year', 'month')
+        .annotate(value=Sum('avg_dly_act'))
+        .order_by('year', 'month')
+    )
+    s_ada = build_series(
+        list(avg_qs),
+        lambda r: safe(r.get('value')) if r.get('value') is not None else None
+    )
+
+    base_trends = {
+        'labels':       trend_months_range,
+        'years':        [str(y) for y in trend_years],
+        'base90':       [s_b90[y]      for y in trend_years],
+        'base30':       [s_b30[y]      for y in trend_years],
+        'hvc':          [s_hvc[y]      for y in trend_years],
+        'base4g':       [s_b4g[y]      for y in trend_years],
+        'act_recharge': [s_actrch[y]   for y in trend_years],
+        'bvs':          [s_bvs[y]      for y in trend_years],
+        'evc':          [s_evc[y]      for y in trend_years],
+        'handset_4g':   [s_hs4g[y]     for y in trend_years],
+        'net_adds':     [s_net_adds[y] for y in trend_years],
+        'churn':        [s_churn[y]    for y in trend_years],
+        'revival':      [s_revival[y]  for y in trend_years],
+        'pen4g':        [s_pen4g[y]    for y in trend_years],
+        'hvc_pct':      [s_hvc_pct[y]  for y in trend_years],
+        'ada':          [s_ada[y]      for y in trend_years],
+    }
+
     return JsonResponse({
         'kpis':   {k: safe(v) for k, v in kpis.items()},
         'growth': growth,
         'revenue_by_region': {'labels': [r['region'] for r in revenue_by_region],    'values': sl(revenue_by_region, 'revenue')},
         'act_by_tech':       {'labels': [r['technology'] for r in act_by_tech],       'values': sl(act_by_tech, 'activations')},
         'rev_by_bu':         {'labels': [r['business_unit'] for r in rev_by_bu],      'values': sl(rev_by_bu, 'revenue')},
-        'recharge':          {
-            'labels': ['Prepaid Digital', 'Postpaid Digital', 'Conventional', 'Digi Recharge'],
-            'values': [safe(recharge['prepaid_digital']), safe(recharge['postpaid_digital']), safe(recharge['conventional']), safe(recharge['digi'])],
+        'recharge': {
+            'labels': ['Total Recharge', 'Digital Recharge', 'Conventional'],
+            'values': [safe(recharge['total']), safe(recharge['digital']), safe(recharge['conventional'])],
         },
         'net_add_region':         net_add_chart,
+        'rev_monthly':            rev_monthly_chart,
+        'rech_monthly':           rech_monthly_chart,
+        'digi_monthly':           digi_monthly_chart,
+        'conv_monthly':           conv_monthly_chart,
         'traffic':                {'labels': [r['region'] for r in traffic], 'outgoing': sl(traffic, 'outgoing'), 'incoming': sl(traffic, 'incoming')},
         'data_vol':               {'labels': [r['technology'] for r in data_vol], 'values': sl(data_vol, 'volume')},
         'site_status':            {'labels': [r['site_status'] for r in site_status_data], 'values': [r['count'] for r in site_status_data]},
-        'top_districts':          {'labels': [r['pta_district'] for r in top_districts], 'values': sl(top_districts, 'revenue')},
+        'top_districts':          {'labels': [r['commercial_district'] for r in top_districts], 'values': sl(top_districts, 'revenue')},
         'churn_revival':          {'labels': [r['region'] for r in churn_revival], 'churn': sl(churn_revival, 'churn'), 'revival': sl(churn_revival, 'revival')},
         'churn_revival_by_month': churn_revival_by_month,
-        'avg_daily_active':       avg_daily_active_chart,
+        'base_trends':            base_trends,
     })
 
 
+# ── Nearby Sites ──────────────────────────────────────────────
+
 @login_required(login_url='login')
 def nearby_sites(request):
-    """Return the 3 nearest sites to a given lat/lng based on Haversine distance.
-    Respects the user's role-scoped queryset."""
     try:
         user_lat = float(request.GET.get('lat'))
         user_lng = float(request.GET.get('lng'))
     except (TypeError, ValueError):
         return JsonResponse({'error': 'Invalid or missing lat/lng'}, status=400)
 
+    radius = request.GET.get('radius')
+    try:
+        radius = float(radius) if radius else None
+    except ValueError:
+        radius = None
+
+    limit = request.GET.get('limit')
+    try:
+        limit = int(limit) if limit else (50 if radius else 3)
+    except ValueError:
+        limit = 50 if radius else 3
+
     role_base = get_scoped_qs(request.user)
 
-    # Find latest period in scope to show fresh data
     latest = role_base.order_by('-year', '-month').values('year', 'month').first()
     if latest:
         qs = role_base.filter(year=latest['year'], month=latest['month'])
     else:
         qs = role_base
 
-    # Pull only sites with valid coordinates — keep payload light
-    candidates = qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True).values(
-        'key', 'latitude', 'longitude', 'region', 'pta_district', 'franchise',
+    lat_range = (radius / 111.0) if radius else 2.0
+    lng_range = (radius / (111.0 * 0.85)) if radius else 2.0
+    candidates = qs.filter(
+        latitude__gte=user_lat - lat_range,
+        latitude__lte=user_lat + lat_range,
+        longitude__gte=user_lng - lng_range,
+        longitude__lte=user_lng + lng_range,
+    ).exclude(latitude__isnull=True).exclude(longitude__isnull=True).values(
+        'key', 'latitude', 'longitude', 'region', 'commercial_district', 'franchise',
         'business_unit', 'technology', 'site_status', 'tot_revn_amt',
         'act_90d', 'act_90d_4g', 'net_add', 'gross_churn', 'hvc_base',
-        'total_recharge', 'year', 'month',
+        'conventional_recharge', 'prepaid_dgtl_amount', 'postpaid_dgtl_amount',
+        'year', 'month',
     )
 
     def haversine_km(lat1, lon1, lat2, lon2):
-        R = 6371.0  # Earth radius in km
+        R = 6371.0
         p1, p2 = math.radians(lat1), math.radians(lat2)
         dphi = math.radians(lat2 - lat1)
         dlmb = math.radians(lon2 - lon1)
@@ -883,39 +1358,151 @@ def nearby_sites(request):
             d = haversine_km(user_lat, user_lng, float(s['latitude']), float(s['longitude']))
         except (TypeError, ValueError):
             continue
+        if radius is not None and d > radius:
+            continue
         scored.append((d, s))
 
     scored.sort(key=lambda x: x[0])
-    top3 = scored[:3]
+    top = scored[:limit]
 
     def safe(v):
         return float(v) if v is not None else 0
 
     results = []
-    for dist, s in top3:
+    for dist, s in top:
+        _pre  = safe(s.get('prepaid_dgtl_amount'))
+        _post = safe(s.get('postpaid_dgtl_amount'))
+        _conv = safe(s.get('conventional_recharge'))
         results.append({
-            'key':           s['key'] or 'Unknown',
-            'distance_km':   round(dist, 2),
-            'latitude':      float(s['latitude']),
-            'longitude':     float(s['longitude']),
-            'region':        s['region'] or '—',
-            'pta_district':  s['pta_district'] or '—',
-            'franchise':     s['franchise'] or '—',
-            'business_unit': s['business_unit'] or '—',
-            'technology':    s['technology'] or '—',
-            'site_status':   s['site_status'] or '—',
-            'revenue':       safe(s['tot_revn_amt']),
-            'act_90d':       safe(s['act_90d']),
-            'act_90d_4g':    safe(s['act_90d_4g']),
-            'net_add':       safe(s['net_add']),
-            'gross_churn':   safe(s['gross_churn']),
-            'hvc_base':      safe(s['hvc_base']),
-            'total_recharge': safe(s['total_recharge']),
-            'period':        f"{s['month']}/{s['year']}" if s['year'] else '—',
+            'key':            s['key'] or 'Unknown',
+            'distance_km':    round(dist, 2),
+            'latitude':       float(s['latitude']),
+            'longitude':      float(s['longitude']),
+            'region':         s['region'] or '—',
+            'pta_district':   s['commercial_district'] or '—',
+            'franchise':      s['franchise'] or '—',
+            'business_unit':  s['business_unit'] or '—',
+            'technology':     s['technology'] or '—',
+            'site_status':    s['site_status'] or '—',
+            'revenue':        safe(s['tot_revn_amt']),
+            'act_90d':        safe(s['act_90d']),
+            'act_90d_4g':     safe(s['act_90d_4g']),
+            'net_add':        safe(s['net_add']),
+            'gross_churn':    safe(s['gross_churn']),
+            'hvc_base':       safe(s['hvc_base']),
+            'total_recharge': _pre + _post + _conv,
+            'period':         f"{s['month']}/{s['year']}" if s['year'] else '—',
         })
 
     return JsonResponse({
-        'user_location': {'lat': user_lat, 'lng': user_lng},
-        'count':         len(results),
-        'sites':         results,
+        'user_location':  {'lat': user_lat, 'lng': user_lng},
+        'radius_km':      radius,
+        'count':          len(results),
+        'total_in_scope': len(scored),
+        'sites':          results,
+    })
+
+
+# ── Chat ──────────────────────────────────────────────────────
+
+@login_required(login_url='login')
+def chat_page(request):
+    profile = get_or_create_profile(request.user)
+    profile.last_seen = timezone.now()
+    profile.save(update_fields=['last_seen'])
+    return render(request, 'dashboard/chat.html', {'profile': profile})
+
+
+@login_required(login_url='login')
+def chat_messages(request):
+    # Only update last_seen on POST or initial load (no ?since=), not on every poll
+    is_poll = request.method == 'GET' and request.GET.get('since')
+    if not is_poll:
+        UserProfile.objects.filter(user=request.user).update(last_seen=timezone.now())
+
+    if request.method == 'POST':
+        text  = request.POST.get('text', '').strip()
+        image = request.FILES.get('image')
+        audio = request.FILES.get('audio')
+
+        if not text and not image and not audio:
+            return JsonResponse({'error': 'Empty message'}, status=400)
+        if image and not image.content_type.startswith('image/'):
+            return JsonResponse({'error': 'File must be an image'}, status=400)
+        if image and image.size > 5 * 1024 * 1024:
+            return JsonResponse({'error': 'Image must be under 5 MB'}, status=400)
+        if audio and audio.size > 10 * 1024 * 1024:
+            return JsonResponse({'error': 'Audio must be under 10 MB'}, status=400)
+
+        audio_duration = None
+        if audio:
+            try:
+                audio_duration = int(request.POST.get('audio_duration', 0)) or None
+            except (ValueError, TypeError):
+                audio_duration = None
+
+        msg = ChatMessage.objects.create(
+            sender=request.user,
+            text=text[:2000] if text else '',
+            image=image if image else None,
+            audio=audio if audio else None,
+            audio_duration=audio_duration,
+        )
+        return JsonResponse({'ok': True, 'id': msg.id})
+
+    since = request.GET.get('since')
+    base_qs = ChatMessage.objects.select_related('sender', 'sender__profile')
+
+    if since:
+        try:
+            since_id = int(since)
+            messages_list = list(base_qs.filter(id__gt=since_id).order_by('id'))
+        except ValueError:
+            messages_list = []
+    else:
+        messages_list = list(base_qs.order_by('-id')[:100])[::-1]
+
+    def serialize(m):
+        sender_profile = getattr(m.sender, 'profile', None)
+        return {
+            'id':             m.id,
+            'sender_id':      m.sender.id,
+            'sender_name':    m.sender.get_full_name() or m.sender.username,
+            'designation':    sender_profile.designation if sender_profile else '',
+            'picture':        sender_profile.get_picture_url() if sender_profile else None,
+            'text':           m.text,
+            'image':          m.image.url if m.image else None,
+            'audio':          m.audio.url if m.audio else None,
+            'audio_duration': m.audio_duration,
+            'created_at':     m.created_at.isoformat(),
+            'is_mine':        m.sender_id == request.user.id,
+        }
+
+    return JsonResponse({
+        'messages': [serialize(m) for m in messages_list],
+        'count':    len(messages_list),
+    })
+
+
+@login_required(login_url='login')
+def chat_users(request):
+    five_min_ago = timezone.now() - timedelta(minutes=5)
+    users = User.objects.select_related('profile').order_by('first_name', 'username')
+
+    def serialize(u):
+        p = getattr(u, 'profile', None)
+        is_online = bool(p and p.last_seen and p.last_seen >= five_min_ago)
+        return {
+            'id':          u.id,
+            'name':        u.get_full_name() or u.username,
+            'designation': p.designation if p else '',
+            'category':    p.category if p else '',
+            'picture':     p.get_picture_url() if p else None,
+            'is_online':   is_online,
+            'is_me':       u.id == request.user.id,
+        }
+
+    return JsonResponse({
+        'users': [serialize(u) for u in users],
+        'total': users.count(),
     })
