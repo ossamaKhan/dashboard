@@ -273,7 +273,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
       <img src="{% static 'images/logo1.jpg' %}" style="height:34px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
       <div><div style="font-size:12px;font-weight:800;color:var(--orange)">Ufone 5G</div></div>
     </div>
-    <div class="sb-sec">Marketing</div>
+    <div class="sb-sec">Main</div>
     <a href="/dashboard/" class="nv active" onclick="closeSidebar()">Executive Brief</a>
     <a href="/base/" class="nv" onclick="closeSidebar()">Base Analytics</a>
     <a href="/revenue/" class="nv" onclick="closeSidebar()">Revenue Analytics</a>
@@ -753,6 +753,8 @@ function initMap(){
     zoomControl:true,attributionControl:false,
     preferCanvas:true,zoomAnimationThreshold:4,
     fadeAnimation:false,markerZoomAnimation:false,
+    closePopupOnClick:false,
+    tap:false,
   });
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
     attribution:'© OpenStreetMap contributors © CARTO',
@@ -876,7 +878,7 @@ function fetchMapData(){
 
       const popupW = Math.min(260, window.innerWidth - 40);
       const marker=L.marker([m.lat,m.lng],{icon});
-      marker.bindPopup(popup,{maxWidth:popupW,autoPan:true,autoPanPadding:[20,20]});
+      marker.bindPopup(popup,{maxWidth:popupW,autoPan:true,autoPanPadding:[20,20],closeButton:true,autoClose:false,closeOnClick:false,closeOnEscapeKey:true});
       // Click only — no mouseover
       marker.addTo(markerLayer);
     });
