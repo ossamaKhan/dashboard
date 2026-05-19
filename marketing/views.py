@@ -12,6 +12,9 @@ from django.utils import timezone
 from datetime import timedelta
 import math
 import os
+import hashlib
+import json as _json
+from django.core.cache import cache
 
 
 def get_or_create_profile(user):
@@ -827,6 +830,19 @@ def dashboard_data(request):
 
     role_base = get_scoped_qs(request.user)
 
+    # ── Cache: return instantly on repeat requests (5 min TTL) ──
+    _cache_params = {
+        'r': region, 'p': pta, 'f': franchise, 'a': arm,
+        't': technology, 'bu': business_unit, 'ss': site_status,
+        'm': month, 'y': year, 'uid': request.user.id,
+    }
+    _cache_key = 'dash_' + hashlib.md5(
+        _json.dumps(_cache_params, sort_keys=True).encode()
+    ).hexdigest()
+    _cached = cache.get(_cache_key)
+    if _cached is not None:
+        return JsonResponse(_cached)
+
     qs = role_base
     if region:        qs = qs.filter(region=region)
     if pta:           qs = qs.filter(commercial_district=pta)
@@ -934,17 +950,21 @@ def dashboard_data(request):
     # ── Technology site count breakdown ───────────────────────
     # Count distinct sites per technology generation
     # A site with "2G+3G+4G" counts toward 4G; "2G+3G" toward 3G; "2G" toward 2G
-    sites_4g = (qs_kpi.filter(technology__icontains='4G')
-                .exclude(key__isnull=True).exclude(key='')
-                .values('key').distinct().count())
-    sites_3g = (qs_kpi.filter(technology__icontains='3G')
-                .exclude(technology__icontains='4G')  # exclude sites already counted in 4G
-                .exclude(key__isnull=True).exclude(key='')
-                .values('key').distinct().count())
-    sites_2g = (qs_kpi.exclude(technology__icontains='3G')
-                .exclude(technology__icontains='4G')
-                .exclude(key__isnull=True).exclude(key='')
-                .values('key').distinct().count())
+    # Single query for all technology site counts — classify in Python
+    _tech_rows = (qs_kpi.exclude(key__isnull=True).exclude(key='')
+                  .values('key', 'technology').distinct())
+    _s4g = set(); _s3g = set(); _s2g = set()
+    for row in _tech_rows:
+        k, t = row['key'], (row['technology'] or '')
+        if '4G' in t:
+            _s4g.add(k)
+        elif '3G' in t:
+            _s3g.add(k)
+        else:
+            _s2g.add(k)
+    sites_4g = len(_s4g)
+    sites_3g = len(_s3g)
+    sites_2g = len(_s2g)
     kpis['sites_4g'] = sites_4g
     kpis['sites_3g'] = sites_3g
     kpis['sites_2g'] = sites_2g
@@ -1274,7 +1294,8 @@ def dashboard_data(request):
         'ada':          [s_ada[y]      for y in trend_years],
     }
 
-    return JsonResponse({
+    # ── Cache the result ────────────────────────────────────────
+    _response_data = {
         'kpis':   {k: safe(v) for k, v in kpis.items()},
         'growth': growth,
         'revenue_by_region': {'labels': [r['region'] for r in revenue_by_region],    'values': sl(revenue_by_region, 'revenue')},
@@ -1296,7 +1317,9 @@ def dashboard_data(request):
         'churn_revival':          {'labels': [r['region'] for r in churn_revival], 'churn': sl(churn_revival, 'churn'), 'revival': sl(churn_revival, 'revival')},
         'churn_revival_by_month': churn_revival_by_month,
         'base_trends':            base_trends,
-    })
+    }
+    cache.set(_cache_key, _response_data, 300)  # 5 min TTL
+    return JsonResponse(_response_data)
 
 
 # ── Nearby Sites ──────────────────────────────────────────────
