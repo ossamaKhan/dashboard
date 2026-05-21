@@ -378,6 +378,8 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 </div>
 <main>
 
+
+
   <!-- ══ Target vs Achievement KPI cards (with TVA% + YTD/GOLM/YOY growth) ══ -->
 
   <div class="kpi">
@@ -527,14 +529,78 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   </div>
 
   <div class="kpi">
-    <div class="kpi-label">Female FCA</div>
-    <div class="kpi-value" id="kpi-female-fca" style="color:var(--purple2)">—</div>
-    <div class="kpi-growth" style="margin-top:10px">
-      <div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="g-female-fca-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="g-female-fca-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="g-female-fca-ytd-curr">—</span></div></div>
+    <div class="kpi-label">EVC Active Base</div>
+    <div class="kpi-value" id="kpi-evc-active-base" style="color:var(--teal)">—</div>
+    <div class="kpi-divider" style="margin-top:10px"></div>
+    <div class="kpi-growth" data-metric="evc_active_base" style="margin-top:10px">
+      <div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="g-evc-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="g-evc-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="g-evc-ytd-curr">—</span></div></div>
+      <div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="g-evc-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="g-evc-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="g-evc-mtd-curr">—</span></div></div>
+      <div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="g-evc-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="g-evc-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="g-evc-yoy-curr">—</span></div></div>
     </div>
   </div>
+  <!-- ══ Grand FCA Card ══ -->
+  <div class="kpi span-full" id="grand-fca-card" style="border:2px solid var(--orange);background:linear-gradient(135deg,var(--panel-bg) 0%,rgba(245,130,32,0.04) 100%)">
 
+    <!-- Header row: FCA Achievement prominently displayed -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+      <div>
+        <div class="kpi-label" style="font-size:10px;letter-spacing:1.5px">FCA ACHIEVEMENT · GRAND SUMMARY</div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-top:4px">
+          <div class="kpi-value" id="grand-fca-ach" style="font-size:36px;color:var(--orange)">—</div>
+          <div style="font-size:12px;color:var(--muted);font-weight:700">of <span id="grand-fca-tgt" style="color:var(--orange);font-weight:800">—</span> target</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="att-pct" id="grand-fca-pct" style="display:inline-flex;align-items:center;padding:4px 14px;border-radius:20px;font-size:14px;font-weight:900;background:rgba(0,200,83,0.12);color:#00C853">—</div>
+        <div style="height:8px;width:160px;background:var(--input-bg);border-radius:6px;overflow:hidden">
+          <div id="grand-fca-bar" style="height:100%;background:linear-gradient(90deg,var(--orange),var(--purple));width:0%;transition:width .8s ease"></div>
+        </div>
+      </div>
+    </div>
 
+    <div class="kpi-divider"></div>
+
+    <!-- Sub-metrics grid: 6 items each showing absolute + % of FCA -->
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:14px" id="grand-sub-grid">
+
+      <div style="background:var(--input-bg);border-radius:12px;padding:12px 14px;border:1px solid var(--border)">
+        <div class="kpi-label" style="font-size:9px;margin-bottom:6px">SD Bundle</div>
+        <div style="font-size:16px;font-weight:900;color:var(--purple)" id="grand-sd-bundle">—</div>
+        <div style="font-size:10px;font-weight:800;color:var(--muted);margin-top:4px"><span id="grand-sd-bundle-pct" style="color:var(--teal)">—</span> of FCA</div>
+      </div>
+
+      <div style="background:var(--input-bg);border-radius:12px;padding:12px 14px;border:1px solid var(--border)">
+        <div class="kpi-label" style="font-size:9px;margin-bottom:6px">ZR</div>
+        <div style="font-size:16px;font-weight:900;color:var(--teal)" id="grand-zr">—</div>
+        <div style="font-size:10px;font-weight:800;color:var(--muted);margin-top:4px"><span id="grand-zr-pct" style="color:var(--teal)">—</span> of FCA</div>
+      </div>
+
+      <div style="background:var(--input-bg);border-radius:12px;padding:12px 14px;border:1px solid var(--border)">
+        <div class="kpi-label" style="font-size:9px;margin-bottom:6px">Dormancy</div>
+        <div style="font-size:16px;font-weight:900;color:var(--red)" id="grand-dormancy">—</div>
+        <div style="font-size:10px;font-weight:800;color:var(--muted);margin-top:4px"><span id="grand-dormancy-pct" style="color:var(--red)">—</span> of FCA</div>
+      </div>
+
+      <div style="background:var(--input-bg);border-radius:12px;padding:12px 14px;border:1px solid var(--border)">
+        <div class="kpi-label" style="font-size:9px;margin-bottom:6px">Female FCA</div>
+        <div style="font-size:16px;font-weight:900;color:var(--purple2)" id="grand-female-fca">—</div>
+        <div style="font-size:10px;font-weight:800;color:var(--muted);margin-top:4px"><span id="grand-female-fca-pct" style="color:var(--purple2)">—</span> of FCA</div>
+      </div>
+
+      <div style="background:var(--input-bg);border-radius:12px;padding:12px 14px;border:1px solid var(--border)">
+        <div class="kpi-label" style="font-size:9px;margin-bottom:6px">Bundle Ach</div>
+        <div style="font-size:16px;font-weight:900;color:var(--orange)" id="grand-bundle-ach">—</div>
+        <div style="font-size:10px;font-weight:800;color:var(--muted);margin-top:4px"><span id="grand-bundle-ach-pct" style="color:var(--orange)">—</span> of FCA</div>
+      </div>
+
+      <div style="background:var(--input-bg);border-radius:12px;padding:12px 14px;border:1px solid var(--border)">
+        <div class="kpi-label" style="font-size:9px;margin-bottom:6px">QOS Ach</div>
+        <div style="font-size:16px;font-weight:900;color:var(--green)" id="grand-qos-ach">—</div>
+        <div style="font-size:10px;font-weight:800;color:var(--muted);margin-top:4px"><span id="grand-qos-ach-pct" style="color:var(--green)">—</span> of FCA</div>
+      </div>
+
+    </div>
+  </div>
 </main>
 <footer>
   <img src="{% static 'images/logo1.jpg' %}" style="height:40px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
@@ -702,6 +768,7 @@ function updateKPIs(data){
     ['m0rev',   'm0_revenue_ach'],
     ['hvc',     'hvc_ach'],
     ['bundle',  'bundle_ach'],
+    ['evc',     'evc_active_base'],
   ];
   growthCards.forEach(([uid, metricKey])=>{
     const g = growth[metricKey];
@@ -722,26 +789,43 @@ function updateKPIs(data){
       }
     });
   });
-  
-  // Female FCA — YTD only
-  const fg = growth.female_fca_count;
-  if (fg) {
-    const fc = document.getElementById('g-female-fca-ytd-curr');
-    const fp = document.getElementById('g-female-fca-ytd-prev');
-    const fb = document.getElementById('g-female-fca-ytd-badge');
-    if (fc) fc.textContent = fmt(fg.ytd_curr);
-    if (fp) fp.textContent = fmt(fg.ytd_prev);
-    if (fb){
-      const sign = fg.ytd_pct>0?'+':'';
-      fb.textContent = sign + (fg.ytd_pct||0).toFixed(1) + '%';
-      fb.className = 'growth-badge ' + (fg.ytd_pct>=0?'positive':'negative');
-    }
-  }
-  set('kpi-female-fca', fmt(k.female_fca_count));
-  
-  updateLogoSub();
-}
 
+  updateLogoSub();
+
+  // ── Grand FCA Card ──────────────────────────────────────────
+  const fca = k.fca_ach || 0;
+  const set2 = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  const pctOf = (v) => fca > 0 ? (v / fca * 100).toFixed(1) + '%' : '—';
+
+  // Header
+  set2('grand-fca-ach', fmt(fca));
+  set2('grand-fca-tgt', fmt(k.fca_target || 0));
+  const fcaTva = k.fca_attainment || 0;
+  const fcaPctEl = document.getElementById('grand-fca-pct');
+  if(fcaPctEl){
+    fcaPctEl.textContent = fcaTva.toFixed(1) + '%';
+    let bg='rgba(0,200,83,0.12)', color='#00C853';
+    if(fcaTva < 70){ bg='rgba(255,61,0,0.12)'; color='#FF3D00'; }
+    else if(fcaTva < 100){ bg='rgba(255,193,7,0.15)'; color='#FFA000'; }
+    fcaPctEl.style.background = bg; fcaPctEl.style.color = color;
+  }
+  const barEl = document.getElementById('grand-fca-bar');
+  if(barEl) barEl.style.width = Math.min(fcaTva, 100) + '%';
+
+  // Sub-metrics: absolute + % of FCA
+  const subMetrics = [
+    ['grand-sd-bundle',    'grand-sd-bundle-pct',    k.sd_bundle      || 0],
+    ['grand-zr',           'grand-zr-pct',            k.zr             || 0],
+    ['grand-dormancy',     'grand-dormancy-pct',      k.dormancy_count || 0],
+    ['grand-female-fca',   'grand-female-fca-pct',    k.female_fca_count|| 0],
+    ['grand-bundle-ach',   'grand-bundle-ach-pct',    k.bundle_ach     || 0],
+    ['grand-qos-ach',      'grand-qos-ach-pct',       k.qos_ach        || 0],
+  ];
+  subMetrics.forEach(([absId, pctId, val]) => {
+    set2(absId, fmt(val));
+    set2(pctId, pctOf(val));
+  });
+}
 function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/channel/api/data/?'+p).then(r=>r.json()).then(data=>{lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});}
 
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}

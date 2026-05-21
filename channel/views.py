@@ -184,6 +184,9 @@ def channel_data(request):
         'mtd_served':            Sum('mtd_served'),
         'retailer_trans_count_1':Sum('retailer_trans_count_1'),
         'retailer_trans_count_2':Sum('retailer_trans_count_2'),
+        'sd_bundle':             Sum('sd_bundle'),
+        'zr':                    Sum('zr'),
+        'dormancy_count':        Sum('dormancy_count'),
     }
     kpis_raw = qs.aggregate(**agg_fields)
     kpis = {k: safe(v) for k, v in kpis_raw.items()}
