@@ -253,7 +253,12 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 @media(max-width:580px){#site-map{height:240px}}
 @media(max-width:580px){.ph{flex-direction:column;gap:6px}.ptag{align-self:flex-start}}
 @media(max-width:580px){footer{display:none}}
+
+.chart-panel{background:var(--panel-bg);border:1.5px solid var(--border);border-radius:16px;padding:20px;position:relative;overflow:hidden;transition:box-shadow .3s,background .35s;box-shadow:var(--shadow)}
+.h260{height:260px}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}.pt{font-size:13px;font-weight:800;color:var(--text)}.ps{font-size:11px;font-weight:500;color:var(--muted);margin-top:2px}.ptag{font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:var(--orange);color:#fff;flex-shrink:0}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 <div id="loading"><div class="loader-track"></div><div class="loader-label">Loading Brief</div></div>
@@ -609,6 +614,8 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 </div>
 </div>
 <script>
+Chart.register({id:'globalLabels',afterDatasetsDraw(c){const ctx=c.ctx;if(!ctx||['doughnut','polarArea','pie'].includes(c.config.type))return;ctx.save();c.data.datasets.forEach((ds,i)=>{const m=c.getDatasetMeta(i);if(m.hidden)return;m.data.forEach((p,idx)=>{const v=ds.data[idx];if(v==null||v===0)return;const isMob=c.width<500;if(isMob&&idx%2!==0&&m.type==='line')return;const txt=fmt(v);ctx.font=`bold ${isMob?9:11}px Poppins`;ctx.textAlign='center';ctx.fillStyle=textColor();const isHoriz=c.config.options.indexAxis==='y';const ySafe=isHoriz?p.y+4:(p.y<30?p.y+20:p.y-10);const xSafe=isHoriz?p.x+25:p.x;ctx.fillText(txt,xSafe,ySafe);});});ctx.restore();}});
+
 const ROLE_CONFIG={category:'{{ locked.category }}',regionLocked:{{ locked.region.locked|yesno:"true,false" }},buLocked:{{ locked.bu.locked|yesno:"true,false" }},buValue:'{{ locked.bu.value|default:"" }}'};
 function toggleSidebar(){const s=document.getElementById('sidebar'),o=document.getElementById('sidebar-overlay'),b=document.getElementById('mob-nav-btn'),mab=document.getElementById('mob-action-bar');s.classList.toggle('open');o.classList.toggle('open');const isOpen=s.classList.contains('open');if(b)b.style.display=isOpen?'none':'flex';if(mab)mab.style.display=isOpen?'none':'flex';}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').classList.remove('open');const b=document.getElementById('mob-nav-btn');if(b)b.style.display='flex';const mab=document.getElementById('mob-action-bar');if(mab)mab.style.display='flex';}
