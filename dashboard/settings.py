@@ -27,7 +27,6 @@ ALLOWED_HOSTS = [
     'dashboard-fcy3.onrender.com',
     'localhost',
     '127.0.0.1',
-    "dashboard-mu-ten-50.vercel.app",
 ]
 # Application definition
 
@@ -81,15 +80,36 @@ LOGIN_URL = '/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/'    
 
+'''
+DATABASES = {
+"default": {
+"ENGINE": "django.db.backends.sqlite3",
+"NAME": BASE_DIR / "db.sqlite3",
+}
+}
+'''
+
+# Add these at the top of your settings.py
+import os
+from dotenv import load_dotenv
+from urllib.parse import urlparse, parse_qsl
+
+load_dotenv()
+
+# Replace the DATABASES section of your settings.py with this
+tmpPostgres = urlparse(os.getenv("DATABASE_URL"))
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': tmpPostgres.path.replace('/', ''),
+        'USER': tmpPostgres.username,
+        'PASSWORD': tmpPostgres.password,
+        'HOST': tmpPostgres.hostname,
+        'PORT': 5432,
+        'OPTIONS': dict(parse_qsl(tmpPostgres.query)),
     }
 }
-
-
 
 CACHES = {
     'default': {
