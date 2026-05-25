@@ -1,6 +1,7 @@
 Django==5.2.14
 gunicorn==23.0.0
 whitenoise==6.9.0
+python-dotenv==1.0.1
 
 pandas==2.3.0
 numpy==2.3.0
