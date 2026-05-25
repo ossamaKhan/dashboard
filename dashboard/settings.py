@@ -27,6 +27,9 @@ ALLOWED_HOSTS = [
     'dashboard-fcy3.onrender.com',
     'localhost',
     '127.0.0.1',
+    '.vercel.app',
+    'now.sh',
+    'dashboard-mu-ten-50.vercel.app',
 ]
 # Application definition
 
