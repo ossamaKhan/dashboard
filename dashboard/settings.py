@@ -83,13 +83,13 @@ LOGIN_URL = '/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/'    
 
-'''
 DATABASES = {
 "default": {
 "ENGINE": "django.db.backends.sqlite3",
 "NAME": BASE_DIR / "db.sqlite3",
 }
 }
+
 '''
 
 # Add these at the top of your settings.py
@@ -113,7 +113,7 @@ DATABASES = {
         'OPTIONS': dict(parse_qsl(tmpPostgres.query)),
     }
 }
-
+'''
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',

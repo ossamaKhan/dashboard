@@ -28,7 +28,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .nv:hover{background:#fff5ee;color:#f58220}
 .nv.active{background:#fff5ee;color:#f58220;border-left-color:#f58220}
 .nv-ico{font-size:14px;width:18px;text-align:center;flex-shrink:0}
-.sb-footer{flex-shrink:0;padding:14px 18px;border-top:1px solid rgba(0,0,0,0.07);background:#ffffff;width:200px}
+.sb-.sb-footer{flex-shrink:0;padding:14px 18px;border-top:1px solid rgba(0,0,0,0.07);background:#ffffff;width:200px}
 .sb-user{font-size:11.5px;font-weight:700;color:#4a4570;margin-bottom:3px}
 .sb-email{font-size:10px;font-weight:500;color:#8a85a5;margin-bottom:12px;word-break:break-all}
 .logout-btn{display:flex;align-items:center;gap:8px;width:100%;background:rgba(255,61,0,0.07);border:1.5px solid rgba(255,61,0,0.2);border-radius:8px;padding:8px 12px;font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;color:#FF3D00;cursor:pointer;transition:all .2s;text-decoration:none}
@@ -279,6 +279,8 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <a href="/channel/" class="nv active" onclick="closeSidebar()">Channel Brief</a>
     <a href="/channel/performance/" class="nv" onclick="closeSidebar()">Target Performance</a>
     <a href="/channel/retailers/" class="nv" onclick="closeSidebar()">Retailer Health</a>
+    <a href="/channel/enablers/" class="nv" onclick="closeSidebar()">Enablers</a>
+    <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
     <div class="sb-sec">Account</div>
     <a href="/profile/" class="nv" onclick="closeSidebar()">Profile Settings</a>
     <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
@@ -534,15 +536,66 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   </div>
 
   <div class="kpi">
-    <div class="kpi-label">EVC Active Base</div>
+    <div class="kpi-label">CM EVC Active</div>
     <div class="kpi-value" id="kpi-evc-active-base" style="color:var(--teal)">—</div>
     <div class="kpi-divider" style="margin-top:10px"></div>
-    <div class="kpi-growth" data-metric="evc_active_base" style="margin-top:10px">
+    <div class="kpi-growth" data-metric="cm_evc_active" style="margin-top:10px">
       <div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="g-evc-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="g-evc-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="g-evc-ytd-curr">—</span></div></div>
       <div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="g-evc-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="g-evc-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="g-evc-mtd-curr">—</span></div></div>
       <div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="g-evc-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="g-evc-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="g-evc-yoy-curr">—</span></div></div>
     </div>
   </div>
+
+  <!-- ══ ARPU Cards ══ -->
+  <div class="kpi span-full" style="border-top:3px solid var(--purple2);padding-bottom:4px">
+    <div style="font-size:10px;font-weight:900;color:var(--purple2);text-transform:uppercase;letter-spacing:2px;margin-bottom:14px">M0 ARPU — Revenue per Activation</div>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px">
+
+      <div style="background:var(--input);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px">
+        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">GA ARPU</div>
+        <div style="font-size:20px;font-weight:900;color:var(--orange)" id="kpi-arpu-ga">—</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Rev: <span id="kpi-arpu-rev-ga" style="color:var(--orange)">—</span></div>
+        <div style="font-size:10px;color:var(--muted)">Vol: <span id="kpi-arpu-vol-ga">—</span></div>
+      </div>
+
+      <div style="background:var(--input);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px">
+        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">FCA ARPU</div>
+        <div style="font-size:20px;font-weight:900;color:var(--teal)" id="kpi-arpu-fca">—</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Rev: <span id="kpi-arpu-rev-fca" style="color:var(--teal)">—</span></div>
+        <div style="font-size:10px;color:var(--muted)">Vol: <span id="kpi-arpu-vol-fca">—</span></div>
+      </div>
+
+      <div style="background:var(--input);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px">
+        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">MNP ARPU</div>
+        <div style="font-size:20px;font-weight:900;color:var(--purple)" id="kpi-arpu-mnp">—</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Rev: <span id="kpi-arpu-rev-mnp" style="color:var(--purple)">—</span></div>
+        <div style="font-size:10px;color:var(--muted)">Vol: <span id="kpi-arpu-vol-mnp">—</span></div>
+      </div>
+
+      <div style="background:var(--input);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px">
+        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">MBB ARPU</div>
+        <div style="font-size:20px;font-weight:900;color:#00BCD4" id="kpi-arpu-mbb">—</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Rev: <span id="kpi-arpu-rev-mbb" style="color:#00BCD4">—</span></div>
+        <div style="font-size:10px;color:var(--muted)">Vol: <span id="kpi-arpu-vol-mbb">—</span></div>
+      </div>
+
+      <div style="background:var(--input);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px">
+        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Data SIM ARPU</div>
+        <div style="font-size:20px;font-weight:900;color:#00C853" id="kpi-arpu-datasim">—</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Rev: <span id="kpi-arpu-rev-datasim" style="color:#00C853">—</span></div>
+        <div style="font-size:10px;color:var(--muted)">Vol: <span id="kpi-arpu-vol-datasim">—</span></div>
+      </div>
+
+      <div style="background:var(--input);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px">
+        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">HVC ARPU</div>
+        <div style="font-size:20px;font-weight:900;color:#FFD600" id="kpi-arpu-hvc">—</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Rev: <span id="kpi-arpu-rev-hvc" style="color:#FFD600">—</span></div>
+        <div style="font-size:10px;color:var(--muted)">Vol: <span id="kpi-arpu-vol-hvc">—</span></div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- ══ Grand FCA Card ══ -->
   <div class="kpi span-full" id="grand-fca-card" style="border:2px solid var(--orange);background:linear-gradient(135deg,var(--panel-bg) 0%,rgba(245,130,32,0.04) 100%)">
 
@@ -758,6 +811,9 @@ function updateKPIs(data){
     if(barEl) barEl.style.width=Math.min(pct,100)+'%';
   });
   
+  // EVC Active Base card value (CM EVC Active)
+  set('kpi-evc-active-base', fmt(k.cm_evc_active||0));
+
   // 4G penetration as % (share of FCA that are 4G)
   const penEl=document.getElementById('pen-4g');
   if(penEl){
@@ -775,7 +831,7 @@ function updateKPIs(data){
     ['m0rev',   'm0_revenue_ach'],
     ['hvc',     'hvc_ach'],
     ['bundle',  'bundle_ach'],
-    ['evc',     'evc_active_base'],
+    ['evc',     'cm_evc_active'],
   ];
   growthCards.forEach(([uid, metricKey])=>{
     const g = growth[metricKey];
@@ -831,6 +887,23 @@ function updateKPIs(data){
   subMetrics.forEach(([absId, pctId, val]) => {
     set2(absId, fmt(val));
     set2(pctId, pctOf(val));
+  });
+
+
+  // ── ARPU calculations ────────────────────────────────────────────────────
+  const arpu_map = [
+    ['ga',      k.m0_rev_ga,       k.cm_ga],
+    ['fca',     k.m0_rev_fca,      k.fca_ach],
+    ['mnp',     k.m0_rev_mnp,      k.mnp_ach],
+    ['mbb',     k.m0_rev_mbb,      k.mbb_ach],
+    ['datasim', k.m0_rev_data_sim, k.data_sim_fca],
+    ['hvc',     k.m0_hvc_rev,      k.hvc_ach],
+  ];
+  arpu_map.forEach(([uid, rev, vol]) => {
+    const arpu = (rev && vol && vol > 0) ? (rev / vol) : 0;
+    set(`kpi-arpu-${uid}`,     arpu > 0 ? fmt(Math.round(arpu)) : '—');
+    set(`kpi-arpu-rev-${uid}`, rev  > 0 ? fmt(rev)  : '—');
+    set(`kpi-arpu-vol-${uid}`, vol  > 0 ? fmt(vol)  : '—');
   });
 }
 function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/channel/api/data/?'+p).then(r=>r.json()).then(data=>{lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});}

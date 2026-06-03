@@ -273,11 +273,15 @@ def map_data(request):
 
     franchises = qs.values(
         'key', 'latitude', 'longitude', 'region', 'commercial_district',
-        'technology', 'site_status', 'business_unit'
+        'technology', 'site_status', 'business_unit', 'franchise', 'arm'
     ).annotate(
         total_revenue=Sum('tot_revn_amt'),
         site_count=Count('id'),
         total_activations=Sum('act_90d'),
+        total_base_4g=Sum('act_90d_4g'),
+        total_net_add=Sum('net_add'),
+        total_gross_churn=Sum('gross_churn'),
+        total_hvc=Sum('hvc_base'),
         total_evc=Sum('evc_retailer'),
         total_bvs=Sum('bvs_retailer'),
         total_conv_recharge=Sum('conventional_recharge'),
@@ -313,15 +317,22 @@ def map_data(request):
             'lng':           lng,
             'region':        f['region'] or '',
             'district':      f['commercial_district'] or '',
+            'franchise':     f['franchise'] or '',
+            'arm':           f['arm'] or '',
             'technology':    f['technology'] or '',
             'site_status':   f['site_status'] or '',
             'business_unit': bu,
             'revenue':       safe(f['total_revenue']),
             'activations':   safe(f['total_activations']),
+            'base_4g':       safe(f.get('total_base_4g')),
+            'net_add':       safe(f.get('total_net_add')),
+            'churn':         safe(f.get('total_gross_churn')),
+            'hvc':           safe(f.get('total_hvc')),
             'evc_base':      safe(f.get('total_evc')),
             'bvs_base':      safe(f.get('total_bvs')),
             'conv_recharge': safe(f.get('total_conv_recharge')),
             'digi_recharge': digi,
+            'total_recharge': safe(f.get('total_conv_recharge')) + digi,
         })
         bu_points[bu].append((lng, lat))
         if f['key']:

@@ -22,9 +22,7 @@
         <div class="sc-title">🔐 Dashboard Access Role</div>
         <div class="sc-sub">Controls which data this user sees when they log in to the dashboard</div>
 
-        <!-- Three role radio buttons styled as cards -->
         <div class="role-selector">
-
           <label class="role-opt" id="opt-Region">
             <input type="radio" name="category" value="Region"
                    {% if not profile or profile.category == 'Region' %}checked{% endif %}/>
@@ -34,17 +32,15 @@
               <div class="role-desc">Full access — all data, all filters unlocked</div>
             </div>
           </label>
-
           <label class="role-opt" id="opt-BU">
             <input type="radio" name="category" value="BU"
                    {% if profile and profile.category == 'BU' %}checked{% endif %}/>
             <div class="role-card">
               <div class="role-icon">🏗️</div>
               <div class="role-name">Business Unit</div>
-              <div class="role-desc">Scoped to one BU — Region filter locked</div>
+              <div class="role-desc">Scoped to one or more BUs — Region filter locked</div>
             </div>
           </label>
-
           <label class="role-opt" id="opt-ARM">
             <input type="radio" name="category" value="ARM"
                    {% if profile and profile.category == 'ARM' %}checked{% endif %}/>
@@ -54,29 +50,33 @@
               <div class="role-desc">Scoped to one ARM — Region + BU locked</div>
             </div>
           </label>
-
         </div>
 
-        <!-- BU picker — shown only when BU is selected -->
+        <!-- BU multi-select checkboxes -->
         <div class="role-sub-field" id="bu-field"
              style="{% if not profile or profile.category != 'BU' %}display:none{% endif %}">
-          <label class="form-label">Business Unit <span class="req">*</span></label>
-          <div class="select-wrap">
-            <span class="sel-ico">🏗️</span>
-            <select name="user_business_unit" id="bu-select" class="form-input sel-input">
-              <option value="">— Select Business Unit —</option>
-              {% for bu in bu_choices %}
-              <option value="{{ bu }}"
-                {% if profile and profile.user_business_unit == bu %}selected{% endif %}>
-                {{ bu }}
-              </option>
-              {% endfor %}
-            </select>
+          <label class="form-label">Business Units <span class="req">*</span></label>
+          <div class="field-hint" style="margin-bottom:8px">Select one or more Business Units this user can access</div>
+          {% with selected_bus=profile.user_business_unit|default:"" %}
+          <div class="bu-checkbox-grid" id="bu-checkbox-grid">
+            {% for bu in bu_choices %}
+            <label class="bu-check-item">
+              <input type="checkbox" name="user_business_unit" value="{{ bu }}"
+                {% if bu in selected_bus %}checked{% endif %}/>
+              <span class="bu-check-label">{{ bu }}</span>
+            </label>
+            {% endfor %}
           </div>
-          <div class="field-hint">This user will only see data for the selected Business Unit</div>
+          {% endwith %}
+          <div style="margin-top:8px;display:flex;gap:8px">
+            <button type="button" onclick="toggleAllBU(true)"  class="bu-all-btn">Select All</button>
+            <button type="button" onclick="toggleAllBU(false)" class="bu-all-btn">Clear All</button>
+          </div>
+          <div id="bu-selected-summary" class="field-hint" style="margin-top:6px;color:var(--orange)"></div>
+          <div class="field-hint" style="margin-top:4px">This user will only see data for selected Business Units</div>
         </div>
 
-        <!-- ARM picker — shown only when ARM is selected -->
+        <!-- ARM picker -->
         <div class="role-sub-field" id="arm-field"
              style="{% if not profile or profile.category != 'ARM' %}display:none{% endif %}">
           <label class="form-label">ARM Value <span class="req">*</span></label>
@@ -95,7 +95,6 @@
           <div class="field-hint">This user will only see data for this specific ARM</div>
         </div>
 
-        <!-- Current assignment summary (edit mode only) -->
         {% if not is_create and profile %}
         <div class="role-summary">
           <span class="rsm-label">Current assignment:</span>
@@ -114,7 +113,6 @@
       <div class="section-card">
         <div class="sc-title">Account Details</div>
         <div class="sc-sub">Login credentials and permissions</div>
-
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">Username *</label>
@@ -139,7 +137,6 @@
                    value="{% if edit_user %}{{ edit_user.last_name }}{% endif %}"/>
           </div>
         </div>
-
         <div class="divider">
           {% if is_create %}Password{% else %}Change Password (leave blank to keep current){% endif %}
         </div>
@@ -228,8 +225,6 @@
 
     <!-- ═══════════════ RIGHT SIDEBAR ═══════════════ -->
     <div class="form-sidebar">
-
-      <!-- User preview card -->
       <div class="section-card preview-card">
         <div class="sc-title">Preview</div>
         <div class="preview-avatar" id="preview-avatar">
@@ -243,12 +238,9 @@
         <div class="preview-email" id="preview-email">
           {% if not is_create and edit_user %}{{ edit_user.email }}{% else %}user@ptclgroup.com{% endif %}
         </div>
-
-        <!-- Live role badge -->
         <div style="margin-top:12px;text-align:center">
           <div id="preview-role-badge" class="prev-role-badge"></div>
         </div>
-
         {% if not is_create and profile %}
         <div style="margin-top:14px">
           <div class="prev-info"><span>📱</span> {{ profile.phone|default:"No phone" }}</div>
@@ -267,7 +259,6 @@
         {% endif %}
       </div>
 
-      <!-- Action buttons -->
       <div class="section-card">
         <div class="sc-title">Actions</div>
         <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
@@ -280,8 +271,7 @@
           {% endif %}
         </div>
       </div>
-
-    </div><!-- /form-sidebar -->
+    </div>
   </div>
 </form>
 
@@ -294,15 +284,11 @@
 .form-layout{display:grid;grid-template-columns:1fr 280px;gap:20px;align-items:start}
 .form-col{display:flex;flex-direction:column;gap:18px}
 .form-sidebar{display:flex;flex-direction:column;gap:18px}
-
-/* Section cards */
 .section-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:20px 22px}
 .section-card::before{content:'';display:block;height:3px;background:#f58220;border-radius:14px 14px 0 0;margin:-20px -22px 16px}
 .rbac-card::before{background:linear-gradient(90deg,#f58220,#AB1DFE)}
 .sc-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:3px}
 .sc-sub{font-size:11px;color:var(--muted);margin-bottom:18px}
-
-/* Role selector */
 .role-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
 .role-opt{cursor:pointer}
 .role-opt input[type=radio]{display:none}
@@ -314,27 +300,30 @@
 .role-icon{font-size:24px;margin-bottom:6px}
 .role-name{font-size:12px;font-weight:800;color:var(--text);margin-bottom:3px}
 .role-desc{font-size:10px;font-weight:500;color:var(--muted);line-height:1.4}
-
-/* Sub-field (BU/ARM picker) */
 .role-sub-field{background:var(--input);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:4px}
 .req{color:#FF3D00}
 .select-wrap{position:relative;margin-top:5px}
 .sel-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;z-index:1}
 .sel-input{padding-left:32px!important;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238a85a5' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;cursor:pointer}
 .field-hint{font-size:10px;font-weight:600;color:var(--muted);margin-top:6px}
-
-/* Current assignment summary */
 .role-summary{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);flex-wrap:wrap}
 .rsm-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
 .rsm-chip{display:inline-flex;align-items:center;gap:5px;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700}
-.rsm-chip.green {background:rgba(0,200,83,0.1);border:1.5px solid rgba(0,200,83,0.3);color:#00C853}
+.rsm-chip.green{background:rgba(0,200,83,0.1);border:1.5px solid rgba(0,200,83,0.3);color:#00C853}
 .rsm-chip.purple{background:rgba(171,29,254,0.1);border:1.5px solid rgba(171,29,254,0.3);color:#AB1DFE}
 .rsm-chip.orange{background:rgba(245,130,32,0.1);border:1.5px solid rgba(245,130,32,0.3);color:#f58220}
-
-/* Preview role badge */
 .prev-role-badge{display:inline-flex;align-items:center;gap:5px;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700}
-
-/* Form fields */
+/* BU checkbox grid */
+.bu-checkbox-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;max-height:200px;overflow-y:auto;padding:4px 2px}
+.bu-check-item{display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--card);transition:all .18s}
+.bu-check-item:hover{border-color:#AB1DFE;background:rgba(171,29,254,0.05)}
+.bu-check-item input[type=checkbox]{width:14px;height:14px;accent-color:#AB1DFE;flex-shrink:0}
+.bu-check-item input:checked~.bu-check-label{color:#AB1DFE;font-weight:800}
+.bu-check-item:has(input:checked){border-color:#AB1DFE;background:rgba(171,29,254,0.07)}
+.bu-check-label{font-size:11px;font-weight:600;color:var(--text2)}
+.bu-all-btn{background:var(--input);border:1.5px solid var(--border);border-radius:7px;padding:5px 12px;font-size:10px;font-weight:700;color:var(--text2);cursor:pointer;transition:all .2s}
+.bu-all-btn:hover{border-color:#AB1DFE;color:#AB1DFE}
+/* Form */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .form-full{grid-column:span 2}
 .form-group{display:flex;flex-direction:column;gap:5px}
@@ -349,41 +338,33 @@ select.form-input{appearance:none;cursor:pointer;background-image:url("data:imag
 .checkbox-group{display:flex;flex-direction:column;gap:10px;margin-top:4px}
 .checkbox-label{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer}
 .checkbox-label input{width:15px;height:15px;accent-color:#f58220}
-
-/* Preview card */
 .preview-card{text-align:center}
 .preview-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#f58220,#AB1DFE);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;margin:10px auto 12px;border:2px solid rgba(245,130,32,0.3)}
 .preview-name{font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px}
 .preview-email{font-size:11px;color:var(--muted);word-break:break-all}
 .prev-info{font-size:11px;color:var(--text2);font-weight:500;display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid var(--border)}
 .prev-info:last-child{border-bottom:none}
-
-/* Buttons */
 .save-btn{background:#f58220;color:#fff;border:none;border-radius:9px;padding:11px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;width:100%;box-shadow:0 4px 14px rgba(245,130,32,0.3)}
 .save-btn:hover{background:#e07318;transform:translateY(-1px)}
 .cancel-btn{display:block;text-align:center;background:var(--input);border:1.5px solid var(--border);border-radius:9px;padding:10px;font-size:12px;font-weight:700;color:var(--text2);text-decoration:none;transition:all .2s}
 .cancel-btn:hover{border-color:var(--muted);color:var(--text)}
 .delete-btn{display:block;text-align:center;background:rgba(255,61,0,0.07);border:1.5px solid rgba(255,61,0,0.2);border-radius:9px;padding:10px;font-size:12px;font-weight:700;color:#FF3D00;text-decoration:none;transition:all .2s}
 .delete-btn:hover{background:rgba(255,61,0,0.14)}
-
 @media(max-width:900px){.form-layout{grid-template-columns:1fr}.form-sidebar{order:-1}}
-@media(max-width:600px){.form-grid{grid-template-columns:1fr}.form-full{grid-column:span 1}.role-selector{grid-template-columns:1fr}}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}.form-full{grid-column:span 1}.role-selector{grid-template-columns:1fr}.bu-checkbox-grid{grid-template-columns:1fr}}
 </style>
 
 <script>
-// Set designation dropdown to saved value
 {% if profile and profile.designation %}
 document.getElementById('desig-select').value = "{{ profile.designation }}";
 {% endif %}
 
-// Password visibility toggle
 function togglePw(id, btn) {
   const inp = document.getElementById(id);
   inp.type = inp.type === 'password' ? 'text' : 'password';
   btn.textContent = inp.type === 'password' ? '👁️' : '🙈';
 }
 
-// Password strength
 document.getElementById('pw-field').addEventListener('input', function() {
   const val = this.value;
   let s = 0;
@@ -391,20 +372,13 @@ document.getElementById('pw-field').addEventListener('input', function() {
   if (/[A-Z]/.test(val)) s++;
   if (/[0-9]/.test(val)) s++;
   if (/[^A-Za-z0-9]/.test(val)) s++;
-  const m = {
-    0:{w:'0%',  c:'#FF3D00',l:'Too short'},
-    1:{w:'25%', c:'#FF3D00',l:'Weak'},
-    2:{w:'50%', c:'#FFD600',l:'Fair'},
-    3:{w:'75%', c:'#00BCD4',l:'Good'},
-    4:{w:'100%',c:'#00C853',l:'Strong 💪'},
-  };
-  document.getElementById('pw-bar').style.width      = m[s].w;
+  const m = {0:{w:'0%',c:'#FF3D00',l:'Too short'},1:{w:'25%',c:'#FF3D00',l:'Weak'},2:{w:'50%',c:'#FFD600',l:'Fair'},3:{w:'75%',c:'#00BCD4',l:'Good'},4:{w:'100%',c:'#00C853',l:'Strong 💪'}};
+  document.getElementById('pw-bar').style.width = m[s].w;
   document.getElementById('pw-bar').style.background = m[s].c;
-  document.getElementById('pw-lbl').textContent      = m[s].l;
-  document.getElementById('pw-lbl').style.color      = m[s].c;
+  document.getElementById('pw-lbl').textContent = m[s].l;
+  document.getElementById('pw-lbl').style.color = m[s].c;
 });
 
-// Live preview
 document.querySelector('[name="first_name"]').addEventListener('input', updatePreview);
 document.querySelector('[name="last_name"]').addEventListener('input', updatePreview);
 document.querySelector('[name="email"]').addEventListener('input', function() {
@@ -418,42 +392,61 @@ function updatePreview() {
   if (initials) document.getElementById('preview-avatar').textContent = initials.toUpperCase();
 }
 
-// ── RBAC role switcher ─────────────────────────────────────────
+// BU select all / clear all
+function toggleAllBU(check) {
+  document.querySelectorAll('#bu-checkbox-grid input[type=checkbox]').forEach(cb => cb.checked = check);
+  updateBUSummary();
+}
+
+function updateBUSummary() {
+  const checked = [...document.querySelectorAll('#bu-checkbox-grid input:checked')].map(cb => cb.value);
+  const el = document.getElementById('bu-selected-summary');
+  if (checked.length === 0) {
+    el.textContent = 'No BUs selected';
+    el.style.color = '#FF3D00';
+  } else {
+    el.textContent = checked.length + ' BU' + (checked.length > 1 ? 's' : '') + ' selected: ' + checked.join(', ');
+    el.style.color = '#AB1DFE';
+  }
+}
+
+document.querySelectorAll('#bu-checkbox-grid input[type=checkbox]').forEach(cb => {
+  cb.addEventListener('change', updateBUSummary);
+});
+
+// RBAC role switcher
 const buField  = document.getElementById('bu-field');
 const armField = document.getElementById('arm-field');
-const buSelect  = document.getElementById('bu-select');
 const armSelect = document.getElementById('arm-select');
-const badge    = document.getElementById('preview-role-badge');
+const badge = document.getElementById('preview-role-badge');
 
 const ROLE_CFG = {
-  Region: {label:'🌍 Full Access',    bg:'rgba(0,200,83,0.1)',   border:'rgba(0,200,83,0.3)',   color:'#00C853'},
-  BU:     {label:'🏗️ Business Unit',  bg:'rgba(171,29,254,0.1)', border:'rgba(171,29,254,0.3)', color:'#AB1DFE'},
-  ARM:    {label:'👤 ARM Scoped',     bg:'rgba(245,130,32,0.1)', border:'rgba(245,130,32,0.3)', color:'#f58220'},
+  Region: {label:'🌍 Full Access',   bg:'rgba(0,200,83,0.1)',   border:'rgba(0,200,83,0.3)',   color:'#00C853'},
+  BU:     {label:'🏗️ Business Unit', bg:'rgba(171,29,254,0.1)', border:'rgba(171,29,254,0.3)', color:'#AB1DFE'},
+  ARM:    {label:'👤 ARM Scoped',    bg:'rgba(245,130,32,0.1)', border:'rgba(245,130,32,0.3)', color:'#f58220'},
 };
 
 function applyRole(val) {
-  // Show/hide sub-pickers
   buField.style.display  = (val === 'BU')  ? '' : 'none';
   armField.style.display = (val === 'ARM') ? '' : 'none';
-  // Clear unused fields so they aren't submitted with stale values
-  if (val !== 'BU')  buSelect.value  = '';
+  if (val !== 'BU')  document.querySelectorAll('#bu-checkbox-grid input').forEach(cb => cb.checked = false);
   if (val !== 'ARM') armSelect.value = '';
-  // Update preview badge
   const cfg = ROLE_CFG[val] || ROLE_CFG.Region;
-  badge.textContent      = cfg.label;
+  badge.textContent = cfg.label;
   badge.style.background = cfg.bg;
-  badge.style.border     = `1.5px solid ${cfg.border}`;
-  badge.style.color      = cfg.color;
+  badge.style.border = `1.5px solid ${cfg.border}`;
+  badge.style.color = cfg.color;
+  if (val === 'BU') updateBUSummary();
 }
 
 document.querySelectorAll('input[name="category"]').forEach(r => {
   r.addEventListener('change', () => applyRole(r.value));
 });
 
-// Run on load to restore saved state
 (function(){
   const checked = document.querySelector('input[name="category"]:checked');
   applyRole(checked ? checked.value : 'Region');
+  updateBUSummary();
 })();
 </script>
 

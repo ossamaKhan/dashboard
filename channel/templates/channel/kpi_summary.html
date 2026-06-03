@@ -1,0 +1,444 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ufone 5G · KPI Summary</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+:root{--orange:#f58220;--purple:#AB1DFE;--teal:#00BCD4;--green:#00C853;--red:#FF3D00;--yellow:#FFD600;--font:'Poppins',sans-serif}
+[data-theme="light"]{--bg:#e8e9ed;--border:rgba(0,0,0,0.09);--border2:rgba(245,130,32,0.2);--text:#1a1235;--text2:#4a4570;--muted:#8a85a5;--shadow:0 2px 10px rgba(0,0,0,0.07);--header-bg:#fff;--panel-bg:#fff;--input-bg:#e8e9ed;--dd-bg:#fff;--filter-bg:#f0f1f5}
+[data-theme="dark"]{--bg:#0b0720;--border:rgba(171,29,254,0.18);--border2:rgba(245,130,32,0.2);--text:#f0ecff;--text2:#b8b0e8;--muted:#6b6590;--shadow:0 4px 24px rgba(0,0,0,0.4);--header-bg:rgba(15,11,40,0.97);--panel-bg:#150f35;--input-bg:#1c1645;--dd-bg:#1c1645;--filter-bg:rgba(15,11,40,0.98)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;min-height:100vh;transition:background .35s,color .35s}
+/* Loading */
+#loading{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .4s}
+#loading.hidden{opacity:0;pointer-events:none}
+.loader-track{width:48px;height:48px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--orange);animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Layout */
+.sidebar{width:200px;flex-shrink:0;background:#ffffff;border-right:1px solid rgba(0,0,0,0.09);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;overflow:hidden;transition:transform .3s ease;z-index:200}
+.sb-nav-scroll{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
+.sb-sec{font-size:9px;font-weight:700;color:#8a85a5;text-transform:uppercase;letter-spacing:1.5px;padding:14px 18px 5px}
+.nv{display:flex;align-items:center;gap:9px;padding:9px 18px;font-size:12.5px;font-weight:700;color:#555577;cursor:pointer;border-left:3px solid transparent;transition:all .15s;user-select:none;text-decoration:none}
+.nv:hover{background:#fff5ee;color:#f58220}
+.nv.active{background:#fff5ee;color:#f58220;border-left-color:#f58220}
+.sb-footer{flex-shrink:0;padding:14px 18px;border-top:1px solid rgba(0,0,0,0.07);background:#ffffff;width:200px}
+.sb-user{font-size:11.5px;font-weight:700;color:#4a4570;margin-bottom:3px}
+.sb-email{font-size:10px;font-weight:500;color:#8a85a5;margin-bottom:12px;word-break:break-all}
+.logout-btn{display:flex;align-items:center;gap:8px;width:100%;background:rgba(255,61,0,0.07);border:1.5px solid rgba(255,61,0,0.2);border-radius:8px;padding:8px 12px;font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;color:#FF3D00;cursor:pointer;transition:all .2s;text-decoration:none}
+.logout-btn:hover{background:rgba(255,61,0,0.14)}
+[data-theme="dark"] .sidebar{background:#1a1a2e;border-right-color:#252540}
+[data-theme="dark"] .nv{color:#9090b8}
+[data-theme="dark"] .nv:hover,[data-theme="dark"] .nv.active{background:rgba(245,130,32,0.1);color:#f58220}
+[data-theme="dark"] .sb-footer{border-top-color:#252540;background:#1a1a2e}
+[data-theme="dark"] .sb-user{color:#b8b0e8}
+[data-theme="dark"] .sb-email{color:#6b6590}
+.page{margin-left:200px;display:flex;flex-direction:column;min-height:100vh}
+/* Header */
+header{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--header-bg);border-bottom:1px solid var(--border);gap:12px}
+
+/* Filters */
+.filter-bar{padding:10px 24px;background:var(--filter-bg);border-bottom:2px solid var(--border2);display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.fw{position:relative;min-width:110px;flex:1;max-width:200px}
+.fw-label{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.fi{width:100%;background:var(--input-bg);border:1.5px solid var(--border);border-radius:9px;color:var(--text);font-family:var(--font);font-size:12px;font-weight:600;padding:8px 11px;outline:none;cursor:pointer}
+.fi:focus{border-color:var(--orange)}
+.fi.active{border-color:var(--orange);color:var(--orange);background:rgba(245,130,32,0.06)}
+.fdd{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--dd-bg);border:1.5px solid var(--border);border-radius:10px;max-height:200px;overflow-y:auto;z-index:500;display:none;box-shadow:0 8px 24px rgba(0,0,0,0.15)}
+.fdd.open{display:block}
+.ddi{padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text2);border-bottom:1px solid var(--border)}
+.ddi:last-child{border-bottom:none}
+.ddi:hover{background:rgba(245,130,32,0.07);color:var(--orange)}
+/* Main */
+main{flex:1;padding:16px 24px;display:flex;flex-direction:column;gap:14px}
+/* Controls */
+.controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.period-wrap{display:flex;border:1.5px solid var(--border);border-radius:10px;overflow:hidden}
+.pbtn{padding:7px 16px;border:none;background:transparent;font-family:var(--font);font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .2s}
+.pbtn.on{background:var(--orange);color:#fff}
+.drill-badge{font-size:11px;font-weight:800;color:var(--text);padding:5px 12px;background:var(--input-bg);border:1.5px solid var(--border);border-radius:9px}
+.back-btn{font-size:11px;font-weight:800;color:var(--orange);background:rgba(245,130,32,0.08);border:1.5px solid rgba(245,130,32,0.3);border-radius:9px;padding:5px 12px;cursor:pointer;display:none}
+.ref-label{font-size:10px;color:var(--muted);font-weight:600;margin-left:auto}
+/* Table */
+.tbl-wrap{background:var(--panel-bg);border:1.5px solid var(--border);border-radius:14px;overflow:hidden}
+.tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:11px;min-width:600px}
+thead th{background:var(--input-bg);color:var(--text);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;padding:10px 12px;text-align:center;border-bottom:2px solid var(--border2);white-space:nowrap;position:sticky;top:0}
+thead th:first-child{text-align:left}
+tbody td{border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:rgba(245,130,32,0.04)!important}
+.tva-g{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;min-width:48px;background:rgba(0,200,83,0.12);color:#00C853;border:1px solid rgba(0,200,83,0.3)}
+.tva-y{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;min-width:48px;background:rgba(255,160,0,0.12);color:#FFA000;border:1px solid rgba(255,160,0,0.3)}
+.tva-r{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;min-width:48px;background:rgba(255,61,0,0.10);color:#FF3D00;border:1px solid rgba(255,61,0,0.25)}
+/* Suggestions */
+#sugg{margin-top:0}
+/* Footer */
+footer{padding:16px 24px;background:var(--panel-bg);border-top:2px solid var(--border2);display:flex;align-items:center;justify-content:space-between}
+/* Mobile */
+.mob-nav-btn{display:none;position:fixed;top:12px;left:12px;z-index:1000;background:var(--orange);border:none;border-radius:10px;width:40px;height:40px;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:#fff;box-shadow:0 4px 12px rgba(245,130,32,0.35)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:190}
+.sidebar-overlay.open{display:block}
+@media(max-width:1024px){
+  .sidebar{transform:translateX(-100%);transition:transform .3s}
+  .sidebar.open{transform:translateX(0)}
+  .page{margin-left:0}
+  .mob-nav-btn{display:flex;align-items:center;justify-content:center}
+  header{padding-left:60px}
+  .mob-nav-btn{display:flex}
+}
+@media(max-width:600px){
+  .filter-bar{gap:8px}
+  .fw{min-width:calc(50% - 8px);max-width:100%}
+  main{padding:12px}
+  .controls{flex-direction:column;align-items:stretch}
+  .ref-label{margin-left:0}
+}
+.theme-toggle{position:relative;width:56px;height:28px;background:var(--input-bg);border:1px solid var(--border);border-radius:28px;cursor:pointer;transition:border-color .2s;flex-shrink:0}
+.theme-toggle:hover{border-color:var(--orange)}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--orange);box-shadow:0 2px 8px rgba(245,130,32,0.4);transition:transform .3s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;justify-content:center;font-size:11px}
+[data-theme="dark"] .toggle-thumb{transform:translateX(28px)}
+.toggle-icons{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 7px;font-size:11px;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="loading"><div class="loader-track"></div><div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase">Loading</div></div>
+
+<button class="mob-nav-btn" id="mob-nav-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sb-nav-scroll">
+    <div class="sb-logo" style="padding:14px 18px;border-bottom:1px solid rgba(0,0,0,0.07);display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <img src="{% static 'images/logo1.jpg' %}" style="height:34px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
+      <div><div style="font-size:12px;font-weight:800;color:var(--orange)">Ufone 5G</div></div>
+    </div>
+    <div class="sb-sec">Marketing</div>
+    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Executive Brief</a>
+    <a href="/base/" class="nv" onclick="closeSidebar()">Base Analytics</a>
+    <a href="/revenue/" class="nv" onclick="closeSidebar()">Revenue Analytics</a>
+    <div class="sb-sec">Channel</div>
+    <a href="/channel/" class="nv" onclick="closeSidebar()">Channel Brief</a>
+    <a href="/channel/performance/" class="nv" onclick="closeSidebar()">Target Performance</a>
+    <a href="/channel/retailers/" class="nv" onclick="closeSidebar()">Retailer Health</a>
+    <a href="/channel/enablers/" class="nv" onclick="closeSidebar()">Enablers</a>
+    <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
+    <a href="/channel/kpi-summary/" class="nv active" onclick="closeSidebar()">KPI Summary</a>
+    <div class="sb-sec">Account</div>
+    <a href="/profile/" class="nv" onclick="closeSidebar()">Profile Settings</a>
+    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
+    <div style="flex:1"></div>
+  </div>
+  <div class="sb-footer">
+    <div class="sb-user">{{ request.user.get_full_name|default:request.user.username }}</div>
+    <div class="sb-email">{{ request.user.email }}</div>
+    <a href="{% url 'logout' %}" class="logout-btn"><span>🚪</span> Sign Out</a>
+  </div>
+</aside>
+
+<div class="page">
+  <header>
+    <div style="display:flex;align-items:center;gap:12px">
+      <img src="{% static 'images/logo1.jpg' %}" style="height:38px;border-radius:8px;" alt="Ufone"/>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:2px;text-transform:uppercase" id="logo-sub">KPI SUMMARY</div>
+    </div>
+    <div class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+      <div class="toggle-icons"><span>☀️</span><span>🌙</span></div>
+      <div class="toggle-thumb"><span id="toggle-icon">☀️</span></div>
+    </div>
+  </header>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <div class="fw">
+      <div class="fw-label">Region</div>
+      <input class="fi" id="in-region" placeholder="All Regions" readonly/>
+      <div class="fdd" id="dd-region"></div>
+    </div>
+    <div class="fw" id="fw-bu">
+      <div class="fw-label">BU</div>
+      <input class="fi" id="in-bu" placeholder="All BUs" readonly/>
+      <div class="fdd" id="dd-bu"></div>
+    </div>
+    <div class="fw" id="fw-arm">
+      <div class="fw-label">ARM</div>
+      <input class="fi" id="in-arm" placeholder="All ARMs" readonly/>
+      <div class="fdd" id="dd-arm"></div>
+    </div>
+    <div class="fw" id="fw-franchise">
+      <div class="fw-label">Franchise</div>
+      <input class="fi" id="in-franchise" placeholder="All Franchises" readonly/>
+      <div class="fdd" id="dd-franchise"></div>
+    </div>
+    <div class="fw" style="max-width:110px">
+      <div class="fw-label">Year</div>
+      <input class="fi" id="in-year" placeholder="—" readonly/>
+      <div class="fdd" id="dd-year"></div>
+    </div>
+    <div class="fw" style="max-width:110px">
+      <div class="fw-label">Month</div>
+      <input class="fi" id="in-month" placeholder="—" readonly/>
+      <div class="fdd" id="dd-month"></div>
+    </div>
+    <button onclick="resetAll()" style="background:rgba(255,61,0,0.07);border:1.5px solid rgba(255,61,0,0.2);color:#FF3D00;border-radius:9px;padding:8px 14px;font-family:var(--font);font-size:11px;font-weight:700;cursor:pointer;align-self:flex-end">✕ Reset</button>
+  </div>
+
+  <main>
+    <!-- Controls -->
+    <div class="controls">
+      <div class="period-wrap">
+        <button class="pbtn on" data-p="ytd"  onclick="setPeriod('ytd')">YTD</button>
+        <button class="pbtn"    data-p="golm" onclick="setPeriod('golm')">GOLM</button>
+        <button class="pbtn"    data-p="yoy"  onclick="setPeriod('yoy')">YOY</button>
+      </div>
+      <div class="drill-badge" id="drill-badge">All Regions</div>
+      <button class="back-btn" id="back-btn" onclick="drillUp()">← Back</button>
+      <div class="ref-label" id="ref-label"></div>
+    </div>
+
+    <!-- Table -->
+    <div class="tbl-wrap">
+      <div class="tbl-scroll">
+        <table>
+          <thead id="thead"></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Suggestions -->
+    <div id="sugg"></div>
+  </main>
+
+  <footer>
+    <img src="{% static 'images/logo1.jpg' %}" style="height:36px;border-radius:8px;" alt="Ufone"/>
+    <div style="font-size:11px;color:var(--muted)">© 2026 Ufone 5G · Central B</div>
+  </footer>
+</div>
+
+<script>
+const saved = localStorage.getItem('theme') || 'light';
+document.documentElement.setAttribute('data-theme', saved);
+document.addEventListener('DOMContentLoaded', ()=>{
+  const icon = document.getElementById('toggle-icon');
+  if(icon) icon.textContent = saved === 'dark' ? '🌙' : '☀️';
+});
+function toggleTheme(){
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('toggle-icon').textContent = isDark ? '☀️' : '🌙';
+  localStorage.setItem('theme', isDark ? 'light' : 'dark');
+}
+
+// ── Sidebar ──────────────────────────────────────────────────────────────────
+function toggleSidebar(){const s=document.getElementById('sidebar'),o=document.getElementById('sidebar-overlay'),b=document.getElementById('mob-nav-btn');s.classList.toggle('open');o.classList.toggle('open');const isOpen=s.classList.contains('open');if(b)b.style.display=isOpen?'none':'flex';}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').classList.remove('open');const b=document.getElementById('mob-nav-btn');if(b)b.style.display='flex';}
+
+// ── Filter state ─────────────────────────────────────────────────────────────
+const LOCKED = { category:'{{ locked.category }}', buLocked:{{ locked.bu.locked|yesno:"true,false" }}, buValue:'{{ locked.bu.value|default:"" }}' };
+const S = { region:null, business_unit:null, arm:null, franchise:null, year:null, month:null };
+
+function setupDD(inId, ddId, onSelect){
+  const inp = document.getElementById(inId);
+  const dd  = document.getElementById(ddId);
+  if(!inp||!dd) return;
+  inp.addEventListener('focus', ()=>dd.classList.add('open'));
+  inp.addEventListener('blur',  ()=>setTimeout(()=>dd.classList.remove('open'), 160));
+}
+function buildDD(ddId, items, onSelect, allLabel){
+  const dd = document.getElementById(ddId);
+  if(!dd) return;
+  dd.innerHTML = '';
+  const all = document.createElement('div');
+  all.className = 'ddi'; all.textContent = '— ' + allLabel;
+  all.addEventListener('mousedown', ()=>onSelect(null));
+  dd.appendChild(all);
+  items.forEach(item=>{
+    const el = document.createElement('div');
+    el.className = 'ddi';
+    const isObj = typeof item==='object' && item!==null;
+    el.textContent = isObj ? item.label : item;
+    el.addEventListener('mousedown', ()=>onSelect(isObj ? String(item.val) : item));
+    dd.appendChild(el);
+  });
+}
+function setFi(id, val){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.value = val || '';
+  el.classList.toggle('active', !!val);
+}
+
+setupDD('in-region','dd-region');
+setupDD('in-bu','dd-bu');
+setupDD('in-arm','dd-arm');
+setupDD('in-franchise','dd-franchise');
+setupDD('in-year','dd-year');
+setupDD('in-month','dd-month');
+
+function loadFilters(){
+  const p = new URLSearchParams();
+  if(S.region)        p.set('region', S.region);
+  if(S.business_unit) p.set('business_unit', S.business_unit);
+  if(S.arm)           p.set('arm', S.arm);
+  fetch('/channel/api/filters/?' + p)
+    .then(r=>r.json())
+    .then(data=>{
+      buildDD('dd-region', data.regions||[], v=>{ S.region=v; S.business_unit=null; S.arm=null; S.franchise=null; setFi('in-region',v); setFi('in-bu',null); setFi('in-arm',null); setFi('in-franchise',null); loadFilters(); fetchTable(); }, 'All Regions');
+      buildDD('dd-bu', data.business_units||[], v=>{ S.business_unit=v; S.arm=null; S.franchise=null; setFi('in-bu',v); setFi('in-arm',null); setFi('in-franchise',null); loadFilters(); fetchTable(); }, 'All BUs');
+      buildDD('dd-arm', data.arms||[], v=>{ S.arm=v; S.franchise=null; setFi('in-arm',v); setFi('in-franchise',null); loadFilters(); fetchTable(); }, 'All ARMs');
+      buildDD('dd-franchise', data.franchises||[], v=>{ S.franchise=v; setFi('in-franchise',v); fetchTable(); }, 'All Franchises');
+      buildDD('dd-year', data.years||[], v=>{ S.year=v; setFi('in-year',v); fetchTable(); }, 'All Years');
+      buildDD('dd-month', data.months||[], v=>{ S.month=v; setFi('in-month',v?'Month '+v:null); fetchTable(); }, 'All Months');
+      // Set default year on first load
+      if(!S.year && data.latest_year){ S.year=String(data.latest_year); setFi('in-year', S.year); fetchTable(); }
+    });
+}
+
+function resetAll(){
+  Object.keys(S).forEach(k=>S[k]=null);
+  ['in-region','in-bu','in-arm','in-franchise','in-year','in-month'].forEach(id=>setFi(id,null));
+  drillStack=[];updateDrillUI();
+  loadFilters(); fetchTable();
+}
+
+// Apply role locks
+if(LOCKED.buLocked && LOCKED.buValue){ S.business_unit=LOCKED.buValue; setFi('in-bu',LOCKED.buValue); }
+
+// ── Period + Drill ───────────────────────────────────────────────────────────
+let period = 'ytd';
+let drillStack = [];
+
+function setPeriod(p){
+  period = p;
+  document.querySelectorAll('.pbtn').forEach(b=>b.classList.toggle('on', b.dataset.p===p));
+  fetchTable();
+}
+function drillDown(gf, gv, label){
+  drillStack.push({gf, gv, label});
+  updateDrillUI(); fetchTable();
+}
+function drillUp(){ drillStack.pop(); updateDrillUI(); fetchTable(); }
+function updateDrillUI(){
+  const badge = document.getElementById('drill-badge');
+  const btn   = document.getElementById('back-btn');
+  badge.textContent = drillStack.length ? drillStack[drillStack.length-1].label : 'All Regions';
+  btn.style.display = drillStack.length ? '' : 'none';
+}
+
+// ── Fetch table ──────────────────────────────────────────────────────────────
+function buildParams(){
+  const p = new URLSearchParams();
+  if(S.region)        p.set('region', S.region);
+  if(S.business_unit) p.set('business_unit', S.business_unit);
+  if(S.arm)           p.set('arm', S.arm);
+  if(S.franchise)     p.set('franchise', S.franchise);
+  if(S.year)          p.set('year', S.year);
+  if(S.month)         p.set('month', S.month);
+  p.set('period', period);
+  const fm = {region:'region',business_unit:'business_unit',arm:'arm',franchise_id:'franchise',key:'franchise'};
+  drillStack.forEach(d=>p.set(fm[d.gf]||d.gf, d.gv));
+  return p;
+}
+
+function showLoading(){ document.getElementById('loading').classList.remove('hidden'); }
+function hideLoading(){ document.getElementById('loading').classList.add('hidden'); }
+
+function fetchTable(){
+  showLoading();
+  fetch('/channel/api/kpi-table/?' + buildParams())
+    .then(r=>r.json())
+    .then(data=>{ renderTable(data); hideLoading(); })
+    .catch(e=>{ console.error(e); hideLoading(); });
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function fmt(v){ return v==null?'—':v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(1)+'K':Math.round(v).toLocaleString(); }
+function pill(t){ if(t==null)return'<span style="color:var(--muted)">—</span>'; const c=t>=90?'tva-g':t>=75?'tva-y':'tva-r'; return`<span class="${c}">${t}%</span>`; }
+
+function renderTable(data){
+  const defs=data.kpi_defs||[], rows=data.rows||[], gl=data.group_label||'Group';
+  const isDrill = gl!=='Site';
+  const drillMap = {Region:'region',BU:'business_unit',ARM:'arm',Franchise:'franchise_id',Site:'key'};
+
+  // Update ref label
+  const rl = document.getElementById('ref-label');
+  if(rl) rl.textContent = `${period.toUpperCase()} · ${data.ref_year}/${String(data.ref_month).padStart(2,'0')}`;
+
+  // Header — uses var(--text) via CSS, no JS color needed
+  let h1 = `<tr><th rowspan="2" style="text-align:left;min-width:130px">${gl}</th>`;
+  defs.forEach(d=>{ h1+=`<th colspan="${d.has_tva?3:2}" style="border-left:1px solid var(--border2)">${d.label}</th>`; });
+  h1 += '</tr>';
+  let h2 = '<tr>';
+  defs.forEach(d=>{ h2+=`<th style="border-left:1px solid var(--border2);font-size:8px">Ach</th>${d.has_tva?'<th style="font-size:8px">TVA</th>':''}<th style="font-size:8px">Chg</th>`; });
+  h2 += '</tr>';
+  document.getElementById('thead').innerHTML = h1+h2;
+
+  // Body
+  const tbody = document.getElementById('tbody');
+  if(!rows.length){ tbody.innerHTML=`<tr><td colspan="60" style="text-align:center;padding:40px;color:var(--muted)">📭 No data</td></tr>`; return; }
+
+  const maxAch = defs.map((_,di)=>Math.max(...rows.map(r=>r.kpis[di]?.ach||0),1));
+  let html='';
+  rows.forEach((row,ri)=>{
+    const warn = row.kpis.some(k=>k.tva!=null&&k.tva<90);
+    const lb   = warn?'#FFA000':'#00C853';
+    const bg   = ri%2?'rgba(0,0,0,0.018)':'transparent';
+    const da   = isDrill ? `onclick="drillDown('${drillMap[gl]||gl}','${row.group.replace(/'/g,"\\'")}','${gl}: ${row.group.replace(/'/g,"\\'")}'"` : '';
+
+    html+=`<tr style="border-left:3px solid ${lb};background:${bg};cursor:${isDrill?'pointer':'default'}" ${da}>`;
+    html+=`<td style="padding:10px 14px">
+      <div style="display:flex;align-items:center;gap:7px">
+        ${isDrill?'<span style="color:var(--orange);font-size:10px">▶</span>':''}
+        <div>
+          <div style="font-size:12px;font-weight:800;color:var(--text)">${row.group}</div>
+          <div style="font-size:9px;font-weight:700;color:${lb}">${warn?'⚡ Review':'✓ On Track'}</div>
+        </div>
+      </div>
+    </td>`;
+
+    row.kpis.forEach((k,ki)=>{
+      const barW = maxAch[ki]>0 ? Math.round(k.ach/maxAch[ki]*100) : 0;
+      const ac   = k.has_tva&&k.tva!=null ? (k.tva>=90?'#00C853':k.tva>=75?'#FFA000':'#FF3D00') : 'var(--text)';
+      html+=`<td style="padding:8px 10px;border-left:1px solid var(--border);text-align:center">
+        <div style="font-weight:900;color:${ac}">${fmt(k.ach)}</div>
+        <div style="height:3px;background:var(--input-bg);border-radius:3px;margin-top:3px;overflow:hidden">
+          <div style="height:100%;width:${barW}%;background:${ac};border-radius:3px"></div>
+        </div>
+      </td>`;
+      if(k.has_tva) html+=`<td style="padding:6px 8px;text-align:center">${pill(k.tva)}</td>`;
+      const cc = k.chg==null?'var(--muted)':k.chg>=0?'#00C853':'#FF3D00';
+      html+=`<td style="padding:6px 8px;text-align:center;color:${cc};font-size:10px;font-weight:800">${k.chg!=null?(k.chg>=0?'↑+':'↓')+Math.abs(k.chg)+'%':'—'}</td>`;
+    });
+    html+='</tr>';
+  });
+  tbody.innerHTML = html;
+
+  // Suggestions
+  const sugg = document.getElementById('sugg');
+  const issues = [];
+  rows.forEach(r=>{ if(r.issues) r.issues.forEach(i=>issues.push({g:r.group,i})); });
+  if(!issues.length){
+    sugg.innerHTML=`<div style="padding:12px 16px;background:rgba(0,200,83,0.06);border:1.5px solid rgba(0,200,83,0.2);border-radius:10px;font-size:12px;font-weight:700;color:#00C853">✅ All groups on track</div>`;
+  } else {
+    let sh=`<div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⚠ Suggestions (${issues.length})</div>`;
+    sh+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px">`;
+    issues.forEach(({g,i})=>{
+      sh+=`<div style="background:rgba(255,61,0,0.04);border:1.5px solid rgba(255,61,0,0.15);border-radius:10px;padding:10px 12px">
+        <div style="font-size:9px;font-weight:800;color:var(--muted);margin-bottom:3px">${g}</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:600">${i.includes('declin')?'📉':'⚠️'} ${i}</div>
+      </div>`;
+    });
+    sh+=`</div>`;
+    sugg.innerHTML=sh;
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadFilters();
+</script>
+</body>
+</html>

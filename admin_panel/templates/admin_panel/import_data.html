@@ -1,149 +1,160 @@
 {% extends "admin_panel/base.html" %}
-
 {% block title %}Import Data — NetIQ{% endblock %}
 
 {% block extra_css %}
 <style>
-    .upload-card{
-        max-width:600px;
-        margin:auto;
-        text-align:center;
-    }
-
-    .upload-icon{
-        font-size:40px;
-        color:var(--orange);
-        margin-bottom:10px;
-    }
-
-    .file-input{
-        border:2px dashed var(--border);
-        padding:20px;
-        border-radius:12px;
-        cursor:pointer;
-        background:var(--input);
-        margin-top:15px;
-        display:block;
-    }
-
-    .file-input:hover{
-        border-color:var(--orange);
-    }
-
-    .btn-upload{
-        margin-top:20px;
-        background:var(--gradient-1);
-        border:none;
-        padding:10px 30px;
-        color:#fff;
-        font-weight:700;
-        border-radius:10px;
-    }
-
-    .btn-upload:hover{
-        transform:translateY(-2px);
-        box-shadow:0 8px 20px rgba(245,130,32,0.4);
-    }
-
-    /* Progress */
-    .progress-container{
-        margin-top:20px;
-        display:none;
-    }
-
-    .progress{
-        height:10px;
-        border-radius:10px;
-        overflow:hidden;
-        background:#eee;
-    }
-
-    .progress-bar{
-        height:100%;
-        width:0%;
-        background:var(--gradient-1);
-        transition:width 0.3s ease;
-    }
-
-    .progress-text{
-        margin-top:8px;
-        font-size:12px;
-        color:var(--muted);
-    }
+.import-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px;margin:0 auto}
+.import-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:24px;position:relative}
+.import-card::before{content:'';display:block;height:3px;border-radius:14px 14px 0 0;margin:-24px -24px 20px}
+.card-marketing::before{background:linear-gradient(90deg,#f58220,#FFD600)}
+.card-channel::before{background:linear-gradient(90deg,#AB1DFE,#5E35B1)}
+.card-title{font-size:15px;font-weight:900;color:var(--text);margin-bottom:4px}
+.card-sub{font-size:11px;color:var(--muted);margin-bottom:18px}
+.record-count{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:16px}
+.count-marketing{background:rgba(245,130,32,0.1);color:#f58220;border:1px solid rgba(245,130,32,0.25)}
+.count-channel{background:rgba(171,29,254,0.1);color:#AB1DFE;border:1px solid rgba(171,29,254,0.25)}
+.file-drop{border:2px dashed var(--border);padding:20px;border-radius:12px;cursor:pointer;background:var(--input);margin:10px 0;display:block;text-align:center;transition:all .2s}
+.file-drop:hover{border-color:var(--orange)}
+.file-drop.channel-drop:hover{border-color:#AB1DFE}
+.file-name{font-size:12px;font-weight:600;color:var(--muted)}
+.btn-upload{width:100%;border:none;padding:11px;color:#fff;font-weight:800;border-radius:10px;cursor:pointer;font-family:inherit;font-size:13px;transition:all .2s;margin-top:8px}
+.btn-marketing{background:#f58220;box-shadow:0 4px 14px rgba(245,130,32,0.3)}
+.btn-marketing:hover{background:#e07318;transform:translateY(-1px)}
+.btn-channel{background:#AB1DFE;box-shadow:0 4px 14px rgba(171,29,254,0.3)}
+.btn-channel:hover{background:#9b18e8;transform:translateY(-1px)}
+.progress-box{margin-top:12px;display:none}
+.progress-track{height:8px;border-radius:8px;background:var(--border);overflow:hidden}
+.progress-fill{height:100%;width:0%;border-radius:8px;transition:width .3s}
+.fill-marketing{background:linear-gradient(90deg,#f58220,#FFD600)}
+.fill-channel{background:linear-gradient(90deg,#AB1DFE,#5E35B1)}
+.progress-label{font-size:11px;color:var(--muted);margin-top:5px}
+/* Wipe section */
+.wipe-section{max-width:900px;margin:20px auto 0}
+.wipe-card{background:var(--card);border:1.5px solid rgba(255,61,0,0.25);border-radius:14px;padding:20px 24px}
+.wipe-title{font-size:13px;font-weight:800;color:#FF3D00;margin-bottom:4px}
+.wipe-sub{font-size:11px;color:var(--muted);margin-bottom:16px}
+.wipe-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.wipe-item{background:rgba(255,61,0,0.04);border:1.5px solid rgba(255,61,0,0.15);border-radius:10px;padding:14px}
+.wipe-label{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px}
+.wipe-confirm{width:100%;background:var(--input);border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:12px;color:var(--text);margin-bottom:8px;outline:none}
+.wipe-confirm:focus{border-color:#FF3D00}
+.btn-wipe{width:100%;background:rgba(255,61,0,0.08);border:1.5px solid rgba(255,61,0,0.3);border-radius:8px;padding:9px;color:#FF3D00;font-weight:800;font-family:inherit;font-size:12px;cursor:pointer;transition:all .2s}
+.btn-wipe:hover{background:rgba(255,61,0,0.15)}
+@media(max-width:700px){.import-grid,.wipe-grid{grid-template-columns:1fr}}
 </style>
 {% endblock %}
 
-
 {% block content %}
-
-<div class="page-header animate__animated animate__fadeIn">
-    <div class="page-title">Import Site Data</div>
-    <div class="page-sub">Upload Excel file to bulk insert site records</div>
+<div class="page-header">
+  <div>
+    <div class="page-title">Import Data</div>
+    <div class="page-sub">Upload Excel files to bulk insert records into the database</div>
+  </div>
 </div>
 
-<div class="section-card upload-card animate__animated animate__fadeInUp">
+<div class="import-grid">
 
-    <div class="upload-icon">
-        <i class="fas fa-cloud-upload-alt"></i>
-    </div>
-
-    <h4 style="font-weight:800;">Upload Excel File</h4>
-    <p class="text-muted">Only .xlsx files supported</p>
-
-    <form method="POST" enctype="multipart/form-data" id="uploadForm">
-        {% csrf_token %}
-
-        <label class="file-input">
-            <input type="file" name="file" hidden required onchange="showName(this)">
-            <span id="file-name">Click to choose file</span>
-        </label>
-
-        <button type="submit" class="btn-upload">
-            <i class="fas fa-upload me-1"></i> Upload Data
-        </button>
+  <!-- ── Marketing Import ───────────────────────────────── -->
+  <div class="import-card card-marketing">
+    <div class="card-title">📊 Marketing Data</div>
+    <div class="card-sub">Site-level marketing records (SiteData)</div>
+    <div class="record-count count-marketing">{{ marketing_count|default:0 }} records in DB</div>
+    <form method="POST" enctype="multipart/form-data" id="form-marketing">
+      {% csrf_token %}
+      <input type="hidden" name="data_type" value="marketing"/>
+      <label class="file-drop">
+        <input type="file" name="file" hidden required accept=".xlsx,.xls"
+               onchange="showName(this,'fname-marketing')"/>
+        <span id="fname-marketing" class="file-name">📁 Click to choose .xlsx file</span>
+      </label>
+      <button type="submit" class="btn-upload btn-marketing"
+              onclick="startProgress('prog-marketing','fill-marketing')">
+        ⬆️ Upload Marketing Data
+      </button>
     </form>
-
-    <!-- Progress -->
-    <div class="progress-container" id="progressBox">
-        <div class="progress">
-            <div class="progress-bar" id="progressBar"></div>
-        </div>
-        <div class="progress-text" id="progressText">Uploading...</div>
+    <div class="progress-box" id="prog-marketing">
+      <div class="progress-track"><div class="progress-fill fill-marketing" id="bar-marketing"></div></div>
+      <div class="progress-label" id="lbl-marketing">Uploading...</div>
     </div>
+  </div>
 
+  <!-- ── Channel Import ────────────────────────────────── -->
+  <div class="import-card card-channel">
+    <div class="card-title">📡 Channel Data</div>
+    <div class="card-sub">Franchise-level channel daily records (ChannelDaily)</div>
+    <div class="record-count count-channel">{{ channel_count|default:0 }} records in DB</div>
+    <form method="POST" enctype="multipart/form-data" id="form-channel">
+      {% csrf_token %}
+      <input type="hidden" name="data_type" value="channel"/>
+      <label class="file-drop channel-drop">
+        <input type="file" name="file" hidden required accept=".xlsx,.xls,.csv"
+               onchange="showName(this,'fname-channel')"/>
+        <span id="fname-channel" class="file-name">📁 Click to choose .xlsx / .csv file</span>
+      </label>
+      <button type="submit" class="btn-upload btn-channel"
+              onclick="startProgress('prog-channel','fill-channel')">
+        ⬆️ Upload Channel Data
+      </button>
+    </form>
+    <div class="progress-box" id="prog-channel">
+      <div class="progress-track"><div class="progress-fill fill-channel" id="bar-channel"></div></div>
+      <div class="progress-label" id="lbl-channel">Uploading...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Danger Zone ──────────────────────────────────────── -->
+<div class="wipe-section">
+  <div class="wipe-card">
+    <div class="wipe-title">⚠️ Danger Zone — Wipe Database</div>
+    <div class="wipe-sub">Permanently deletes all records. Type <strong>DELETE</strong> to confirm. This cannot be undone.</div>
+    <div class="wipe-grid">
+
+      <div class="wipe-item">
+        <div class="wipe-label">📊 Wipe Marketing Data <span style="color:#FF3D00">({{ marketing_count|default:0 }} records)</span></div>
+        <form method="POST" action="{% url 'wipe_data' %}">
+          {% csrf_token %}
+          <input type="hidden" name="data_type" value="marketing"/>
+          <input type="text" name="confirm" class="wipe-confirm" placeholder='Type DELETE to confirm'/>
+          <button type="submit" class="btn-wipe">🗑️ Wipe All Marketing Data</button>
+        </form>
+      </div>
+
+      <div class="wipe-item">
+        <div class="wipe-label">📡 Wipe Channel Data <span style="color:#FF3D00">({{ channel_count|default:0 }} records)</span></div>
+        <form method="POST" action="{% url 'wipe_data' %}">
+          {% csrf_token %}
+          <input type="hidden" name="data_type" value="channel"/>
+          <input type="text" name="confirm" class="wipe-confirm" placeholder='Type DELETE to confirm'/>
+          <button type="submit" class="btn-wipe">🗑️ Wipe All Channel Data</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
 </div>
 
 {% endblock %}
 
-
 {% block extra_js %}
 <script>
-function showName(input){
-    const name = input.files[0]?.name || "Click to choose file";
-    document.getElementById("file-name").innerText = name;
+function showName(input, spanId){
+  document.getElementById(spanId).textContent = input.files[0]?.name || 'Click to choose file';
 }
 
-// Simulated progress
-document.getElementById("uploadForm").addEventListener("submit", function(){
-    const progressBox = document.getElementById("progressBox");
-    const bar = document.getElementById("progressBar");
-    const text = document.getElementById("progressText");
-
-    progressBox.style.display = "block";
-
-    let progress = 0;
-
-    const interval = setInterval(() => {
-        if(progress < 90){
-            progress += Math.random() * 10;
-            bar.style.width = progress + "%";
-            text.innerText = "Uploading... " + Math.floor(progress) + "%";
-        } else {
-            clearInterval(interval);
-            bar.style.width = "95%";
-            text.innerText = "Processing file...";
-        }
-    }, 300);
-});
+function startProgress(boxId, fillId){
+  const box  = document.getElementById(boxId);
+  const fill = document.getElementById(fillId);
+  const lbl  = boxId === 'prog-marketing'
+    ? document.getElementById('lbl-marketing')
+    : document.getElementById('lbl-channel');
+  box.style.display = 'block';
+  let pct = 0;
+  const iv = setInterval(()=>{
+    if(pct < 88){ pct += Math.random()*8; fill.style.width=pct+'%'; lbl.textContent='Uploading... '+Math.floor(pct)+'%'; }
+    else{ clearInterval(iv); fill.style.width='92%'; lbl.textContent='Processing file...'; }
+  }, 350);
+}
 </script>
 {% endblock %}

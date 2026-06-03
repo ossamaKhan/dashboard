@@ -28,7 +28,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .nv:hover{background:#fff5ee;color:#f58220}
 .nv.active{background:#fff5ee;color:#f58220;border-left-color:#f58220}
 .nv-ico{font-size:14px;width:18px;text-align:center;flex-shrink:0}
-.sb-footer{flex-shrink:0;padding:14px 18px;border-top:1px solid rgba(0,0,0,0.07);background:#ffffff;width:200px}
+.sb-.sb-footer{flex-shrink:0;padding:14px 18px;border-top:1px solid rgba(0,0,0,0.07);background:#ffffff;width:200px}
 .sb-user{font-size:11.5px;font-weight:700;color:#4a4570;margin-bottom:3px}
 .sb-email{font-size:10px;font-weight:500;color:#8a85a5;margin-bottom:12px;word-break:break-all}
 .logout-btn{display:flex;align-items:center;gap:8px;width:100%;background:rgba(255,61,0,0.07);border:1.5px solid rgba(255,61,0,0.2);border-radius:8px;padding:8px 12px;font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;color:#FF3D00;cursor:pointer;transition:all .2s;text-decoration:none}
@@ -241,38 +241,117 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 [data-theme="dark"] .sb-footer{border-top-color:#252540;background:#1a1a2e}
 [data-theme="dark"] .sb-user{color:#b8b0e8}
 [data-theme="dark"] .sb-email{color:#6b6590}
-@media(max-width:1200px){main{grid-template-columns:repeat(2,1fr)}.span-3{grid-column:span 2}header,.filter-bar,main,footer{padding-left:18px;padding-right:18px}.kpi-value{font-size:20px}.fw{min-width:90px}.filter-row{gap:7px}}
-@media(max-width:1024px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.page-content{width:100%;margin-left:0}.mob-nav-btn{display:flex}header{padding-left:60px}.logo-text-wrap .logo-sub{display:none}main{padding-top:16px}}
-@media(max-width:768px){main{grid-template-columns:repeat(2,1fr);gap:12px;padding:14px}.span-2,.span-3{grid-column:span 2}.span-full{grid-column:1/-1}header{padding:10px 16px 10px 58px;gap:8px;flex-wrap:wrap}.header-meta{display:none}.header-right{gap:6px;flex-wrap:nowrap}.export-btn{display:none!important}.act-menu-wrap{display:block}.filter-bar{padding:0}.filter-toggle-btn{display:flex}.filter-row{gap:8px;padding:10px 14px;flex-wrap:wrap}.f-arrow{display:none}footer{padding:14px}#site-map{height:300px}.kpi-value{font-size:18px}.kpi{padding:14px 16px}.bu-legend{max-width:160px;right:10px;top:10px}}
-@media(max-width:580px){main{grid-template-columns:1fr;gap:10px;padding:12px 10px 80px}.span-2,.span-3,.span-full{grid-column:1/-1}header{padding:8px 12px 8px 54px}.role-badge{display:none}.act-menu-wrap{display:none!important}.mob-action-bar{display:flex}.filter-row{gap:6px;padding:10px 12px}.fw{min-width:calc(50% - 8px);max-width:calc(50% - 8px);flex:none}.row-tag{display:none}.spacer{display:none}footer{flex-direction:column;align-items:flex-start;gap:8px;padding:12px 12px 80px}.footer-right{gap:10px}.footer-copy{font-size:10px}#site-map{height:260px}.kpi-value{font-size:20px}.kpi{padding:14px}.growth-row{flex-wrap:wrap;gap:4px}.bu-legend{display:none!important}.pt{font-size:12px}.fw-label{font-size:9px;letter-spacing:1px}}
-@media(max-width:380px){.kpi-value{font-size:17px}.header-right{gap:4px}.theme-toggle{width:44px;height:24px}.toggle-thumb{width:16px;height:16px}[data-theme="dark"] .toggle-thumb{transform:translateX(20px)}.fw{min-width:calc(50% - 6px);max-width:calc(50% - 6px)}}
-@media(max-width:580px){main{grid-template-columns:repeat(2,1fr)}.kpi{padding:12px 14px}.kpi-value{font-size:17px;letter-spacing:-.5px}.kpi-label{font-size:9px;letter-spacing:1px}.kpi-sub{font-size:9px}.growth-row{font-size:9px}.growth-val{font-size:10px}.kpi-icon{font-size:18px;margin-bottom:5px}.span-2,.span-3,.span-full,.filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 12px}.fw{min-width:unset;max-width:unset;width:100%}.fw[style*="max-width:110px"],.fw[style*="max-width:160px"]{min-width:unset;max-width:unset;width:100%}.spacer{display:none}.row-tag{display:none}.af-bar{grid-column:1/-1}}
-@media(min-width:581px) and (max-width:768px){.filter-row{flex-wrap:wrap}.fw{min-width:calc(33% - 8px);flex:1}
-.fw.has-val{flex:2;min-width:160px!important;max-width:none!important}}
-@media(max-width:580px){}
-@media(max-width:580px){#site-map{height:240px}}
-@media(max-width:580px){.ph{flex-direction:column;gap:6px}.ptag{align-self:flex-start}}
-@media(max-width:580px){footer{display:none}}
 
+.chart-panel .h260{height:260px;position:relative;overflow:hidden}
+.chart-panel .h260 canvas{position:absolute;top:0;left:0;width:100%!important;height:100%!important}
+
+@media(max-width:1200px){
+  main,main.base-layout{grid-template-columns:repeat(2,1fr)}
+  .span-3{grid-column:span 2}
+  header,.filter-bar,main,footer{padding-left:18px;padding-right:18px}
+  .kpi-value{font-size:20px}
+  .fw{min-width:90px}
+  .filter-row{gap:7px}
+}
+@media(max-width:1024px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .page-content{width:100%;margin-left:0}
+  .mob-nav-btn{display:flex}
+  header{padding-left:60px}
+  .logo-text-wrap .logo-sub{display:none}
+  main{padding-top:16px}
+}
+@media(max-width:768px){
+  main,main.base-layout{grid-template-columns:repeat(2,1fr);gap:12px;padding:14px}
+  .span-2,.span-3{grid-column:span 2}
+  .span-full{grid-column:1/-1}
+  header{padding:10px 16px 10px 58px;gap:8px;flex-wrap:wrap}
+  .header-meta{display:none}
+  .header-right{gap:6px;flex-wrap:nowrap}
+  .export-btn{display:none!important}
+  .act-menu-wrap{display:block}
+  .filter-bar{padding:0}
+  .filter-toggle-btn{display:flex}
+  .filter-row{gap:8px;padding:10px 14px;flex-wrap:wrap}
+  .f-arrow{display:none}
+  footer{padding:14px}
+  .kpi-value{font-size:18px}
+  .kpi{padding:14px 16px}
+  .chart-panel .h260{height:220px}
+}
+@media(max-width:580px){
+  main,main.base-layout{grid-template-columns:1fr;gap:10px;padding:10px 10px 80px}
+  .span-2,.span-3,.span-full,.chart-panel{grid-column:1/-1}
+  .kpi{padding:12px 14px}
+  .kpi-value{font-size:17px;letter-spacing:-.5px}
+  .kpi-label{font-size:9px;letter-spacing:1px}
+  .kpi-sub{font-size:9px}
+  .kpi-growth-grid{grid-template-columns:repeat(3,1fr);gap:6px}
+  .kg-item{padding:6px 7px}
+  .kg-badge{font-size:9px;padding:2px 5px}
+  .kg-label{font-size:8px}
+  .kg-prev,.kg-curr{font-size:9px}
+  .h260{height:180px}
+  .chart-panel{padding:12px}
+  .ph{flex-direction:column;gap:4px}
+  .ptag{align-self:flex-start;margin-top:2px}
+  .pt{font-size:12px}
+  header{padding:8px 12px 8px 54px}
+  .role-badge{display:none}
+  .act-menu-wrap{display:none!important}
+  .mob-action-bar{display:flex}
+  .filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 12px}
+  .fw{min-width:unset;max-width:unset;width:100%}
+  .row-tag,.spacer{display:none}
+  footer{display:none}
+}
+
+@media(max-width:380px){
+  main,main.base-layout{grid-template-columns:1fr}
+  .kpi-value{font-size:16px}
+  .chart-panel .h260{height:160px}
+  .header-right{gap:4px}
+  .theme-toggle{width:44px;height:24px}
+  .toggle-thumb{width:16px;height:16px}
+}
+@media(min-width:581px) and (max-width:768px){
+  .filter-row{flex-wrap:wrap}
+  .fw{min-width:calc(33% - 8px);flex:1}
+}
+.chart-panel{background:var(--panel-bg);border:1.5px solid var(--border);border-radius:16px;padding:20px;position:relative;overflow:hidden;transition:box-shadow .3s,background .35s;box-shadow:var(--shadow)}
+.h260{height:260px;position:relative;overflow:hidden}
+.h260 canvas{position:absolute;top:0;left:0;width:100%!important;height:100%!important}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.pt{font-size:13px;font-weight:800;color:var(--text)}
+.ps{font-size:11px;font-weight:500;color:var(--muted);margin-top:2px}
+.ptag{font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:var(--orange);color:#fff;flex-shrink:0}
+.base-layout{position:relative;z-index:5;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:20px 24px}
+.span-2{grid-column:span 2}
+.span-full{grid-column:1/-1}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0}
+.kpi-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px}
+.kpi-value{font-size:22px;font-weight:900;letter-spacing:-1px;line-height:1}
+.kpi-sub{font-size:10px;font-weight:500;color:var(--muted);margin-top:5px}
+.kpi-meta{font-size:11px;font-weight:700;color:var(--muted);margin-top:6px}
+.kpi-meta-val{color:var(--orange);font-weight:800}
+.kpi-divider{height:1px;background:var(--border);margin:12px 0}
+.kpi-growth-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kg-item{background:var(--input-bg);border-radius:10px;padding:8px 10px}
+.kg-label{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+.kg-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;margin-bottom:5px}
+.kg-badge.positive{background:rgba(0,200,83,0.12);color:#00C853}
+.kg-badge.negative{background:rgba(255,61,0,0.10);color:#FF3D00}
+.kg-badge.warning{background:rgba(255,193,7,0.15);color:#FFA000}
+.kg-compare{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.kg-prev{font-size:10px;font-weight:600;color:var(--muted)}
+.kg-curr{font-size:11px;font-weight:800;color:var(--text)}
+.kg-arrow{font-size:9px;color:var(--muted);opacity:.5}
 .k-mnp::before{background:var(--orange)}
 .k-ga::before{background:var(--teal)}
 .k-rech::before{background:var(--purple)}
-.k-fca::before{background:var(--orange)}
-.kg-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;margin-bottom:5px}
-.kg-badge.positive{background:rgba(0,200,83,0.12);color:#00C853}
-.kg-badge.negative{background:rgba(255,61,0,0.12);color:#FF3D00}
-.kg-badge.warning{background:rgba(255,193,7,0.15);color:#FFA000}
-.kg-compare{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;flex-wrap:wrap}
-.kg-prev{color:var(--muted)}.kg-curr{color:var(--text)}.kg-arrow{color:var(--muted)}
-.kg-label{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
-.kpi-growth-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.kg-item{background:var(--input-bg);border-radius:10px;padding:8px 10px}
-.kpi-meta-val{color:var(--orange);font-weight:800}
+@media(max-width:1200px){main.base-layout{grid-template-columns:repeat(2,1fr)}}
 
-.chart-panel{background:var(--panel-bg);border:1.5px solid var(--border);border-radius:16px;padding:20px;position:relative;overflow:hidden;transition:box-shadow .3s,background .35s;box-shadow:var(--shadow)}
-.h260{height:260px}
-.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}.pt{font-size:13px;font-weight:800;color:var(--text)}.ps{font-size:11px;font-weight:500;color:var(--muted);margin-top:2px}.ptag{font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:var(--orange);color:#fff;flex-shrink:0}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
@@ -295,6 +374,8 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <a href="/channel/" class="nv" onclick="closeSidebar()">Channel Brief</a>
     <a href="/channel/performance/" class="nv active" onclick="closeSidebar()">Target Performance</a>
     <a href="/channel/retailers/" class="nv" onclick="closeSidebar()">Retailer Health</a>
+    <a href="/channel/enablers/" class="nv" onclick="closeSidebar()">Enablers</a>
+    <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
     <div class="sb-sec">Account</div>
     <a href="/profile/" class="nv" onclick="closeSidebar()">Profile Settings</a>
     <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
@@ -399,29 +480,14 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 </div>
 <main class="base-layout">
 
-  <div class="kpi span-2 k-mnp">
-    <div class="kpi-label">MNP Achievement</div>
-    <div class="kpi-value" id="k-mnp-ach" style="color:var(--orange)">&mdash;</div>
-    <div class="kpi-sub">Target: <span id="k-mnp-tgt" class="kpi-meta-val"></span></div>
-        <div class="kpi-meta">TVA: <span id="tva-mnp" class="kpi-meta-val" style="font-weight:900">&mdash;</span></div>
-    <div style="height:5px;background:var(--input-bg);border-radius:6px;overflow:hidden;margin:6px 0">
-      <div id="bar-mnp" style="height:100%;background:linear-gradient(90deg,var(--orange),var(--orange)88);width:0%;transition:width .8s"></div>
-    </div>
-    <div class="kpi-divider"></div>
-    <div class="kpi-growth-grid">
-      <div class="kg-item"><div class="kg-label">YTD</div><div class="kg-badge" id="g-mnp-ytd-badge">&mdash;</div><div class="kg-compare"><span class="kg-prev" id="g-mnp-ytd-prev">&mdash;</span><span class="kg-arrow">&#8594;</span><span class="kg-curr" id="g-mnp-ytd-curr">&mdash;</span></div></div>
-      <div class="kg-item"><div class="kg-label">GOLM</div><div class="kg-badge" id="g-mnp-mtd-badge">&mdash;</div><div class="kg-compare"><span class="kg-prev" id="g-mnp-mtd-prev">&mdash;</span><span class="kg-arrow">&#8594;</span><span class="kg-curr" id="g-mnp-mtd-curr">&mdash;</span></div></div>
-      <div class="kg-item"><div class="kg-label">YOY</div><div class="kg-badge" id="g-mnp-yoy-badge">&mdash;</div><div class="kg-compare"><span class="kg-prev" id="g-mnp-yoy-prev">&mdash;</span><span class="kg-arrow">&#8594;</span><span class="kg-curr" id="g-mnp-yoy-curr">&mdash;</span></div></div>
-    </div>
-  </div>
-
-  <div class="kpi span-2 k-ga">
-    <div class="kpi-label">GA Activations</div>
+  <div class="kpi span-full k-ga">
+    <div class="kpi-label">FCA Achievement</div>
     <div class="kpi-value" id="k-ga-ach" style="color:var(--teal)">&mdash;</div>
-    <div class="kpi-sub">Target: <span id="k-ga-tgt" class="kpi-meta-val"></span></div>
-        <div class="kpi-meta">TVA: <span id="tva-ga" class="kpi-meta-val" style="font-weight:900">&mdash;</span></div>
-    <div style="height:5px;background:var(--input-bg);border-radius:6px;overflow:hidden;margin:6px 0">
-      <div id="bar-ga" style="height:100%;background:linear-gradient(90deg,var(--teal),var(--teal)88);width:0%;transition:width .8s"></div>
+    <div class="kpi-sub">Target: <span id="k-ga-tgt" class="kpi-meta-val">&mdash;</span></div><div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+      <div style="flex:1;height:5px;background:var(--input-bg);border-radius:6px;overflow:hidden">
+        <div id="bar-ga" style="height:100%;background:var(--teal);width:0%;transition:width .8s"></div>
+      </div>
+      <span id="tva-ga" class="kg-badge positive" style="font-size:10px;min-width:46px;justify-content:center">&mdash;</span>
     </div>
     <div class="kpi-divider"></div>
     <div class="kpi-growth-grid">
@@ -431,23 +497,46 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     </div>
   </div>
 
-  <div class="chart-panel span-2 h260">
-    <div class="ph"><div><div class="pt">MNP Monthly Trend</div><div class="ps">Achievement & Target by Month · Multi-Year</div></div><span class="ptag">Bar</span></div>
-    <div style="height:260px;position:relative;"><canvas id="chart-mnp"></canvas></div>
+  <div class="chart-panel span-full">
+    <div class="ph"><div><div class="pt">FCA Monthly Trend</div></div><span class="ptag">Bar</span></div>
+    <div class="h260" style="position:relative"><canvas id="chart-ga"></canvas></div>
   </div>
 
-  <div class="chart-panel span-2 h260">
-    <div class="ph"><div><div class="pt">GA Monthly Trend</div><div class="ps">Absolute Activations by Month · Multi-Year</div></div><span class="ptag">Bar</span></div>
-    <div style="height:260px;position:relative;"><canvas id="chart-ga"></canvas></div>
+  <div class="kpi span-full k-mnp">
+    <div class="kpi-label">MNP Achievement</div>
+    <div class="kpi-value" id="k-mnp-ach" style="color:var(--orange)">&mdash;</div>
+    <div class="kpi-sub">Target: <span id="k-mnp-tgt" class="kpi-meta-val">&mdash;</span></div><div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+      <div style="flex:1;height:5px;background:var(--input-bg);border-radius:6px;overflow:hidden">
+        <div id="bar-mnp" style="height:100%;background:var(--orange);width:0%;transition:width .8s"></div>
+      </div>
+      <span id="tva-mnp" class="kg-badge positive" style="font-size:10px;min-width:46px;justify-content:center">&mdash;</span>
+    </div>
+    <div class="kpi-divider"></div>
+    <div class="kpi-growth-grid">
+      <div class="kg-item"><div class="kg-label">YTD</div><div class="kg-badge" id="g-mnp-ytd-badge">&mdash;</div><div class="kg-compare"><span class="kg-prev" id="g-mnp-ytd-prev">&mdash;</span><span class="kg-arrow">&#8594;</span><span class="kg-curr" id="g-mnp-ytd-curr">&mdash;</span></div></div>
+      <div class="kg-item"><div class="kg-label">GOLM</div><div class="kg-badge" id="g-mnp-mtd-badge">&mdash;</div><div class="kg-compare"><span class="kg-prev" id="g-mnp-mtd-prev">&mdash;</span><span class="kg-arrow">&#8594;</span><span class="kg-curr" id="g-mnp-mtd-curr">&mdash;</span></div></div>
+      <div class="kg-item"><div class="kg-label">YOY</div><div class="kg-badge" id="g-mnp-yoy-badge">&mdash;</div><div class="kg-compare"><span class="kg-prev" id="g-mnp-yoy-prev">&mdash;</span><span class="kg-arrow">&#8594;</span><span class="kg-curr" id="g-mnp-yoy-curr">&mdash;</span></div></div>
+    </div>
   </div>
 
-  <div class="kpi span-2 k-rech">
+  <div class="chart-panel span-2">
+    <div class="ph"><div><div class="pt">MNP Monthly Trend</div></div><span class="ptag">Bar</span></div>
+    <div class="h260" style="position:relative"><canvas id="chart-mnp"></canvas></div>
+  </div>
+
+  <div class="chart-panel span-2">
+    <div class="ph"><div><div class="pt">MNP Target vs Achievement</div></div><span class="ptag">Target</span></div>
+    <div class="h260" style="position:relative"><canvas id="chart-mnp2"></canvas></div>
+  </div>
+
+  <div class="kpi span-full k-rech">
     <div class="kpi-label">Recharge Achievement</div>
     <div class="kpi-value" id="k-rech-ach" style="color:var(--purple)">&mdash;</div>
-    <div class="kpi-sub">Target: <span id="k-rech-tgt" class="kpi-meta-val"></span></div>
-        <div class="kpi-meta">TVA: <span id="tva-rech" class="kpi-meta-val" style="font-weight:900">&mdash;</span></div>
-    <div style="height:5px;background:var(--input-bg);border-radius:6px;overflow:hidden;margin:6px 0">
-      <div id="bar-rech" style="height:100%;background:linear-gradient(90deg,var(--purple),var(--purple)88);width:0%;transition:width .8s"></div>
+    <div class="kpi-sub">Target: <span id="k-rech-tgt" class="kpi-meta-val">&mdash;</span></div><div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+      <div style="flex:1;height:5px;background:var(--input-bg);border-radius:6px;overflow:hidden">
+        <div id="bar-rech" style="height:100%;background:var(--purple);width:0%;transition:width .8s"></div>
+      </div>
+      <span id="tva-rech" class="kg-badge positive" style="font-size:10px;min-width:46px;justify-content:center">&mdash;</span>
     </div>
     <div class="kpi-divider"></div>
     <div class="kpi-growth-grid">
@@ -457,20 +546,42 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     </div>
   </div>
 
-  <div class="kpi span-2 k-fca">
-    <div class="kpi-label">FCA Achievement</div>
-    <div class="kpi-value" id="k-fca-ach" style="color:var(--orange)">&mdash;</div>
-    <div class="kpi-sub">Base for TVA calculation</div>
-    <div class="kpi-meta">TVA denominator for all metrics above</div>
+  <div class="chart-panel span-full">
+    <div class="ph"><div><div class="pt">Channel Recharge</div></div><span class="ptag">Bar</span></div>
+    <div class="h260" style="position:relative"><canvas id="chart-rech"></canvas></div>
   </div>
 
-  <div class="chart-panel span-full h260">
-    <div class="ph"><div><div class="pt">Recharge Monthly Trend</div><div class="ps">Achievement & Target by Month · Multi-Year</div></div><span class="ptag">Bar</span></div>
-    <div style="height:260px;position:relative;"><canvas id="chart-rech"></canvas></div>
+  <div class="chart-panel span-full">
+    <div class="ph"><div><div class="pt">Conventional Recharge</div></div><span class="ptag">Bar</span></div>
+    <div class="h260" style="position:relative"><canvas id="chart-conv"></canvas></div>
+  </div>
+
+  <div class="chart-panel span-2">
+    <div class="ph"><div><div class="pt">Site Recharge Trend</div></div><span class="ptag">Bar</span></div>
+    <div class="h260" style="position:relative"><canvas id="chart-rech-site"></canvas></div>
+  </div>
+
+  <div class="chart-panel span-2">
+    <div class="ph"><div><div class="pt">Recharge Target vs Achievement</div></div><span class="ptag">Target</span></div>
+    <div class="h260" style="position:relative"><canvas id="chart-rech2"></canvas></div>
+  </div>
+
+  <div class="chart-panel span-2">
+    <div class="ph"><div><div class="pt">Digital vs Conventional Recharge</div></div><span class="ptag">Pie</span></div>
+    <div class="h260" style="position:relative"><canvas id="chart-rech-polar"></canvas></div>
+  </div>
+
+  <div class="chart-panel span-2">
+    <div class="ph"><div><div class="pt">MBB Growth</div></div><span class="ptag">Bar</span></div>
+    <div class="h260" style="position:relative"><canvas id="chart-mbb"></canvas></div>
+  </div>
+
+  <div class="chart-panel span-full">
+    <div class="ph"><div><div class="pt">Data SIM Growth</div></div><span class="ptag">Bar</span></div>
+    <div class="h260" style="position:relative"><canvas id="chart-datasim"></canvas></div>
   </div>
 
 </main>
-
 <footer>
   <img src="{% static 'images/logo1.jpg' %}" style="height:40px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
   <div class="footer-right"><div class="footer-region">Central B · Multan</div><div class="footer-copy">© 2026 All Rights Reserved</div></div>
@@ -478,7 +589,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 </div>
 </div>
 <script>
-Chart.register({id:'globalLabels',afterDatasetsDraw(c){const ctx=c.ctx;if(!ctx||['doughnut','polarArea','pie'].includes(c.config.type))return;ctx.save();c.data.datasets.forEach((ds,i)=>{const m=c.getDatasetMeta(i);if(m.hidden)return;m.data.forEach((p,idx)=>{const v=ds.data[idx];if(v==null||v===0)return;const isMob=c.width<500;if(isMob&&idx%2!==0&&m.type==='line')return;const txt=fmt(v);ctx.font=`bold ${isMob?9:11}px Poppins`;ctx.textAlign='center';ctx.fillStyle=textColor();const isHoriz=c.config.options.indexAxis==='y';const ySafe=isHoriz?p.y+4:(p.y<30?p.y+20:p.y-10);const xSafe=isHoriz?p.x+25:p.x;ctx.fillText(txt,xSafe,ySafe);});});ctx.restore();}});
+Chart.register({id:'globalLabels',afterDatasetsDraw(c){const ctx=c.ctx;if(!ctx)return;if(['doughnut','polarArea','pie'].includes(c.config.type))return;if(c.config.options&&c.config.options.skipGlobalLabels)return;if(c.config.options&&c.config.options.indexAxis==='y')return;ctx.save();c.data.datasets.forEach((ds,i)=>{const m=c.getDatasetMeta(i);if(m.hidden)return;m.data.forEach((p,idx)=>{const v=ds.data[idx];if(v==null||v===0)return;const isMob=c.width<500;if(isMob&&idx%2!==0&&m.type==='line')return;const txt=fmt(v);ctx.font=`bold ${isMob?9:11}px Poppins`;ctx.textAlign='center';ctx.fillStyle=textColor();const ySafe=p.y<30?p.y+20:p.y-10;ctx.fillText(txt,p.x,ySafe);});});ctx.restore();}});
 
 const ROLE_CONFIG={category:'{{ locked.category }}',regionLocked:{{ locked.region.locked|yesno:"true,false" }},buLocked:{{ locked.bu.locked|yesno:"true,false" }},buValue:'{{ locked.bu.value|default:"" }}'};
 function toggleSidebar(){const s=document.getElementById('sidebar'),o=document.getElementById('sidebar-overlay'),b=document.getElementById('mob-nav-btn'),mab=document.getElementById('mob-action-bar');s.classList.toggle('open');o.classList.toggle('open');const isOpen=s.classList.contains('open');if(b)b.style.display=isOpen?'none':'flex';if(mab)mab.style.display=isOpen?'none':'flex';}
@@ -596,53 +707,48 @@ setupInput('in-month','dd-month');setupInput('in-year','dd-year');
 function updateKPIs(data){
   const k=data.kpis||{}, g=data.growth||{};
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  const fca = k.fca_ach || 0;
+  const fca=k.fca_ach||0;
 
-  function setTva(uid, val){
-    const pct = fca > 0 ? (val / fca * 100) : 0;
-    const el  = document.getElementById('tva-'+uid);
+  function setTva(uid,val,denom){
+    const d=(denom&&denom>0)?denom:fca;
+    const pct=d>0?(val/d*100):0;
+    const el=document.getElementById('tva-'+uid);
     if(el){
-      el.textContent = pct.toFixed(1)+'%';
-      el.style.color = pct>=100?'#00C853':pct>=70?'#FFA000':'#FF3D00';
+      el.textContent=pct.toFixed(1)+'%';
+      el.className='kg-badge '+(pct>=100?'positive':pct>=70?'warning':'negative');
     }
-    const bar = document.getElementById('bar-'+uid);
-    if(bar) bar.style.width = Math.min(pct,100)+'%';
+    const bar=document.getElementById('bar-'+uid);
+    if(bar) bar.style.width=Math.min(pct,100)+'%';
+  }
+  function setGrowth(uid,key){
+    const gg=g[key]||{};
+    ['ytd','mtd','yoy'].forEach(p=>{
+      const pct=gg[p+'_pct']??0, prev=gg[p+'_prev']??0, curr=gg[p+'_curr']??0;
+      const isPos=pct>=0;
+      const b=document.getElementById('g-'+uid+'-'+p+'-badge');
+      const pv=document.getElementById('g-'+uid+'-'+p+'-prev');
+      const cv=document.getElementById('g-'+uid+'-'+p+'-curr');
+      if(b){b.textContent=(isPos?'+':'')+pct.toFixed(1)+'%';b.className='kg-badge '+(isPos?'positive':'negative');}
+      if(pv) pv.textContent=fmt(prev);
+      if(cv) cv.textContent=fmt(curr);
+    });
   }
 
-  // ── MNP ──────────────────────────────────────────────────
   set('k-mnp-ach', fmt(k.mnp_ach||0));
   set('k-mnp-tgt', fmt(k.mnp_target||0));
-  setTva('mnp', k.mnp_ach||0);
+  setTva('mnp', k.mnp_ach||0, k.mnp_target||0);
+  setGrowth('mnp','mnp_ach');
 
-  // ── GA ───────────────────────────────────────────────────
-  set('k-ga-ach',  fmt(k.cm_ga||0));
-  set('k-ga-tgt',  '');
-  setTva('ga', k.cm_ga||0);
+  set('k-ga-ach', fmt(k.fca_ach||0));
+  set('k-ga-tgt', fmt(fca));
+  setTva('ga', k.fca_ach||0, k.fca_target||0);
+  setGrowth('ga','fca_ach');
 
-  // ── Recharge ─────────────────────────────────────────────
   set('k-rech-ach', fmt(k.loading_ach||0));
   set('k-rech-tgt', fmt(k.loading_target||0));
-  setTva('rech', k.loading_ach||0);
+  setTva('rech', k.loading_ach||0, k.loading_target||0);
+  setGrowth('rech','loading_ach');
 
-  // ── FCA info card ─────────────────────────────────────────
-  set('k-fca-ach', fmt(fca));
-
-  // ── Growth rows (YTD/GOLM/YOY) ───────────────────────────
-  [['mnp','mnp_ach'],['ga','cm_ga'],['rech','loading_ach']].forEach(([uid,key])=>{
-    const gg=g[key]||{};
-    ['ytd','mtd','yoy'].forEach(period=>{
-      const pct =gg[period+'_pct'] ??0;
-      const prev=gg[period+'_prev']??0;
-      const curr=gg[period+'_curr']??0;
-      const isPos=pct>=0;
-      const b=document.getElementById('g-'+uid+'-'+period+'-badge');
-      const p=document.getElementById('g-'+uid+'-'+period+'-prev');
-      const c=document.getElementById('g-'+uid+'-'+period+'-curr');
-      if(b){b.textContent=(isPos?'+':'')+pct.toFixed(1)+'%';b.className='kg-badge '+(isPos?'positive':'negative');}
-      if(p) p.textContent=fmt(prev);
-      if(c) c.textContent=fmt(curr);
-    });
-  });
   updateLogoSub();
 }
 function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/channel/api/data/?'+p).then(r=>r.json()).then(data=>{lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});}
@@ -652,97 +758,344 @@ function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function tip(extra={}){return{backgroundColor:panelColor(),borderColor:'#f58220',borderWidth:1.5,titleColor:'#f58220',bodyColor:textColor(),padding:12,titleFont:{weight:'700',size:12},bodyFont:{weight:'600',size:11},...extra};}
 
 function buildCharts(d){
-  if(!d||!d.monthly){console.error('buildCharts: no monthly data');return;}
+  if(!d||!d.monthly) return;
   const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const C=COLORS;
-  const monthly=d.monthly;
 
   function chartBar(canvasId, achKey, tgtKey, colorOff){
-    const achSrc=monthly[achKey];
-    if(!achSrc||!achSrc.datasets||!achSrc.datasets.length){
-      console.warn('buildCharts: no data for',achKey);return;
-    }
-    const tgtSrc=tgtKey?monthly[tgtKey]:null;
-    const years=achSrc.datasets.map(ds=>ds.label);
-
-    // Find last non-null month across all years
+    const achSrc=d.monthly[achKey];
+    if(!achSrc||!achSrc.datasets||!achSrc.datasets.length) return;
+    const tgtSrc=tgtKey?d.monthly[tgtKey]:null;
     let lastIdx=-1;
-    achSrc.datasets.forEach(ds=>{
-      ds.data.forEach((v,i)=>{if(v!=null&&v!==0&&i>lastIdx)lastIdx=i;});
-    });
-    if(lastIdx<0){console.warn('buildCharts: all null for',achKey);return;}
-
+    achSrc.datasets.forEach(ds=>ds.data.forEach((v,i)=>{if(v!=null&&v!==0&&i>lastIdx)lastIdx=i;}));
+    if(lastIdx<0) return;
     const labels=achSrc.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
-
+    const latestYearIdx=achSrc.datasets.length-1;
     const datasets=[];
-    // Achievement bars (one per year)
     achSrc.datasets.forEach((ds,i)=>{
       datasets.push({
-        label:    String(ds.label),
-        data:     ds.data.slice(0,lastIdx+1),
-        backgroundColor: C[(i+(colorOff||0))%C.length]+'bb',
-        borderColor:     C[(i+(colorOff||0))%C.length],
+        label:String(ds.label), data:ds.data.slice(0,lastIdx+1),
+        backgroundColor:COLORS[(i+(colorOff||0))%COLORS.length]+'bb',
+        borderColor:COLORS[(i+(colorOff||0))%COLORS.length],
         borderWidth:1.5, borderRadius:3, borderSkipped:false,
-        type:'bar', order:1,
-        _showCallout: false,
+        type:'bar', order:1, _showCallout:!tgtKey,
       });
     });
-    // Target line for latest year (if target key provided)
     if(tgtSrc&&tgtSrc.datasets&&tgtSrc.datasets.length){
       const latestTgtDs=tgtSrc.datasets[tgtSrc.datasets.length-1];
+      const latestAchDs=achSrc.datasets[latestYearIdx];
+      const pctArr=latestTgtDs.data.slice(0,lastIdx+1).map((t,j)=>{
+        const a=latestAchDs?latestAchDs.data[j]:0;
+        return(t&&t>0)?parseFloat((a/t*100).toFixed(1)):null;
+      });
       datasets.push({
-        label:       'Target '+latestTgtDs.label,
-        data:        latestTgtDs.data.slice(0,lastIdx+1),
-        type:        'line',
-        borderColor: '#f58220',
-        backgroundColor: 'transparent',
-        borderWidth: 2,
-        borderDash:  [5,5],
-        pointRadius: 3,
-        pointBackgroundColor: '#f58220',
-        tension:     0.3,
-        order:       0,
-        spanGaps:    true,
-        _showCallout: true,
+        label:'Target '+latestTgtDs.label,
+        data:latestTgtDs.data.slice(0,lastIdx+1),
+        type:'line', borderColor:'#f58220', backgroundColor:'transparent',
+        borderWidth:2, borderDash:[5,5], pointRadius:3,
+        pointBackgroundColor:'#f58220', tension:0.3, order:0, spanGaps:true,
+        _showCallout:true, _pctData:pctArr,
       });
     }
-
     dc(canvasId);
-    const el=document.getElementById(canvasId);
-    if(!el){console.warn('buildCharts: canvas not found',canvasId);return;}
-
+    const el=document.getElementById(canvasId); if(!el) return;
     const calloutPlugin={id:'barCallout',afterDatasetsDraw(chart){
       const ctx=chart.ctx;
       chart.data.datasets.forEach((ds,di)=>{
         if(!ds._showCallout) return;
-        const meta=chart.getDatasetMeta(di);
-        if(meta.hidden) return;
+        const meta=chart.getDatasetMeta(di); if(meta.hidden) return;
         meta.data.forEach((point,j)=>{
-          const v=ds.data[j];
-          if(v==null||v===0) return;
+          const pct=ds._pctData?ds._pctData[j]:null;
+          const abs=ds.data[j];
+          const label=pct!=null?(pct+'%'):fmt(abs);
+          if(label==null||abs==null||abs===0) return;
+          ctx.save(); ctx.textAlign='center'; ctx.textBaseline='bottom';
+          ctx.font='bold 10px Poppins'; ctx.fillStyle=textColor();
+          ctx.fillText(label, point.x, point.y-8); ctx.restore();
+        });
+      });
+    }};
+    charts[canvasId]=new Chart(el,{
+      type:'bar', plugins:[calloutPlugin],
+      data:{labels,datasets},
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:{duration:800},
+        skipGlobalLabels:true,
+        plugins:{
+          legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
+          tooltip:{...tip(),callbacks:{label:ctx=>{
+            if(ctx.dataset.type==='line') return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+            return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+          }}},
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
+          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+        }
+      }
+    });
+  }
+
+
+  // ── Chart 1: MNP multi-year bars, NO trendline, callout = abs + % of year ──
+  function chartMnpTrend(canvasId, d){
+    const src = d.monthly['mnp_ach'];
+    if(!src||!src.datasets||!src.datasets.length) return;
+    let lastIdx=-1;
+    src.datasets.forEach(ds=>ds.data.forEach((v,i)=>{if(v!=null&&v!==0&&i>lastIdx)lastIdx=i;}));
+    if(lastIdx<0) return;
+    const labels = src.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
+
+    // Pre-compute yearly totals for % callout
+    const datasets = src.datasets.map((ds,i)=>{
+      const sliced = ds.data.slice(0,lastIdx+1);
+      const yearTotal = sliced.reduce((s,v)=>s+(v||0), 0);
+      return {
+        label: String(ds.label),
+        data: sliced,
+        _yearTotal: yearTotal,
+        backgroundColor: COLORS[(i)%COLORS.length]+'bb',
+        borderColor:     COLORS[(i)%COLORS.length],
+        borderWidth:1.5, borderRadius:3, borderSkipped:false,
+        type:'bar', order:1,
+        _showCallout: true,  // all years get callouts
+      };
+    });
+
+    dc(canvasId);
+    const el = document.getElementById(canvasId); if(!el) return;
+
+    const calloutPlugin = {id:'mnpTrendCallout', afterDatasetsDraw(chart){
+      const ctx = chart.ctx;
+      chart.data.datasets.forEach((ds,di)=>{
+        if(!ds._showCallout) return;
+        const meta = chart.getDatasetMeta(di); if(meta.hidden) return;
+        meta.data.forEach((bar,j)=>{
+          const v = ds.data[j]; if(v==null||v===0) return;
           ctx.save();
-          ctx.textAlign='center';
-          ctx.textBaseline='bottom';
-          ctx.font='bold 10px Poppins';
-          ctx.fillStyle='#f58220';
-          ctx.fillText(fmt(v), point.x, point.y-8);
+          ctx.textAlign='center'; ctx.textBaseline='bottom';
+          ctx.font='bold 9px Poppins'; ctx.fillStyle=textColor();
+          ctx.fillText(fmt(v), bar.x, bar.y-6);
           ctx.restore();
         });
       });
     }};
 
-    charts[canvasId]=new Chart(el,{
-      type:'bar',
-      plugins:[calloutPlugin],
-      data:{labels,datasets},
+    charts[canvasId] = new Chart(el,{
+      type:'bar', plugins:[calloutPlugin],
+      data:{labels, datasets},
       options:{
-        responsive:true,maintainAspectRatio:false,animation:{duration:800},
+        responsive:true, maintainAspectRatio:false, animation:{duration:800},
         skipGlobalLabels:true,
         plugins:{
           legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
           tooltip:{...tip(),callbacks:{
             label:ctx=>{
-              if(ctx.dataset.type==='line') return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+              const v=ctx.raw, total=ctx.dataset._yearTotal||0;
+              const pct=total>0?(v/total*100).toFixed(1)+'%':'—';
+              return ` ${ctx.dataset.label}: ${fmt(v)}`;
+            }
+          }},
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
+          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+        }
+      }
+    });
+  }
+
+  // ── Chart 2: Latest year only — Target bar + Ach bar + TVA trendline ──
+  function chartMnpVsTarget(canvasId, d){
+    const achSrc = d.monthly['mnp_ach'];
+    const tgtSrc = d.monthly['mnp_target'];
+    if(!achSrc||!achSrc.datasets||!tgtSrc||!tgtSrc.datasets) return;
+
+    // Latest year datasets
+    const latestAchDs  = achSrc.datasets[achSrc.datasets.length-1];
+    const latestTgtDs  = tgtSrc.datasets[tgtSrc.datasets.length-1];
+    const latestYear   = latestAchDs.label;
+
+    let lastIdx=-1;
+    latestAchDs.data.forEach((v,i)=>{if(v!=null&&v!==0&&i>lastIdx)lastIdx=i;});
+    if(lastIdx<0) return;
+    const labels = achSrc.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
+
+    const achData = latestAchDs.data.slice(0,lastIdx+1);
+    const tgtData = latestTgtDs.data.slice(0,lastIdx+1);
+
+    // TVA% = ach/target*100 per month
+    const tvaData = tgtData.map((t,j)=>(t&&t>0)?parseFloat((achData[j]/t*100).toFixed(1)):null);
+
+    const datasets = [
+      {
+        label: 'Target '+latestYear,
+        data: tgtData,
+        backgroundColor: COLORS[3]+'bb',   // teal
+        borderColor:     COLORS[3],
+        borderWidth:1.5, borderRadius:3, borderSkipped:false,
+        type:'bar', order:2, _showCallout:true, _isTarget:true,
+      },
+      {
+        label: 'Ach '+latestYear,
+        data: achData,
+        backgroundColor: COLORS[0]+'bb',   // orange
+        borderColor:     COLORS[0],
+        borderWidth:1.5, borderRadius:3, borderSkipped:false,
+        type:'bar', order:1, _showCallout:true, _isTarget:false,
+      },
+      {
+        label: 'TVA%',
+        data: tvaData,
+        type:'line',
+        borderColor:'#AB1DFE', backgroundColor:'transparent',
+        borderWidth:2, borderDash:[4,4],
+        pointRadius:3, pointBackgroundColor:'#AB1DFE',
+        tension:0.3, order:0, spanGaps:true,
+        yAxisID:'y2',
+        _showCallout:true, _isTva:true,
+      },
+    ];
+
+    dc(canvasId);
+    const el = document.getElementById(canvasId); if(!el) return;
+
+    const calloutPlugin2 = {id:'mnpVsTargetCallout', afterDatasetsDraw(chart){
+      const ctx = chart.ctx;
+      chart.data.datasets.forEach((ds,di)=>{
+        if(!ds._showCallout) return;
+        const meta = chart.getDatasetMeta(di); if(meta.hidden) return;
+        meta.data.forEach((point,j)=>{
+          const v = ds.data[j]; if(v==null||v===0) return;
+          ctx.save();
+          ctx.textAlign='center'; ctx.textBaseline='bottom';
+          if(ds._isTva){
+            // TVA% nodes: show percentage in purple
+            ctx.font='bold 9px Poppins'; ctx.fillStyle=textColor();
+            ctx.fillText(v+'%', point.x, point.y-8);
+          } else {
+            // Bar callouts: absolute value
+            ctx.font='bold 9px Poppins'; ctx.fillStyle=textColor();
+            ctx.fillText(fmt(v), point.x, point.y-6);
+          }
+          ctx.restore();
+        });
+      });
+    }};
+
+    charts[canvasId] = new Chart(el,{
+      type:'bar', plugins:[calloutPlugin2],
+      data:{labels, datasets},
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:{duration:800},
+        skipGlobalLabels:true,
+        plugins:{
+          legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
+          tooltip:{...tip(),callbacks:{
+            label:ctx=>{
+              if(ctx.dataset.label==='TVA%') return ` TVA: ${ctx.raw}%`;
+              return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+            }
+          }},
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
+          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y2:{position:'right',grid:{display:false},ticks:{color:'#AB1DFE',font:{size:9,weight:'700'},callback:v=>v+'%'},border:{display:false},suggestedMin:0,suggestedMax:150},
+        }
+      }
+    });
+  }
+
+
+  // ── Generic growth chart: multi-year bars + optional target line + callouts ──
+  function chartGrowth(canvasId, achKey, tgtKey, colorOff){
+    const achSrc = d.monthly[achKey];
+    if(!achSrc||!achSrc.datasets||!achSrc.datasets.length) return;
+    const tgtSrc = tgtKey ? d.monthly[tgtKey] : null;
+
+    let lastIdx=-1;
+    achSrc.datasets.forEach(ds=>ds.data.forEach((v,i)=>{if(v!=null&&v!==0&&i>lastIdx)lastIdx=i;}));
+    if(lastIdx<0) return;
+    const labels = achSrc.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
+    const latestYearIdx = achSrc.datasets.length-1;
+
+    const datasets = achSrc.datasets.map((ds,i)=>{
+      const sliced = ds.data.slice(0,lastIdx+1);
+      const yearTotal = sliced.reduce((s,v)=>s+(v||0), 0);
+      return {
+        label: String(ds.label), data: sliced,
+        _yearTotal: yearTotal,
+        backgroundColor: COLORS[(i+(colorOff||0))%COLORS.length]+'bb',
+        borderColor:     COLORS[(i+(colorOff||0))%COLORS.length],
+        borderWidth:1.5, borderRadius:3, borderSkipped:false,
+        type:'bar', order:1, _showCallout:true,
+      };
+    });
+
+    if(tgtSrc&&tgtSrc.datasets&&tgtSrc.datasets.length){
+      const latestTgtDs = tgtSrc.datasets[tgtSrc.datasets.length-1];
+      const latestAchDs = achSrc.datasets[latestYearIdx];
+      const pctArr = latestTgtDs.data.slice(0,lastIdx+1).map((t,j)=>{
+        const a = latestAchDs ? latestAchDs.data[j] : 0;
+        return (t&&t>0) ? parseFloat((a/t*100).toFixed(1)) : null;
+      });
+      datasets.push({
+        label: 'Target '+latestTgtDs.label,
+        data: latestTgtDs.data.slice(0,lastIdx+1),
+        type:'line', borderColor:'#AB1DFE', backgroundColor:'transparent',
+        borderWidth:2, borderDash:[5,5], pointRadius:3,
+        pointBackgroundColor:'#AB1DFE',
+        tension:0.3, order:0, spanGaps:true,
+        _showCallout:true, _pctData:pctArr, _isTvaLine:true,
+      });
+    }
+
+    dc(canvasId);
+    const el = document.getElementById(canvasId); if(!el) return;
+
+    const growthCallout = {id:'growthCallout'+canvasId, afterDatasetsDraw(chart){
+      const ctx = chart.ctx;
+      chart.data.datasets.forEach((ds,di)=>{
+        if(!ds._showCallout) return;
+        const meta = chart.getDatasetMeta(di); if(meta.hidden) return;
+        const yearTotal = ds._yearTotal || 0;
+        meta.data.forEach((point,j)=>{
+          const v = ds.data[j]; if(v==null||v===0) return;
+          ctx.save();
+          ctx.textAlign='center'; ctx.textBaseline='bottom';
+          ctx.font='bold 9px Poppins';
+          if(ds._isTvaLine){
+            // trendline: show TVA%
+            const pct = ds._pctData ? ds._pctData[j] : null;
+            if(pct==null){ctx.restore();return;}
+            ctx.fillStyle=textColor();
+            ctx.fillText(pct+'%', point.x, point.y-8);
+          } else {
+            // bars: show absolute + % of year
+            ctx.fillStyle=textColor();
+            ctx.fillText(fmt(v), point.x, point.y-6);
+          }
+          ctx.restore();
+        });
+      });
+    }};
+
+    charts[canvasId] = new Chart(el,{
+      type:'bar', plugins:[growthCallout],
+      data:{labels, datasets},
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:{duration:800},
+        skipGlobalLabels:true,
+        plugins:{
+          legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
+          tooltip:{...tip(),callbacks:{
+            label:ctx=>{
+              if(ctx.dataset._isTvaLine){
+                const pct=ctx.dataset._pctData?ctx.dataset._pctData[ctx.dataIndex]:null;
+                return pct!=null?` TVA: ${pct}%`:` Target: ${fmt(ctx.raw)}`;
+              }
+              const total=ctx.dataset._yearTotal||0;
+              const pct=total>0?(ctx.raw/total*100).toFixed(1)+'%':'—';
               return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
             }
           }},
@@ -755,10 +1108,305 @@ function buildCharts(d){
     });
   }
 
+
+
+  // ── Recharge: latest year Target bar + Ach bar + TVA% trendline ─────────
+  function chartRechVsTarget(canvasId, d){
+    const achSrc = d.monthly['loading_ach'];
+    const tgtSrc = d.monthly['loading_target'];
+    if(!achSrc||!achSrc.datasets||!tgtSrc||!tgtSrc.datasets) return;
+
+    const latestAchDs = achSrc.datasets[achSrc.datasets.length-1];
+    const latestTgtDs = tgtSrc.datasets[tgtSrc.datasets.length-1];
+    const latestYear  = latestAchDs.label;
+
+    let lastIdx=-1;
+    latestAchDs.data.forEach((v,i)=>{if(v!=null&&v!==0&&i>lastIdx)lastIdx=i;});
+    if(lastIdx<0) return;
+    const labels  = achSrc.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
+    const achData = latestAchDs.data.slice(0,lastIdx+1);
+    const tgtData = latestTgtDs.data.slice(0,lastIdx+1);
+    const tvaData = tgtData.map((t,j)=>(t&&t>0)?parseFloat((achData[j]/t*100).toFixed(1)):null);
+
+    const datasets = [
+      {
+        label:'Ach '+latestYear, data:achData,
+        backgroundColor:COLORS[1]+'bb', borderColor:COLORS[1],
+        borderWidth:1.5, borderRadius:3, borderSkipped:false,
+        type:'bar', order:2, _showCallout:true,
+      },
+      {
+        label:'Target '+latestYear, data:tgtData,
+        backgroundColor:COLORS[3]+'bb', borderColor:COLORS[3],
+        borderWidth:1.5, borderRadius:3, borderSkipped:false,
+        type:'bar', order:1, _showCallout:true,
+      },
+      {
+        label:'TVA%', data:tvaData,
+        type:'line', borderColor:'#AB1DFE', backgroundColor:'transparent',
+        borderWidth:2, borderDash:[4,4], pointRadius:3,
+        pointBackgroundColor:'#AB1DFE',
+        tension:0.3, order:0, spanGaps:true, yAxisID:'y2',
+        _showCallout:true, _isTva:true,
+      },
+    ];
+
+    dc(canvasId);
+    const el = document.getElementById(canvasId); if(!el) return;
+
+    const rechVsCallout = {id:'rechVsCallout', afterDatasetsDraw(chart){
+      const ctx = chart.ctx;
+      chart.data.datasets.forEach((ds,di)=>{
+        if(!ds._showCallout) return;
+        const meta = chart.getDatasetMeta(di); if(meta.hidden) return;
+        meta.data.forEach((point,j)=>{
+          const v = ds.data[j]; if(v==null||v===0) return;
+          ctx.save();
+          ctx.textAlign='center'; ctx.textBaseline='bottom';
+          ctx.font='bold 9px Poppins';
+          if(ds._isTva){
+            ctx.fillStyle=textColor();
+            ctx.fillText(v+'%', point.x, point.y-8);
+          } else {
+            ctx.fillStyle=textColor();
+            ctx.fillText(fmt(v), point.x, point.y-6);
+          }
+          ctx.restore();
+        });
+      });
+    }};
+
+    charts[canvasId] = new Chart(el,{
+      type:'bar', plugins:[rechVsCallout],
+      data:{labels, datasets},
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:{duration:800},
+        skipGlobalLabels:true,
+        plugins:{
+          legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
+          tooltip:{...tip(),callbacks:{
+            label:ctx=>{
+              if(ctx.dataset._isTva) return ` TVA: ${ctx.raw}%`;
+              return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+            }
+          }},
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
+          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y2:{position:'right',grid:{display:false},ticks:{color:'#AB1DFE',font:{size:9,weight:'700'},callback:v=>v+'%'},border:{display:false},suggestedMin:0,suggestedMax:150},
+        }
+      }
+    });
+  }
+
+
+  // ── Recharge: Digital vs Conventional polar area chart ──────────────────
+  function chartRechPolar(canvasId, d){
+    const k = d.kpis || {};
+    const digital = k.loading_ach_site_conv || 0;
+    const total   = k.total_site_loading    || 0;
+    const conv    = Math.max(0, total - digital);
+    if(total === 0) return;
+
+    dc(canvasId);
+    const el = document.getElementById(canvasId); if(!el) return;
+
+    charts[canvasId] = new Chart(el, {
+      type: 'doughnut',
+      data: {
+        labels: ['Digital', 'Conventional'],
+        datasets: [{
+          data: [digital, conv],
+          backgroundColor: ['rgba(0,188,212,0.75)', 'rgba(171,29,254,0.75)'],
+          borderColor:     [panelColor(), panelColor()],
+          borderWidth: 3,
+          hoverOffset: 8,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: {duration:800},
+        cutout: '55%',
+        plugins: {
+          legend: {
+            display: true, position: 'bottom',
+            labels: {color:textColor(), font:{weight:'700',size:11}, boxWidth:12, padding:14}
+          },
+          tooltip: {...tip(), callbacks: {
+            label: ctx => {
+              const pct = total>0?(ctx.raw/total*100).toFixed(1):'0';
+              return ` ${ctx.label}: ${fmt(ctx.raw)} (${pct}%)`;
+            }
+          }},
+        }
+      },
+      plugins: [{
+        id: 'rechPieLabels',
+        afterDatasetsDraw(chart){
+          const ctx = chart.ctx;
+          const vals = [digital, conv];
+          chart.getDatasetMeta(0).data.forEach((arc, i) => {
+            if(!vals[i]) return;
+            const pct = (vals[i]/total*100).toFixed(1)+'%';
+            const midAngle = arc.startAngle + (arc.endAngle - arc.startAngle)/2;
+            const r = (arc.innerRadius + arc.outerRadius) / 2;
+            const x = arc.x + Math.cos(midAngle) * r;
+            const y = arc.y + Math.sin(midAngle) * r;
+            ctx.save();
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.font = 'bold 10px Poppins'; ctx.fillStyle = '#ffffff';
+            ctx.fillText(pct, x, y);
+            ctx.restore();
+          });
+        }
+      }]
+    });
+  }
+
+  
+  // ── EVC Active Monthly bar chart ──────────────────────────────────────────
+  function chartEvcBar(canvasId, d){
+    const src = d.monthly['evc_active_base'];
+    if(!src||!src.datasets||!src.datasets.length) return;
+    let lastIdx=-1;
+    src.datasets.forEach(ds=>ds.data.forEach((v,i)=>{if(v!=null&&v!==0&&i>lastIdx)lastIdx=i;}));
+    if(lastIdx<0) return;
+    const labels   = src.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
+    const datasets = src.datasets.map((ds,i)=>({
+      label: String(ds.label),
+      data:  ds.data.slice(0,lastIdx+1),
+      backgroundColor: COLORS[(i+6)%COLORS.length]+'bb',
+      borderColor:     COLORS[(i+6)%COLORS.length],
+      borderWidth:1.5, borderRadius:3, borderSkipped:false,
+      type:'bar', order:1, _showCallout:true,
+    }));
+
+    dc(canvasId);
+    const el = document.getElementById(canvasId); if(!el) return;
+
+    const evcBarCallout = {id:'evcBarCallout', afterDatasetsDraw(chart){
+      const ctx = chart.ctx;
+      chart.data.datasets.forEach((ds,di)=>{
+        if(!ds._showCallout) return;
+        const meta = chart.getDatasetMeta(di); if(meta.hidden) return;
+        meta.data.forEach((bar,j)=>{
+          const v = ds.data[j]; if(v==null||v===0) return;
+          ctx.save();
+          ctx.textAlign='center'; ctx.textBaseline='bottom';
+          ctx.font='bold 9px Poppins'; ctx.fillStyle=textColor();
+          ctx.fillText(fmt(v), bar.x, bar.y-6);
+          ctx.restore();
+        });
+      });
+    }};
+
+    charts[canvasId] = new Chart(el, {
+      type:'bar', plugins:[evcBarCallout],
+      data:{labels, datasets},
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:{duration:800},
+        skipGlobalLabels:true,
+        plugins:{
+          legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
+          tooltip:{...tip(),callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmt(ctx.raw)}`}},
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
+          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+        }
+      }
+    });
+  }
+
+  // ── EVC Tier Breakdown pie chart ───────────────────────────────────────────
+  function chartEvcPie(canvasId, d){
+    const k = d.kpis || {};
+    const platinum = k.cm_evc_active_platinum || 0;
+    const gold     = k.cm_evc_active_gold     || 0;
+    const silver   = k.cm_evc_active_silver   || 0;
+    const total    = platinum + gold + silver;
+    if(total === 0){
+      const el2 = document.getElementById(canvasId);
+      if(el2){
+        const ctx2 = el2.getContext('2d');
+        ctx2.clearRect(0,0,el2.width,el2.height);
+        ctx2.textAlign='center'; ctx2.textBaseline='middle';
+        ctx2.font='bold 12px Poppins'; ctx2.fillStyle='#8a85a5';
+        ctx2.fillText('No tier data available', el2.width/2, el2.height/2);
+      }
+      return;
+    }
+
+    dc(canvasId);
+    const el = document.getElementById(canvasId); if(!el) return;
+
+    charts[canvasId] = new Chart(el, {
+      type: 'polarArea',
+      data: {
+        labels: ['Platinum','Gold','Silver'],
+        datasets: [{
+          data: [platinum, gold, silver],
+          backgroundColor: ['rgba(171,29,254,0.7)','rgba(255,214,0,0.7)','rgba(184,176,232,0.7)'],
+          borderColor:     ['#AB1DFE','#FFD600','#b8b0e8'],
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: {duration:800},
+        plugins: {
+          legend: {
+            display: true, position: 'bottom',
+            labels: {color:textColor(), font:{weight:'700',size:11}, boxWidth:12, padding:14}
+          },
+          tooltip: {...tip(), callbacks: {
+            label: ctx => {
+              const pct = total>0?(ctx.raw/total*100).toFixed(1):'0';
+              return ` ${ctx.label}: ${fmt(ctx.raw)} (${pct}%)`;
+            }
+          }},
+        },
+        scales: {
+          r: {
+            ticks: {color:tickColor(), backdropColor:'transparent', font:{size:9,weight:'600'}, callback:v=>fmt(v)},
+            grid:  {color:gridColor()},
+            pointLabels: {color:textColor(), font:{size:10,weight:'700'}},
+          }
+        }
+      },
+      plugins: [{
+        id: 'evcPolarLabels',
+        afterDatasetsDraw(chart){
+          const ctx = chart.ctx;
+          const vals = [platinum, gold, silver];
+          chart.getDatasetMeta(0).data.forEach((arc, i) => {
+            if(!vals[i]) return;
+            const pct = (vals[i]/total*100).toFixed(1)+'%';
+            const midAngle = arc.startAngle + (arc.endAngle - arc.startAngle)/2;
+            const r = arc.outerRadius * 0.65;
+            const x = chart.width/2  + Math.cos(midAngle)*r;
+            const y = chart.height/2 + Math.sin(midAngle)*r;
+            ctx.save();
+            ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.font='bold 10px Poppins'; ctx.fillStyle='#ffffff';
+            ctx.fillText(pct, x, y);
+            ctx.restore();
+          });
+        }
+      }]
+    });
+  }
+
   setTimeout(()=>{
-    chartBar('chart-mnp',  'mnp_ach',   'mnp_target',    0);
-    chartBar('chart-ga',   'cm_ga',      null,            2);
-    chartBar('chart-rech', 'loading_ach','loading_target',1);
+    chartMnpTrend('chart-mnp', d);
+    chartMnpVsTarget('chart-mnp2', d);
+    chartGrowth('chart-ga', 'fca_ach', null, 2);
+    chartGrowth('chart-rech',      'loading_ach',      null, 1);
+    chartGrowth('chart-conv',      'loading_ach_site_conv', null, 3);
+    chartGrowth('chart-rech-site', 'total_site_loading',null, 6);
+    chartRechVsTarget('chart-rech2', d);
+    chartRechPolar('chart-rech-polar', d);
+    chartGrowth('chart-mbb',     'mbb_ach',      null, 4);
+    chartGrowth('chart-datasim', 'data_sim_fca', null, 5);
   }, 50);
 }
 

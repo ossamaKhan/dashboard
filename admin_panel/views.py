@@ -12,6 +12,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from marketing.models import SiteData, UserProfile
+from channel.models import ChannelDaily
 from django.contrib.auth.models import User
 from .forms import SiteDataForm, UserProfileForm
 from .models import AdminLog
@@ -102,7 +103,7 @@ def site_data_list(request):
         sites = sites.filter(
             Q(franchise__icontains=search_query) |
             Q(region__icontains=search_query) |
-            Q(commercial_district__icontains=search_query) |
+            Q(pta_district__icontains=search_query) |
             Q(technology__icontains=search_query)
         )
     if region_filter:
@@ -185,6 +186,7 @@ def site_data_delete(request, pk):
 # ── Helper: pull distinct BU and ARM lists from SiteData ─────
 
 def _get_bu_choices():
+    """Distinct business_unit values from SiteData, sorted."""
     return list(
         SiteData.objects.exclude(business_unit__isnull=True)
         .exclude(business_unit='')
@@ -194,6 +196,7 @@ def _get_bu_choices():
     )
 
 def _get_arm_choices():
+    """Distinct arm values from SiteData, sorted."""
     return list(
         SiteData.objects.exclude(arm__isnull=True)
         .exclude(arm='')
@@ -209,8 +212,9 @@ def _get_arm_choices():
 def user_list(request):
     users = User.objects.all().select_related('profile').order_by('-date_joined')
 
-    search_query    = request.GET.get('search', '').strip()
-    status_filter   = request.GET.get('status', '')
+    search_query  = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '')
+    # NEW: filter by category
     category_filter = request.GET.get('category', '')
 
     if search_query:
@@ -227,6 +231,7 @@ def user_list(request):
     elif status_filter == 'admin':
         users = users.filter(is_staff=True)
 
+    # Filter by RBAC category via related profile
     if category_filter in ('Region', 'BU', 'ARM'):
         users = users.filter(profile__category=category_filter)
 
@@ -234,22 +239,27 @@ def user_list(request):
     users_page = paginator.get_page(request.GET.get('page', 1))
 
     return render(request, 'admin_panel/user_list.html', {
-        'users':           users_page,
-        'search_query':    search_query,
-        'status_filter':   status_filter,
+        'users':          users_page,
+        'search_query':   search_query,
+        'status_filter':  status_filter,
         'category_filter': category_filter,
-        'total_count':     User.objects.count(),
-        'active_count':    User.objects.filter(is_active=True).count(),
-        'admin_count':     User.objects.filter(is_staff=True).count(),
-        'region_count':    UserProfile.objects.filter(category='Region').count(),
+        'total_count':    User.objects.count(),
+        'active_count':   User.objects.filter(is_active=True).count(),
+        'admin_count':    User.objects.filter(is_staff=True).count(),
+        # Category counts for the header chips
+        'region_count':   UserProfile.objects.filter(category='Region').count(),
         'bu_count':        UserProfile.objects.filter(category='BU').count(),
         'arm_count':       UserProfile.objects.filter(category='ARM').count(),
-        'active_tab':      'users',
+        'active_tab':     'users',
     })
 
 
 @admin_required
 def user_create(request):
+    """
+    Create a brand new user (admin-initiated).
+    Includes category, user_business_unit, user_arm assignment.
+    """
     bu_choices  = _get_bu_choices()
     arm_choices = _get_arm_choices()
 
@@ -262,8 +272,9 @@ def user_create(request):
         is_active  = request.POST.get('is_active') == 'on'
         is_staff   = request.POST.get('is_staff') == 'on'
 
+        # ── RBAC fields ──
         category           = request.POST.get('category', 'Region')
-        user_business_unit = request.POST.get('user_business_unit', '').strip()
+        user_business_unit = ','.join([b.strip() for b in request.POST.getlist('user_business_unit') if b.strip()])
         user_arm           = request.POST.get('user_arm', '').strip()
 
         errors = []
@@ -277,7 +288,7 @@ def user_create(request):
             errors.append('A user with this email already exists.')
         if not password or len(password) < 8:
             errors.append('Password must be at least 8 characters.')
-        if category == 'BU' and not user_business_unit:
+        if category == 'BU' and not user_business_unit.strip(','):
             errors.append('Please select a Business Unit for BU category users.')
         if category == 'ARM' and not user_arm:
             errors.append('Please select an ARM for ARM category users.')
@@ -297,8 +308,9 @@ def user_create(request):
             profile.department         = request.POST.get('department', '').strip()
             profile.region             = request.POST.get('region', '').strip()
             profile.employee_id        = request.POST.get('employee_id', '').strip()
+            # ── RBAC ──
             profile.category           = category
-            profile.user_business_unit = user_business_unit if category == 'BU'  else ''
+            profile.user_business_unit = ','.join([b.strip() for b in request.POST.getlist('user_business_unit') if b.strip()]) if category == 'BU' else ''
             profile.user_arm           = user_arm           if category == 'ARM' else ''
             profile.save()
 
@@ -322,6 +334,9 @@ def user_create(request):
 
 @admin_required
 def user_edit(request, pk):
+    """
+    Edit an existing user — updates User model, UserProfile, and RBAC category.
+    """
     user       = get_object_or_404(User, pk=pk)
     profile, _ = UserProfile.objects.get_or_create(user=user)
     bu_choices  = _get_bu_choices()
@@ -337,11 +352,12 @@ def user_edit(request, pk):
         if User.objects.filter(email=new_email).exclude(pk=pk).exists():
             errors.append('This email is already used by another account.')
 
+        # ── RBAC fields ──
         category           = request.POST.get('category', 'Region')
-        user_business_unit = request.POST.get('user_business_unit', '').strip()
+        user_business_unit = ','.join([b.strip() for b in request.POST.getlist('user_business_unit') if b.strip()])
         user_arm           = request.POST.get('user_arm', '').strip()
 
-        if category == 'BU' and not user_business_unit:
+        if category == 'BU' and not user_business_unit.strip(','):
             errors.append('Please select a Business Unit for BU category users.')
         if category == 'ARM' and not user_arm:
             errors.append('Please select an ARM for ARM category users.')
@@ -364,8 +380,9 @@ def user_edit(request, pk):
             profile.region             = request.POST.get('region', '').strip()
             profile.employee_id        = request.POST.get('employee_id', '').strip()
             profile.bio                = request.POST.get('bio', '').strip()
+            # ── RBAC ──
             profile.category           = category
-            profile.user_business_unit = user_business_unit if category == 'BU'  else ''
+            profile.user_business_unit = ','.join([b.strip() for b in request.POST.getlist('user_business_unit') if b.strip()]) if category == 'BU' else ''
             profile.user_arm           = user_arm           if category == 'ARM' else ''
             if 'picture' in request.FILES:
                 profile.picture = request.FILES['picture']
@@ -436,25 +453,32 @@ def user_toggle_active(request, pk):
     return redirect('admin_user_list')
 
 
+# ── NEW: Quick category assignment via AJAX/POST ──────────────
+
 @admin_required
 def user_set_category(request, pk):
+    """
+    Quick-assign category without going to the full edit page.
+    POST: category, user_business_unit (if BU), user_arm (if ARM)
+    Returns JSON for use with fetch().
+    """
     user    = get_object_or_404(User, pk=pk)
     profile, _ = UserProfile.objects.get_or_create(user=user)
 
     if request.method == 'POST':
         category           = request.POST.get('category', 'Region')
-        user_business_unit = request.POST.get('user_business_unit', '').strip()
+        user_business_unit = ','.join([b.strip() for b in request.POST.getlist('user_business_unit') if b.strip()])
         user_arm           = request.POST.get('user_arm', '').strip()
 
         if category not in ('Region', 'BU', 'ARM'):
             return JsonResponse({'ok': False, 'error': 'Invalid category'}, status=400)
-        if category == 'BU' and not user_business_unit:
+        if category == 'BU' and not user_business_unit.strip(','):
             return JsonResponse({'ok': False, 'error': 'Business Unit is required for BU category'}, status=400)
         if category == 'ARM' and not user_arm:
             return JsonResponse({'ok': False, 'error': 'ARM value is required for ARM category'}, status=400)
 
         profile.category           = category
-        profile.user_business_unit = user_business_unit if category == 'BU'  else ''
+        profile.user_business_unit = ','.join([b.strip() for b in request.POST.getlist('user_business_unit') if b.strip()]) if category == 'BU' else ''
         profile.user_arm           = user_arm           if category == 'ARM' else ''
         profile.save()
 
@@ -503,165 +527,233 @@ def to_str(val):
     except:
         return None
 
-def parse_month_year(val):
-    """Parse the Month column which contains a date like '1/1/2025' or '2025-01-01'.
-    Returns (month_int, year_int) or (None, None)."""
-    try:
-        if pd.isna(val):
-            return None, None
-        s = str(val).strip()
-        if not s or s in ('nan', 'None', ''):
-            return None, None
-        # Try common date formats
-        for fmt in ('%m/%d/%Y', '%Y-%m-%d', '%d/%m/%Y', '%m-%d-%Y', '%Y/%m/%d',
-                    '%m/%d/%y', '%d-%m-%Y', '%d/%m/%y'):
-            try:
-                dt = datetime.strptime(s, fmt)
-                return dt.month, dt.year
-            except ValueError:
-                continue
-        # Try pandas Timestamp
-        ts = pd.Timestamp(val)
-        if not pd.isna(ts):
-            return ts.month, ts.year
-        return None, None
-    except:
-        return None, None
+# ── Channel column map (mirrors import_channel management command) ──
+import re as _re
+
+_CH_COL_MAP = {
+    'Dated':'date','Franchise ID':'franchise_id','City':'city','Region':'region',
+    'BU':'business_unit','Status':'status','ARM':'arm','GA Target':'fca_target','GA Ach':'fca_ach',
+    '4G Targets':'g4_target','4G Ach':'g4_ach','MNP Target':'mnp_target','MNP Ach':'mnp_ach',
+    'Loading Target':'loading_target','Loading Ach':'loading_ach','EVC Uload':'evc_uload',
+    'Vouchers':'vouchers','Total Site Loading':'total_site_loading',
+    'Conv. site loading':'loading_ach_site_conv','Issuance Ach':'issuance_ach',
+    'Uload Recharge Ach':'uload_recharge_ach','Data SIM FCA':'data_sim_fca',
+    'MBB Targets':'mbb_target','MBB Ach':'mbb_ach','M0 Revenue Targets':'m0_revenue_target',
+    'M0 Revenue Ach':'m0_revenue_ach','QOS Targets':'qos_target','QOS Ach':'qos_ach',
+    'EVC Active Base':'evc_active_base','Bundle Target':'bundle_target','Bundle Ach':'bundle_ach',
+    'Recharge Only':'recharge_only','Female FCA Count':'female_fca_count',
+    'Dormancy Count':'dormancy_count','HVC TGT':'hvc_target','HVC Ach':'hvc_ach',
+    'CM GA':'cm_ga','CM Disown':'cm_disown','Female CNIC Disowned':'female_cnic_disowned',
+    'New SIM Sale (Disowned CNICs)':'new_sim_sale_disowned_cnics',
+    'FCA Date within 90 Days Disowned':'fca_within_90d_disowned',
+    'FCA Date within 90 Days (Disown & new Activation)':'fca_within_90d_disown_new_activation',
+    '90 Days Active Base Disown':'active_90d_base_disown',
+    '90 Days Active Base (Disown & new Activation)':'active_90d_base_disown_new_activation',
+    'NPR SO':'npr','Active SO (Daily Ave.)':'active_so_daily_avg','Active SO NPR':'active_so_npr',
+    'LM Active EVC':'lm_active_evc','MTD Served':'mtd_served','Avg Served':'avg_served',
+    'CM EVC Active (Platinum)':'cm_evc_active_platinum','CM EVC Active (Gold)':'cm_evc_active_gold',
+    'CM EVC Active (Silver)':'cm_evc_active_silver','CM EVC Active':'cm_evc_active',
+    'CM 964 Active (Platinum)':'cm_964_active_platinum','CM 964 Active (Gold)':'cm_964_active_gold',
+    'CM 964 Active (Silver)':'cm_964_active_silver','CM 964 Active':'cm_964_active',
+    'Total Bundles Activated':'total_bundles_activated','Daily Avg. Bundle Subs':'daily_avg_bundle_subs',
+    'cc':'cc','Total Bundles Activated.1':'total_bundles_activated_2',
+    'Daily Avg. Bundle Subs.1':'daily_avg_bundle_subs_2','EVC CMTD Active':'evc_cmtd_active',
+    'CM Daily Active':'cm_daily_active','964 Active CMTD':'active_964_cmtd',
+    'Retailer Trans Count = 1':'retailer_trans_count_1','Retailer Trans Count = 2':'retailer_trans_count_2',
+    'Trans >=3%':'trans_ge_3_pct','PBC':'pbc','ZR FCA':'zr_fca','ZR':'zr',
+    'EVC Retailer':'evc_retailer','Daily Active EVC':'daily_active_evc',
+    'Daily Active Served':'daily_active_served','WIC SR':'wic_sr','Retail SR':'retail_sr',
+    'Total SR':'total_sr','Cell Sites Count':'cell_sites_count','FCA':'fca_per_site',
+    'Per Site FCA':'fca_per_site_value','SD Bundle':'sd_bundle','FCA ARPU':'fca_m0',
+    'MNP ARPU':'mnp_m0','MBB ARPU':'mbb_m0','Data Sim ARPU':'data_sim_m0',
+    'GA ARPU':'ga_m0','HVC ARPU':'hvc_m0','M0 Rev FCA':'m0_rev_fca',
+    'M0 Rev MNP':'m0_rev_mnp','M0 Rev MBB':'m0_rev_mbb','M0 Rev Data Sim':'m0_rev_data_sim',
+    'M0 Rev GA':'m0_rev_ga','M0 HVC Rev':'m0_hvc_rev',
+}
+
+def _ch_parse_num(v):
+    if v is None or (isinstance(v, float) and pd.isna(v)): return 0
+    if isinstance(v, (int, float)): return v
+    s = str(v).strip().replace(',','').replace(' ','')
+    if s in ('','nan','na','-','#div/0!','#n/a'): return 0
+    try: return float(s)
+    except: return 0
+
+def _ch_parse_date(v):
+    if pd.isna(v): return None
+    if isinstance(v, datetime): return v.date()
+    if hasattr(v,'date'): return v.date()
+    s = str(v).strip()
+    for fmt in ('%m/%d/%Y','%d/%m/%Y','%Y-%m-%d','%m-%d-%Y'):
+        try: return datetime.strptime(s,fmt).date()
+        except: continue
+    return None
 
 
 @admin_required
 def import_data(request):
-    """
-    Import Excel data with the NEW column layout (no bisp_type, region_main,
-    total_recharge, digi_recharge columns).
+    data_type = request.POST.get('data_type', 'marketing') if request.method == 'POST' else 'marketing'
 
-    New column order (0-indexed):
-     0  Month (date → parsed to month + year)
-     1  Key
-     2  2G ID
-     3  3G ID
-     4  4G ID
-     5  Technology
-     6  Business Unit
-     7  Region
-     8  Commercial District
-     9  CL Status
-    10  USF/Non-USF
-    11  latitude
-    12  longitude
-    13  PTA District
-    14  Site Status
-    15  Type
-    16  FR (franchise)
-    17  ARM.ARM Name
-    18  BVS.
-    19  FCA.
-    20  Act 90D
-    21  Act 30D
-    22  Act 90D (4G)
-    23  HVC Base
-    24  Total Rev Amt
-    25  BVS Retailer
-    26  EVC Retailer
-    27  Outgoing Minutes
-    28  Incoming Minutes
-    29  Volume (GBs)
-    30  DATA (4G)
-    31  FCA (Adjusted)
-    32  Total Revival
-    33  Gross Churn
-    34  Net Adds
-    35  Avg. Daily Active
-    36  Active Rechargers
-    37  MO Revenue
-    38  MNP FCA
-    39  Handset 4G
-    40  RCHRG_FACE_VALUE
-    41  PP_RECHAR_FACE_VAL
-    42  Prepaid Digital Amount
-    43  Postpaid Digital Amount
-    44  Conventional Recharge
-    """
     if request.method == 'POST' and request.FILES.get('file'):
+        file = request.FILES['file']
         try:
-            file = request.FILES['file']
-            df = pd.read_excel(file, header=None)
-            df.columns = range(len(df.columns))
-            # Skip header row
-            df = df.iloc[1:].reset_index(drop=True)
-            # Drop rows where column 0 (Month/date) is empty
-            df = df[df[0].notna()]
+            if data_type == 'channel':
+                # ── Channel import ─────────────────────────────────────
+                df = pd.read_excel(file)
+                # Normalize headers (collapse newlines/spaces)
+                df.columns = [_re.sub(r'\s+', ' ', str(c)).strip() for c in df.columns]
+                # Handle duplicate columns
+                seen = {}
+                new_cols = []
+                for c in df.columns:
+                    if c in seen:
+                        seen[c] += 1
+                        new_cols.append(f'{c}.{seen[c]}')
+                    else:
+                        seen[c] = 0
+                        new_cols.append(c)
+                df.columns = new_cols
 
-            objects = []
-            total_rows = len(df)
+                int_fields = {f.name for f in ChannelDaily._meta.get_fields()
+                              if hasattr(f,'get_internal_type') and f.get_internal_type() in ('IntegerField','BigIntegerField')}
+                float_fields = {f.name for f in ChannelDaily._meta.get_fields()
+                                if hasattr(f,'get_internal_type') and f.get_internal_type()=='FloatField'}
 
-            for i, row in df.iterrows():
-                m, y = parse_month_year(row[0])
-                obj = SiteData(
-                    month                  = m,
-                    year                   = y,
-                    key                    = to_str(row[1]),
-                    id_2g                  = to_str(row[2]),
-                    id_3g                  = to_str(row[3]),
-                    id_4g                  = to_str(row[4]),
-                    technology             = to_str(row[5]),
-                    business_unit          = to_str(row[6]),
-                    region                 = to_str(row[7]),
-                    commercial_district    = to_str(row[8]),
-                    cl_status              = to_str(row[9]),
-                    usf_status             = to_str(row[10]),
-                    latitude               = to_float(row[11]),
-                    longitude              = to_float(row[12]),
-                    pta_district           = to_str(row[13]),
-                    site_status            = to_str(row[14]),
-                    site_type              = to_str(row[15]),
-                    franchise              = to_str(row[16]),
-                    arm                    = to_str(row[17]),
-                    bvs                    = to_dec(row[18]),
-                    fca                    = to_dec(row[19]),
-                    act_90d                = to_int(row[20]),
-                    act_30d                = to_int(row[21]),
-                    act_90d_4g             = to_int(row[22]),
-                    hvc_base               = to_int(row[23]),
-                    tot_revn_amt           = to_dec(row[24]),
-                    bvs_retailer           = to_int(row[25]),
-                    evc_retailer           = to_int(row[26]),
-                    minutes_outgoing       = to_dec(row[27]),
-                    minutes_incoming       = to_dec(row[28]),
-                    volume_gbs             = to_dec(row[29]),
-                    data_ntwrk_vol_4g      = to_dec(row[30]),
-                    fca_adjusted           = to_dec(row[31]),
-                    tot_revival            = to_int(row[32]),
-                    gross_churn            = to_int(row[33]),
-                    net_add                = to_int(row[34]),
-                    avg_dly_act            = to_dec(row[35]),
-                    act_recharger          = to_int(row[36]),
-                    m0_revn                = to_dec(row[37]),
-                    mnp_fca                = to_int(row[38]),
-                    handset_4g             = to_int(row[39]),
-                    rchrg_face_value_mtd   = to_dec(row[40]),
-                    pp_rechar_face_val_mtd = to_dec(row[41]),
-                    prepaid_dgtl_amount    = to_dec(row[42]),
-                    postpaid_dgtl_amount   = to_dec(row[43]),
-                    conventional_recharge  = to_dec(row[44]),
+                existing_keys = set(ChannelDaily.objects.values_list('date','franchise_id'))
+                objs_create = []
+                objs_update = []
+                skipped = 0
+                total_rows = len(df)
+
+                for idx, row in df.iterrows():
+                    kwargs = {}
+                    for src_col, model_field in _CH_COL_MAP.items():
+                        if src_col not in df.columns: continue
+                        val = row[src_col]
+                        if model_field == 'date':
+                            kwargs[model_field] = _ch_parse_date(val)
+                        elif model_field in ('franchise_id','city','region','business_unit',
+                                             'arm','status'):
+                            kwargs[model_field] = str(val).strip() if not pd.isna(val) else ''
+                        elif model_field in int_fields:
+                            kwargs[model_field] = int(_ch_parse_num(val))
+                        elif model_field in float_fields:
+                            kwargs[model_field] = float(_ch_parse_num(val))
+                        else:
+                            kwargs[model_field] = _ch_parse_num(val)
+
+                    if not kwargs.get('date') or not kwargs.get('franchise_id'):
+                        skipped += 1
+                        continue
+
+                    key = (kwargs['date'], kwargs['franchise_id'])
+                    if key in existing_keys:
+                        objs_update.append(kwargs)
+                    else:
+                        objs_create.append(ChannelDaily(**kwargs))
+                        existing_keys.add(key)
+
+                if objs_create:
+                    ChannelDaily.objects.bulk_create(objs_create, batch_size=500)
+                if objs_update:
+                    for kw in objs_update:
+                        ChannelDaily.objects.filter(
+                            date=kw['date'], franchise_id=kw['franchise_id']
+                        ).update(**{k:v for k,v in kw.items() if k not in ('date','franchise_id')})
+
+                AdminLog.objects.create(
+                    user=request.user, action='import', model_name='ChannelDaily',
+                    details=f'Imported {len(objs_create)} new + {len(objs_update)} updated channel rows from {file.name}'
                 )
-                objects.append(obj)
-                if len(objects) == 500:
-                    SiteData.objects.bulk_create(objects)
-                    objects = []
-            if objects:
-                SiteData.objects.bulk_create(objects)
+                messages.success(request, f'✅ Channel import: {len(objs_create)} created, {len(objs_update)} updated, {skipped} skipped.')
 
-            AdminLog.objects.create(
-                user=request.user, action='import', model_name='SiteData',
-                details=f'Imported {total_rows} records from {file.name}'
-            )
-            messages.success(request, f'Successfully uploaded {total_rows} records!')
+            else:
+                # ── Marketing import ───────────────────────────────────
+                df = pd.read_excel(file, header=None)
+                df.columns = range(len(df.columns))
+                df = df.iloc[1:].reset_index(drop=True)
+                df = df[df[0].notna()]
+                objects = []
+                total_rows = len(df)
+                for i, row in df.iterrows():
+                    obj = SiteData(
+                        region_main=to_str(row[0]), bisp_type=to_str(row[1]),
+                        month=to_int(row[2]), year=to_int(row[3]),
+                        key=to_int(row[4]), id_2g=to_str(row[5]),
+                        id_3g=to_str(row[6]), id_4g=to_str(row[7]),
+                        technology=to_str(row[8]), business_unit=to_str(row[9]),
+                        region=to_str(row[10]), commercial_district=to_str(row[11]),
+                        cl_status=to_str(row[12]), usf_status=to_str(row[13]),
+                        latitude=to_float(row[14]), longitude=to_float(row[15]),
+                        pta_district=to_str(row[16]), site_status=to_str(row[17]),
+                        site_type=to_str(row[18]), franchise=to_str(row[19]),
+                        arm=to_str(row[20]), fca=to_dec(row[21]), bvs=to_dec(row[22]),
+                        act_90d=to_int(row[23]), act_30d=to_int(row[24]),
+                        act_90d_4g=to_int(row[25]), hvc_base=to_int(row[26]),
+                        tot_revn_amt=to_dec(row[27]), bvs_retailer=to_int(row[28]),
+                        evc_retailer=to_int(row[29]), minutes_outgoing=to_dec(row[30]),
+                        minutes_incoming=to_dec(row[31]), volume_gbs=to_dec(row[32]),
+                        data_ntwrk_vol_4g=to_dec(row[33]), fca_adjusted=to_dec(row[34]),
+                        tot_revival=to_int(row[35]), gross_churn=to_int(row[36]),
+                        net_add=to_int(row[37]), avg_dly_act=to_dec(row[38]),
+                        act_recharger=to_int(row[39]), m0_revn=to_dec(row[40]),
+                        mnp_fca=to_int(row[41]), handset_4g=to_int(row[42]),
+                        rchrg_face_value_mtd=to_dec(row[43]), pp_rechar_face_val_mtd=to_dec(row[44]),
+                        prepaid_dgtl_amount=to_dec(row[45]), postpaid_dgtl_amount=to_dec(row[46]),
+                        conventional_recharge=to_dec(row[47]), total_recharge=to_dec(row[48]),
+                        digi_recharge=to_dec(row[49]),
+                    )
+                    objects.append(obj)
+                    if len(objects) == 500:
+                        SiteData.objects.bulk_create(objects)
+                        objects = []
+                if objects:
+                    SiteData.objects.bulk_create(objects)
+                AdminLog.objects.create(
+                    user=request.user, action='import', model_name='SiteData',
+                    details=f'Imported {total_rows} records from {file.name}'
+                )
+                messages.success(request, f'🎉 Marketing import: {total_rows} records uploaded!')
+
         except Exception as e:
             messages.error(request, f'Error: {str(e)}')
         return redirect('import_data')
 
-    return render(request, 'admin_panel/import_data.html', {'active_tab': 'import'})
+    return render(request, 'admin_panel/import_data.html', {
+        'active_tab': 'import',
+        'marketing_count': SiteData.objects.count(),
+        'channel_count': ChannelDaily.objects.count(),
+    })
+
+
+@admin_required
+def wipe_data(request):
+    """Wipe marketing or channel data — POST only with confirmation."""
+    if request.method == 'POST':
+        data_type = request.POST.get('data_type', '')
+        confirm   = request.POST.get('confirm', '')
+        if confirm != 'DELETE':
+            messages.error(request, 'Type DELETE to confirm wipe.')
+            return redirect('import_data')
+        if data_type == 'marketing':
+            count = SiteData.objects.count()
+            SiteData.objects.all().delete()
+            AdminLog.objects.create(
+                user=request.user, action='delete', model_name='SiteData',
+                details=f'Wiped all {count} marketing records'
+            )
+            messages.success(request, f'🗑️ Wiped {count} marketing records.')
+        elif data_type == 'channel':
+            count = ChannelDaily.objects.count()
+            ChannelDaily.objects.all().delete()
+            AdminLog.objects.create(
+                user=request.user, action='delete', model_name='ChannelDaily',
+                details=f'Wiped all {count} channel records'
+            )
+            messages.success(request, f'🗑️ Wiped {count} channel records.')
+        else:
+            messages.error(request, 'Invalid data type.')
+    return redirect('import_data')
 
 
 @admin_required

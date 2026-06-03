@@ -142,7 +142,7 @@ main{position:relative;z-index:5;padding:20px 24px;display:grid;grid-template-co
 .map-stat-chip{display:inline-flex;align-items:center;gap:5px;background:var(--input-bg);border:1px solid var(--border);border-radius:20px;padding:4px 11px;font-size:10px;font-weight:700;color:var(--text2)}
 .map-stat-chip span{color:var(--orange);font-weight:800}
 .map-live-dot{width:7px;height:7px;background:#00C853;border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
-.bu-legend{position:absolute;bottom:22px;left:22px;background:rgba(var(--panel-bg-rgb,255,255,255),0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:600;min-width:160px;max-width:200px;max-height:320px;overflow-y:auto}
+.bu-legend{position:absolute;bottom:22px;left:22px;background:rgba(var(--panel-bg-rgb,255,255,255),0.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1.5px solid var(--border);border-radius:12px;padding:10px 13px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:600;min-width:170px;max-width:210px;max-height:340px;overflow-y:auto}
 [data-theme="dark"] .bu-legend{background:rgba(21,15,53,0.92)}
 .bu-legend-title{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
 .bu-legend-row{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:600;color:var(--text2);padding:4px 0;border-bottom:1px solid var(--border);cursor:default}
@@ -552,6 +552,8 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 </div>
 </div>
 <script>
+Chart.register({id:'globalLabels',afterDatasetsDraw(c){const ctx=c.ctx;if(!ctx)return;if(['doughnut','polarArea','pie'].includes(c.config.type))return;if(c.config.options&&c.config.options.skipGlobalLabels)return;if(c.config.options&&c.config.options.indexAxis==='y')return;ctx.save();c.data.datasets.forEach((ds,i)=>{const m=c.getDatasetMeta(i);if(m.hidden)return;m.data.forEach((p,idx)=>{const v=ds.data[idx];if(v==null||v===0)return;const isMob=c.width<500;if(isMob&&idx%2!==0&&m.type==='line')return;const txt=fmt(v);ctx.font=`bold ${isMob?9:11}px Poppins`;ctx.textAlign='center';ctx.fillStyle=textColor();const ySafe=p.y<30?p.y+20:p.y-10;ctx.fillText(txt,p.x,ySafe);});});ctx.restore();}});
+
 const ROLE_CONFIG={category:'{{ locked.category }}',regionLocked:{{ locked.region.locked|yesno:"true,false" }},buLocked:{{ locked.bu.locked|yesno:"true,false" }},buValue:'{{ locked.bu.value|default:"" }}'};
 function toggleSidebar(){const s=document.getElementById('sidebar'),o=document.getElementById('sidebar-overlay'),b=document.getElementById('mob-nav-btn'),mab=document.getElementById('mob-action-bar');s.classList.toggle('open');o.classList.toggle('open');const isOpen=s.classList.contains('open');if(b)b.style.display=isOpen?'none':'flex';if(mab)mab.style.display=isOpen?'none':'flex';}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').classList.remove('open');const b=document.getElementById('mob-nav-btn');if(b)b.style.display='flex';const mab=document.getElementById('mob-action-bar');if(mab)mab.style.display='flex';}
@@ -883,23 +885,42 @@ function fetchMapData(){
       });
 
       // Popup — click only, no redundant fields
-      const digiTotal=m.digi_recharge+m.conv_recharge;
-      const digiPct=digiTotal?((m.digi_recharge/digiTotal)*100).toFixed(0)+'%':'—';
-      const popup=`<div style="min-width:210px;font-family:'Poppins',sans-serif">
+      const totalRech = m.total_recharge || (m.digi_recharge + m.conv_recharge);
+      const digiPct  = totalRech ? ((m.digi_recharge/totalRech)*100).toFixed(0)+'%' : '—';
+      const convPct  = totalRech ? ((m.conv_recharge/totalRech)*100).toFixed(0)+'%' : '—';
+      const statusColor = m.site_status==='Active'?'#00C853':'#FF3D00';
+      const popup=`<div style="min-width:260px;max-width:300px;font-family:'Poppins',sans-serif">
         <div class="map-popup-title" style="background:linear-gradient(135deg,${color},${bStyle.fill})">
-          📡 ${m.key||'Unknown'}
-          <div style="font-size:9px;font-weight:600;opacity:.85;margin-top:2px">${bu} · ${m.district||'—'}</div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:13px;font-weight:900">📡 ${m.key||'Unknown'}</span>
+            <span style="font-size:9px;padding:2px 8px;border-radius:20px;background:${statusColor}22;color:${statusColor};border:1px solid ${statusColor};font-weight:800">${m.site_status||'—'}</span>
+          </div>
+          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:4px">${bu} · ${m.district||'—'}</div>
+          ${m.franchise?`<div style="font-size:9px;opacity:.7;margin-top:1px">FR: ${m.franchise}${m.arm?' · ARM: '+m.arm:''}</div>`:''}
         </div>
         <div class="map-popup-body">
-          <div class="map-popup-row"><span class="map-popup-label">Technology</span><span>${m.technology||'—'}</span></div>
-          <div class="map-popup-row"><span class="map-popup-label">Status</span><span style="color:${m.site_status==='Active'?'#00C853':'#FF3D00'};font-weight:800">${m.site_status||'—'}</span></div>
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <div style="flex:1;background:rgba(0,200,83,0.08);border:1px solid rgba(0,200,83,0.2);border-radius:8px;padding:6px 8px;text-align:center">
+              <div style="font-size:9px;font-weight:700;color:#8a85a5;text-transform:uppercase;letter-spacing:1px">Revenue</div>
+              <div style="font-size:12px;font-weight:900;color:${color};margin-top:2px">PKR ${fmt(m.revenue)}</div>
+            </div>
+            <div style="flex:1;background:rgba(0,188,212,0.08);border:1px solid rgba(0,188,212,0.2);border-radius:8px;padding:6px 8px;text-align:center">
+              <div style="font-size:9px;font-weight:700;color:#8a85a5;text-transform:uppercase;letter-spacing:1px">90D Base</div>
+              <div style="font-size:12px;font-weight:900;color:#00BCD4;margin-top:2px">${fmt(m.activations)}</div>
+            </div>
+          </div>
+          <div class="map-popup-row"><span class="map-popup-label">Technology</span><span style="font-weight:800;color:${color}">${m.technology||'—'}</span></div>
+          <div class="map-popup-row"><span class="map-popup-label">4G Base</span><span>${fmt(m.base_4g)}</span></div>
+          <div class="map-popup-row"><span class="map-popup-label">Net Additions</span><span style="color:${(m.net_add||0)>=0?'#00C853':'#FF3D00'};font-weight:800">${fmt(m.net_add)}</span></div>
+          <div class="map-popup-row"><span class="map-popup-label">Gross Churn</span><span style="color:#FF3D00;font-weight:700">${fmt(m.churn)}</span></div>
+          <div class="map-popup-row"><span class="map-popup-label">HVC Base</span><span>${fmt(m.hvc)}</span></div>
           <div class="map-popup-divider"></div>
-          <div class="map-popup-row"><span class="map-popup-label">Revenue</span><span style="color:${color};font-weight:800">PKR ${fmt(m.revenue)}</span></div>
-          <div class="map-popup-row"><span class="map-popup-label">90D Base</span><span>${fmt(m.activations)}</span></div>
-          <div class="map-popup-row"><span class="map-popup-label">EVC / BVS</span><span>${fmt(m.evc_base)} / ${fmt(m.bvs_base)}</span></div>
+          <div class="map-popup-row"><span class="map-popup-label">EVC Retailer</span><span>${fmt(m.evc_base)}</span></div>
+          <div class="map-popup-row"><span class="map-popup-label">BVS Retailer</span><span>${fmt(m.bvs_base)}</span></div>
           <div class="map-popup-divider"></div>
-          <div class="map-popup-row"><span class="map-popup-label">Digital Rech.</span><span>PKR ${fmt(m.digi_recharge)} <span style="color:var(--muted);font-size:9px">(${digiPct})</span></span></div>
-          <div class="map-popup-row"><span class="map-popup-label">Conv. Rech.</span><span>PKR ${fmt(m.conv_recharge)}</span></div>
+          <div class="map-popup-row"><span class="map-popup-label">Total Recharge</span><span style="color:${color};font-weight:800">PKR ${fmt(totalRech)}</span></div>
+          <div class="map-popup-row"><span class="map-popup-label">Digital</span><span>PKR ${fmt(m.digi_recharge)} <span style="color:#00BCD4;font-size:9px;font-weight:800">(${digiPct})</span></span></div>
+          <div class="map-popup-row"><span class="map-popup-label">Conventional</span><span>PKR ${fmt(m.conv_recharge)} <span style="color:#AB1DFE;font-size:9px;font-weight:800">(${convPct})</span></span></div>
         </div>
       </div>`;
 
@@ -934,12 +955,20 @@ function fetchMapData(){
     const sortedBUs=Object.keys(buCounts).sort((a,b)=>buCounts[b]-buCounts[a]);
     const buCountEl=document.getElementById('map-bu-count');
     if(buCountEl)buCountEl.textContent=sortedBUs.length;
+    const totalSites = sortedBUs.reduce((s,bu)=>s+buCounts[bu],0);
     body.innerHTML=sortedBUs.map(bu=>{
       const bs=BOUNDARY_STYLES[bu]||{stroke:'#607D8B'};
-      return `<div class="bu-legend-row">
-        <div class="bu-legend-dot" style="background:${bs.stroke}"></div>
-        <div class="bu-legend-name" title="${bu}">${bu}</div>
-        <div class="bu-legend-count" style="background:${bs.stroke}">${buCounts[bu]}</div>
+      const cnt=buCounts[bu];
+      const barW=totalSites?((cnt/totalSites)*100).toFixed(0)+'%':'0%';
+      return `<div class="bu-legend-row" style="flex-direction:column;align-items:stretch;padding:6px 0;gap:3px">
+        <div style="display:flex;align-items:center;gap:7px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${bs.stroke};flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>
+          <span style="flex:1;font-size:10px;font-weight:800;color:var(--text)">${bu}</span>
+          <span style="font-size:10px;font-weight:900;color:${bs.stroke}">${cnt}</span>
+        </div>
+        <div style="margin-left:15px;height:3px;border-radius:3px;background:var(--input-bg);overflow:hidden">
+          <div style="height:100%;width:${barW};background:${bs.stroke};border-radius:3px;transition:width .6s"></div>
+        </div>
       </div>`;
     }).join('');
     legend.style.display='block';
@@ -1019,18 +1048,33 @@ function openTrend(type, dataKey, title, sub){
     let lastIdx = -1;
     src.datasets.forEach(ds => ds.data.forEach((v,i)=>{ if(v!=null&&i>lastIdx) lastIdx=i; }));
     if(lastIdx<0) lastIdx = 11;
-    const labels   = src.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
-    const datasets = src.datasets.map((ds,i)=>({
-      label: String(ds.label), data: ds.data.slice(0,lastIdx+1),
-      borderColor:C[i%C.length], backgroundColor:C[i%C.length]+'22',
-      fill:src.datasets.length===1, tension:0.4, pointRadius:4,
-      pointHoverRadius:6, borderWidth:2.5, spanGaps:true,
-    }));
+    const labels = src.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
+    // Pre-compute yearly totals so tooltip can show % of annual total
+    const datasets = src.datasets.map((ds,i)=>{
+      const sliced = ds.data.slice(0,lastIdx+1);
+      const yearTotal = sliced.reduce((s,v)=>s+(v||0), 0);
+      return {
+        label: String(ds.label), data: sliced,
+        _yearTotal: yearTotal,
+        borderColor:C[i%C.length], backgroundColor:C[i%C.length]+'22',
+        fill:src.datasets.length===1, tension:0.4, pointRadius:4,
+        pointHoverRadius:6, borderWidth:2.5, spanGaps:true,
+      };
+    });
     _trendChart = new Chart(canvas,{
       type:'line', data:{labels,datasets},
       options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
-        skipGlobalLabels:true,
-        plugins:{legend:{display:datasets.length>1,position:'top',labels:{color:textColor(),font:{weight:'700',size:11}}},tooltip:{...tip()}},
+        plugins:{
+          legend:{display:datasets.length>1,position:'top',labels:{color:textColor(),font:{weight:'700',size:11}}},
+          tooltip:{...tip(),callbacks:{
+            label:ctx=>{
+              const v = ctx.raw;
+              const total = ctx.dataset._yearTotal || 0;
+              const pct = (total > 0) ? (v / total * 100).toFixed(1) + '%' : '—';
+              return ` ${ctx.dataset.label}: ${pct}`;
+            }
+          }},
+        },
         scales:{x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'}}},
                 y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}}}}
     });
@@ -1053,7 +1097,6 @@ function openTrend(type, dataKey, title, sub){
     _trendChart = new Chart(canvas,{
       type:'bar', data:{labels,datasets},
       options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
-        skipGlobalLabels:true,
         plugins:{legend:{display:years.length>1,position:'top',labels:{color:textColor(),font:{weight:'700',size:11}}},
           tooltip:{...tip(),callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmt(ctx.raw)}`}}},
         scales:{x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'}}},
@@ -1068,7 +1111,6 @@ function openTrend(type, dataKey, title, sub){
       data:{labels:src.labels,datasets:[{label:'Revenue',data:src.values,
         backgroundColor:C[0]+'bb',borderColor:C[0],borderWidth:1.5,borderRadius:3}]},
       options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:{duration:600},
-        skipGlobalLabels:true,
         plugins:{legend:{display:false},tooltip:{...tip(),callbacks:{label:ctx=>` PKR ${fmt(ctx.raw)}`}}},
         scales:{x:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}},
                 y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'700'}}}}}
@@ -1082,7 +1124,6 @@ function openTrend(type, dataKey, title, sub){
       data:{labels:src.labels,datasets:[{label:'Revenue',data:src.values,
         backgroundColor:C[1]+'bb',borderColor:C[1],borderWidth:1.5,borderRadius:3}]},
       options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:{duration:600},
-        skipGlobalLabels:true,
         plugins:{legend:{display:false},tooltip:{...tip(),callbacks:{label:ctx=>` PKR ${fmt(ctx.raw)}`}}},
         scales:{x:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}},
                 y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'700'}}}}}
@@ -1098,7 +1139,6 @@ function openTrend(type, dataKey, title, sub){
         {label:'Incoming',data:src.incoming,backgroundColor:C[2]+'bb',borderColor:C[2],borderWidth:1.5,borderRadius:3},
       ]},
       options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
-        skipGlobalLabels:true,
         plugins:{legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11}}},tooltip:{...tip()}},
         scales:{x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'}}},
                 y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}}}}
@@ -1114,7 +1154,6 @@ function openTrend(type, dataKey, title, sub){
         {label:'Revival',data:src.revival,backgroundColor:'rgba(0,200,83,0.7)',  borderColor:'#00C853',borderWidth:1.5,borderRadius:3},
       ]},
       options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
-        skipGlobalLabels:true,
         plugins:{legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11}}},tooltip:{...tip()}},
         scales:{x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'}}},
                 y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}}}}

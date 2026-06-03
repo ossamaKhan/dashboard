@@ -20,9 +20,9 @@ urlpatterns = [
     path('users/<int:pk>/toggle-active/',   views.user_toggle_active, name='admin_user_toggle_active'),
 
     # Import / Export / Logs
+    path('import/', views.import_data,  name='import_data'),
     path('import/', views.import_data,  name='admin_import_data'),
-    path('export/', views.export_data,  name='admin_export_data'),
+    path('wipe/',   views.wipe_data,    name='wipe_data'),
+    path('export/', views.export_data,  name='export_data'),
     path('logs/',   views.admin_logs,   name='admin_logs'),
-    path('import-data/', views.import_data, name='import_data'),
-
 ]
