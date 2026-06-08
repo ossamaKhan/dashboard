@@ -386,8 +386,10 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <div class="fw disabled" id="fw-arm">
       <div class="fw-label"><span class="ldot ld-o"></span>ARM</div>
       <span class="fi-ico" style="font-size:11px;opacity:.5">◉</span>
-      <input class="fi" id="in-arm" placeholder="All ARMs" readonly/>
-      <div class="fdd" id="dd-arm"></div>
+<input class="fi" id="in-arm"
+  value="{% if locked.arm.locked %}{{ locked.arm.value|default:'' }}{% endif %}"
+  placeholder="{% if not locked.arm.locked %}All ARMs{% endif %}"
+  {% if locked.arm.locked %}disabled style="pointer-events:none;cursor:not-allowed;color:var(--purple);font-weight:700"{% else %}readonly{% endif %}/>      <div class="fdd" id="dd-arm"></div>
     </div>
     <span class="f-arrow">&#8250;</span>
     <div class="fw disabled" id="fw-franchise">
@@ -571,7 +573,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 </div>
 </div>
 <script>
-const ROLE_CONFIG={category:'{{ locked.category }}',regionLocked:{{ locked.region.locked|yesno:"true,false" }},buLocked:{{ locked.bu.locked|yesno:"true,false" }},buValue:'{{ locked.bu.value|default:"" }}'};
+const ROLE_CONFIG={category:'{{ locked.category }}',regionLocked:{{ locked.region.locked|yesno:"true,false" }},buLocked:{{ locked.bu.locked|yesno:"true,false" }},buValue:'{{ locked.bu.value|default:"" }}',armLocked: {{ locked.arm.locked|yesno:"true,false" }}, armValue:  '{{ locked.arm.value|default:"" }}'};
 function toggleSidebar(){const s=document.getElementById('sidebar'),o=document.getElementById('sidebar-overlay'),b=document.getElementById('mob-nav-btn'),mab=document.getElementById('mob-action-bar');s.classList.toggle('open');o.classList.toggle('open');const isOpen=s.classList.contains('open');if(b)b.style.display=isOpen?'none':'flex';if(mab)mab.style.display=isOpen?'none':'flex';}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').classList.remove('open');const b=document.getElementById('mob-nav-btn');if(b)b.style.display='flex';const mab=document.getElementById('mob-action-bar');if(mab)mab.style.display='flex';}
 function toggleTheme(){const html=document.documentElement;const isDark=html.getAttribute('data-theme')==='dark';html.setAttribute('data-theme',isDark?'light':'dark');document.getElementById('toggle-icon').textContent=isDark?'☀️':'🌙';localStorage.setItem('theme',isDark?'light':'dark');if(lastData)buildRevenueCharts(lastData);syncMabThemeIco();}
@@ -652,10 +654,21 @@ function resetAll(){
 
 /* ── applyRoleLocks: sets S.business_unit AND enables franchise for BU users ── */
 function applyRoleLocks(){
-  if(ROLE_CONFIG.buLocked&&ROLE_CONFIG.buValue){
-    setVal('in-bu',ROLE_CONFIG.buValue,'ac-p');
-    S.business_unit=ROLE_CONFIG.buValue;
+  if(ROLE_CONFIG.armLocked && ROLE_CONFIG.armValue){
+    if(ROLE_CONFIG.buValue){ setVal('in-bu', ROLE_CONFIG.buValue, 'ac-p'); S.business_unit = ROLE_CONFIG.buValue; }
+    setVal('in-arm', ROLE_CONFIG.armValue, 'ac-p');
+    S.arm = ROLE_CONFIG.armValue;
     enable('fw-franchise');
+    document.getElementById('fw-region')?.classList.add('role-locked');
+    document.getElementById('fw-bu')?.classList.add('role-locked');
+    document.getElementById('fw-arm')?.classList.add('role-locked');
+  } else if(ROLE_CONFIG.buLocked && ROLE_CONFIG.buValue){
+    setVal('in-bu', ROLE_CONFIG.buValue, 'ac-p');
+    S.business_unit = ROLE_CONFIG.buValue;
+    enable('fw-arm');
+    enable('fw-franchise');
+    document.getElementById('fw-bu')?.classList.add('role-locked');
+    document.getElementById('fw-region')?.classList.add('role-locked');
   }
 }
 
@@ -703,7 +716,7 @@ function loadOptions(isFirstLoad=false){
 /* ── setupInputs: no pta, no technology ── */
 if(!ROLE_CONFIG.regionLocked){setupInput('in-region','dd-region');}
 setupInput('in-franchise','dd-franchise',true);
-setupInput('in-arm','dd-arm');
+if(!ROLE_CONFIG.armLocked){ setupInput('in-arm', 'dd-arm'); }
 if(!ROLE_CONFIG.buLocked){setupInput('in-bu','dd-bu');}
 setupInput('in-month','dd-month');setupInput('in-year','dd-year');
 

@@ -329,23 +329,32 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <div class="fw {% if locked.region.locked %}role-locked{% endif %}" id="fw-region">
       <div class="fw-label"><span class="ldot ld-o"></span>Region{% if locked.region.locked %} <span style="font-size:9px;opacity:.7">Locked</span>{% endif %}</div>
       <span class="fi-ico" style="font-size:11px;opacity:.5">◉</span>
-      <input class="fi" id="in-region" placeholder="{% if locked.region.locked %}Locked{% else %}All Regions{% endif %}" readonly/>
+      <input class="fi" id="in-region"
+        value="{% if locked.region.locked %}{{ locked.region.value|default:'' }}{% endif %}"
+        placeholder="{% if not locked.region.locked %}All Regions{% endif %}"
+        {% if locked.region.locked %}readonly disabled style="pointer-events:none;cursor:not-allowed;opacity:1;color:var(--purple);font-weight:700"{% else %}readonly{% endif %}/>
       {% if not locked.region.locked %}<div class="fdd" id="dd-region"></div>{% endif %}
     </div>
     <span class="f-arrow">›</span>
     <div class="fw {% if locked.bu.locked %}role-locked{% else %}disabled{% endif %}" id="fw-bu">
       <div class="fw-label"><span class="ldot ld-o"></span>BU{% if locked.bu.locked %} <span style="font-size:9px;opacity:.7">Locked</span>{% endif %}</div>
       <span class="fi-ico" style="font-size:11px;opacity:.5">◉</span>
-      <input class="fi" id="in-bu" placeholder="{% if locked.bu.locked %}{{ locked.bu.value|default:'Locked' }}{% else %}All BUs{% endif %}" readonly/>
+      <input class="fi" id="in-bu"
+        value="{% if locked.bu.locked %}{{ locked.bu.value|default:'' }}{% endif %}"
+        placeholder="{% if not locked.bu.locked %}All BUs{% endif %}"
+        {% if locked.bu.locked %}readonly disabled style="pointer-events:none;cursor:not-allowed;opacity:1;color:var(--purple);font-weight:700"{% else %}readonly{% endif %}/>
       {% if not locked.bu.locked %}<div class="fdd" id="dd-bu"></div>{% endif %}
     </div>
 
     <span class="f-arrow">›</span>
-    <div class="fw disabled" id="fw-arm">
-      <div class="fw-label"><span class="ldot ld-o"></span>ARM</div>
+    <div class="fw {% if locked.arm.locked %}role-locked{% else %}disabled{% endif %}" id="fw-arm">
+      <div class="fw-label"><span class="ldot ld-o"></span>ARM{% if locked.arm.locked %} <span style="font-size:9px;opacity:.7">Locked</span>{% endif %}</div>
       <span class="fi-ico" style="font-size:11px;opacity:.5">◉</span>
-      <input class="fi" id="in-arm" placeholder="All ARMs" readonly/>
-      <div class="fdd" id="dd-arm"></div>
+      <input class="fi" id="in-arm"
+        value="{% if locked.arm.locked %}{{ locked.arm.value|default:'' }}{% endif %}"
+        placeholder="{% if not locked.arm.locked %}All ARMs{% endif %}"
+        {% if locked.arm.locked %}readonly disabled style="pointer-events:none;cursor:not-allowed;opacity:1;color:var(--purple);font-weight:700"{% else %}readonly{% endif %}/>
+      {% if not locked.arm.locked %}<div class="fdd" id="dd-arm"></div>{% endif %}
     </div>
     <span class="f-arrow">›</span>
     <div class="fw disabled" id="fw-franchise">
@@ -669,7 +678,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 <script>
 Chart.register({id:'globalLabels',afterDatasetsDraw(c){const ctx=c.ctx;if(!ctx||['doughnut','polarArea','pie'].includes(c.config.type))return;ctx.save();c.data.datasets.forEach((ds,i)=>{const m=c.getDatasetMeta(i);if(m.hidden)return;m.data.forEach((p,idx)=>{const v=ds.data[idx];if(v==null||v===0)return;const isMob=c.width<500;if(isMob&&idx%2!==0&&m.type==='line')return;const txt=fmt(v);ctx.font=`bold ${isMob?9:11}px Poppins`;ctx.textAlign='center';ctx.fillStyle=textColor();const isHoriz=c.config.options.indexAxis==='y';const ySafe=isHoriz?p.y+4:(p.y<30?p.y+20:p.y-10);const xSafe=isHoriz?p.x+25:p.x;ctx.fillText(txt,xSafe,ySafe);});});ctx.restore();}});
 
-const ROLE_CONFIG={category:'{{ locked.category }}',regionLocked:{{ locked.region.locked|yesno:"true,false" }},buLocked:{{ locked.bu.locked|yesno:"true,false" }},buValue:'{{ locked.bu.value|default:"" }}'};
+const ROLE_CONFIG={category:'{{ locked.category }}',regionLocked:{{ locked.region.locked|yesno:"true,false" }},buLocked:{{ locked.bu.locked|yesno:"true,false" }},buValue:'{{ locked.bu.value|default:"" }}',armLocked:{{ locked.arm.locked|yesno:"true,false" }},armValue:'{{ locked.arm.value|default:"" }}'};
 function toggleSidebar(){const s=document.getElementById('sidebar'),o=document.getElementById('sidebar-overlay'),b=document.getElementById('mob-nav-btn'),mab=document.getElementById('mob-action-bar');s.classList.toggle('open');o.classList.toggle('open');const isOpen=s.classList.contains('open');if(b)b.style.display=isOpen?'none':'flex';if(mab)mab.style.display=isOpen?'none':'flex';}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').classList.remove('open');const b=document.getElementById('mob-nav-btn');if(b)b.style.display='flex';const mab=document.getElementById('mob-action-bar');if(mab)mab.style.display='flex';}
 function toggleTheme(){const html=document.documentElement;const isDark=html.getAttribute('data-theme')==='dark';html.setAttribute('data-theme',isDark?'light':'dark');document.getElementById('toggle-icon').textContent=isDark?'☀️':'🌙';localStorage.setItem('theme',isDark?'light':'dark');if(lastData)buildCharts(lastData);syncMabThemeIco();}
@@ -687,7 +696,7 @@ function textColor(){return getTheme()==='dark'?'#b8b0e8':'#4a4570';}
 function fmt(n){if(n==null)return'—';if(n>=1e9)return(n/1e9).toFixed(2)+'B';if(n>=1e6)return(n/1e6).toFixed(2)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return Math.round(n).toLocaleString();}
 function enable(id){document.getElementById(id)?.classList.remove('disabled');}
 function disable(id){document.getElementById(id)?.classList.add('disabled');}
-function buildDD(ddId,items,onSelect,allLabel){const dd=document.getElementById(ddId);if(!dd)return;dd.innerHTML='';const all=document.createElement('div');all.className='ddi ao';all.textContent=`— ${allLabel}`;all.addEventListener('mousedown',()=>onSelect(null));dd.appendChild(all);items.forEach(item=>{const el=document.createElement('div');el.className='ddi';const isObj=typeof item==='object'&&item!==null;el.textContent=isObj?item.label:item;el.addEventListener('mousedown',()=>onSelect(isObj?String(item.val):item));dd.appendChild(el);});}
+function buildDD(ddId,items,onSelect,allLabel){const dd=document.getElementById(ddId);if(!dd)return;dd.innerHTML='';items=[...new Set(items)];const all=document.createElement('div');all.className='ddi ao';all.textContent=`— ${allLabel}`;all.addEventListener('mousedown',()=>onSelect(null));dd.appendChild(all);items.forEach(item=>{const el=document.createElement('div');el.className='ddi';const isObj=typeof item==='object'&&item!==null;el.textContent=isObj?item.label:item;el.addEventListener('mousedown',()=>onSelect(isObj?String(item.val):item));dd.appendChild(el);});}
 function setupInput(inId,ddId,searchable=false){const inp=document.getElementById(inId),dd=document.getElementById(ddId);if(!inp||!dd)return;inp.addEventListener('focus',()=>dd.classList.add('open'));inp.addEventListener('blur',()=>setTimeout(()=>dd.classList.remove('open'),160));if(searchable){inp.removeAttribute('readonly');inp.addEventListener('input',()=>{const q=inp.value.toLowerCase();dd.querySelectorAll('.ddi').forEach(el=>{el.style.display=el.textContent.toLowerCase().includes(q)?'':'none';});dd.classList.add('open');});}}
 function setVal(inId,val,cls=''){const el=document.getElementById(inId);if(!el)return;el.value=val||'';el.title=val||'';el.classList.remove('ac-o','ac-p');if(val&&cls){el.classList.add(cls);el.closest('.fw')?.classList.add('has-val');}else{el.closest('.fw')?.classList.remove('has-val');}}
 const TAG_META={region:{label:'Region',cascade:true},franchise:{label:'Franchise',cascade:true},business_unit:{label:'BU',cascade:true},arm:{label:'ARM',cascade:true},month:{label:'Month',cascade:false},year:{label:'Year',cascade:false}};
@@ -733,13 +742,23 @@ function resetAll(){
   renderTags();loadOptions();fetchData();fetchMapData();
 }
 function applyRoleLocks(){
-  if(ROLE_CONFIG.buLocked&&ROLE_CONFIG.buValue){
-    // Set the visible input AND the state — without this S.business_unit stays null
-    // so loadOptions() never sends the BU param and franchise list stays empty
+  if(ROLE_CONFIG.armLocked&&ROLE_CONFIG.armValue){
+    // ARM user: lock region, BU and ARM
+    if(ROLE_CONFIG.buValue){setVal('in-bu',ROLE_CONFIG.buValue,'ac-p');S.business_unit=ROLE_CONFIG.buValue;}
+    setVal('in-arm',ROLE_CONFIG.armValue,'ac-p');
+    S.arm=ROLE_CONFIG.armValue;
+    enable('fw-franchise');
+    document.getElementById('fw-region')?.classList.add('role-locked');
+    document.getElementById('fw-bu')?.classList.add('role-locked');
+    document.getElementById('fw-arm')?.classList.add('role-locked');
+  } else if(ROLE_CONFIG.buLocked&&ROLE_CONFIG.buValue){
+    // BU user: lock region and BU, ARM stays open
     setVal('in-bu',ROLE_CONFIG.buValue,'ac-p');
     S.business_unit=ROLE_CONFIG.buValue;
-    // BU is pre-set so franchise is immediately accessible — enable it now
+    enable('fw-arm');
     enable('fw-franchise');
+    document.getElementById('fw-region')?.classList.add('role-locked');
+    document.getElementById('fw-bu')?.classList.add('role-locked');
   }
 }
 function loadOptions(isFirstLoad=false){
@@ -779,7 +798,7 @@ function loadOptions(isFirstLoad=false){
 }
 if(!ROLE_CONFIG.regionLocked){setupInput('in-region','dd-region');}
 setupInput('in-franchise','dd-franchise',true);
-setupInput('in-arm','dd-arm');
+if(!ROLE_CONFIG.armLocked){setupInput('in-arm','dd-arm');}
 if(!ROLE_CONFIG.buLocked){setupInput('in-bu','dd-bu');}
 setupInput('in-month','dd-month');setupInput('in-year','dd-year');
 function updateKPIs(data){

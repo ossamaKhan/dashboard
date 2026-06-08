@@ -557,7 +557,7 @@ function textColor(){return getTheme()==='dark'?'#b8b0e8':'#4a4570';}
 function fmt(n){if(n==null)return'—';if(n>=1e9)return(n/1e9).toFixed(2)+'B';if(n>=1e6)return(n/1e6).toFixed(2)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return Math.round(n).toLocaleString();}
 function enable(id){document.getElementById(id)?.classList.remove('disabled');}
 function disable(id){document.getElementById(id)?.classList.add('disabled');}
-function buildDD(ddId,items,onSelect,allLabel){const dd=document.getElementById(ddId);if(!dd)return;dd.innerHTML='';const all=document.createElement('div');all.className='ddi ao';all.textContent=`— ${allLabel}`;all.addEventListener('mousedown',()=>onSelect(null));dd.appendChild(all);items.forEach(item=>{const el=document.createElement('div');el.className='ddi';const isObj=typeof item==='object'&&item!==null;el.textContent=isObj?item.label:item;el.addEventListener('mousedown',()=>onSelect(isObj?String(item.val):item));dd.appendChild(el);});}
+function buildDD(ddId,items,onSelect,allLabel){const dd=document.getElementById(ddId);if(!dd)return;dd.innerHTML='';items=[...new Set(items)];const all=document.createElement('div');all.className='ddi ao';all.textContent=`— ${allLabel}`;all.addEventListener('mousedown',()=>onSelect(null));dd.appendChild(all);items.forEach(item=>{const el=document.createElement('div');el.className='ddi';const isObj=typeof item==='object'&&item!==null;el.textContent=isObj?item.label:item;el.addEventListener('mousedown',()=>onSelect(isObj?String(item.val):item));dd.appendChild(el);});}
 function setupInput(inId,ddId,searchable=false){const inp=document.getElementById(inId),dd=document.getElementById(ddId);if(!inp||!dd)return;inp.addEventListener('focus',()=>dd.classList.add('open'));inp.addEventListener('blur',()=>setTimeout(()=>dd.classList.remove('open'),160));if(searchable){inp.removeAttribute('readonly');inp.addEventListener('input',()=>{const q=inp.value.toLowerCase();dd.querySelectorAll('.ddi').forEach(el=>{el.style.display=el.textContent.toLowerCase().includes(q)?'':'none';});dd.classList.add('open');});}}
 function setVal(inId,val,cls=''){const el=document.getElementById(inId);if(!el)return;el.value=val||'';el.title=val||'';el.classList.remove('ac-o','ac-p');if(val&&cls){el.classList.add(cls);el.closest('.fw')?.classList.add('has-val');}else{el.closest('.fw')?.classList.remove('has-val');}}
 const TAG_META={region:{label:'Region',cascade:true},franchise:{label:'Franchise',cascade:true},business_unit:{label:'BU',cascade:true},arm:{label:'ARM',cascade:true},month:{label:'Month',cascade:false},year:{label:'Year',cascade:false}};
@@ -603,13 +603,21 @@ function resetAll(){
   renderTags();loadOptions();fetchData();fetchMapData();
 }
 function applyRoleLocks(){
-  if(ROLE_CONFIG.buLocked&&ROLE_CONFIG.buValue){
-    // Set the visible input AND the state — without this S.business_unit stays null
-    // so loadOptions() never sends the BU param and franchise list stays empty
+  if(ROLE_CONFIG.armLocked&&ROLE_CONFIG.armValue){
+    if(ROLE_CONFIG.buValue){setVal('in-bu',ROLE_CONFIG.buValue,'ac-p');S.business_unit=ROLE_CONFIG.buValue;}
+    setVal('in-arm',ROLE_CONFIG.armValue,'ac-p');
+    S.arm=ROLE_CONFIG.armValue;
+    enable('fw-franchise');
+    document.getElementById('fw-region')?.classList.add('role-locked');
+    document.getElementById('fw-bu')?.classList.add('role-locked');
+    document.getElementById('fw-arm')?.classList.add('role-locked');
+  } else if(ROLE_CONFIG.buLocked&&ROLE_CONFIG.buValue){
     setVal('in-bu',ROLE_CONFIG.buValue,'ac-p');
     S.business_unit=ROLE_CONFIG.buValue;
-    // BU is pre-set so franchise is immediately accessible — enable it now
+    enable('fw-arm');
     enable('fw-franchise');
+    document.getElementById('fw-region')?.classList.add('role-locked');
+    document.getElementById('fw-bu')?.classList.add('role-locked');
   }
 }
 function loadOptions(isFirstLoad=false){
@@ -626,8 +634,8 @@ function loadOptions(isFirstLoad=false){
       buildDD('dd-region',data.regions,v=>{
         S.region=v;S.franchise=null;S.arm=null;S.business_unit=null;
         setVal('in-region',v,'ac-o');setVal('in-franchise',null);setVal('in-arm',null);setVal('in-bu',null);
-        if(v){if(!ROLE_CONFIG.buLocked)document.getElementById('fw-bu')?.classList.remove('disabled');}else{if(!ROLE_CONFIG.buLocked)document.getElementById('fw-bu')?.classList.add('disabled');document.getElementById('fw-arm')?.classList.add('disabled');document.getElementById('fw-franchise')?.classList.add('disabled');}
-        renderTags();loadOptions();fetchData();fetchMapData();
+        if(v){if(!ROLE_CONFIG.buLocked)document.getElementById('fw-bu')?.classList.remove('disabled');}else{if(!ROLE_CONFIG.buLocked)document.getElementById('fw-bu')?.classList.add('disabled');document.getElementById('fw-franchise')?.classList.add('disabled');}
+        applyRoleLocks();renderTags();loadOptions();fetchData();fetchMapData();
       },'All Regions');
     }
     buildDD('dd-arm',data.arms||[],v=>{

@@ -29,14 +29,78 @@ def attainment(ach, target):
 
 
 def get_scoped_qs(user):
-    return ChannelDaily.objects.all()
+    """
+    Returns a ChannelDaily queryset scoped to the user's RBAC role.
+    - Region : all data
+    - BU     : filtered to user's business_unit(s)
+    - ARM    : filtered to user's arm
+    """
+    qs = ChannelDaily.objects.all()
+    try:
+        profile = user.profile
+        category = profile.category
+    except Exception:
+        return qs
+
+    if category == 'BU':
+        bu_raw = profile.user_business_unit or ''
+        bu = bu_raw.split(',')[0].strip() if bu_raw else ''
+        if bu:
+            qs = qs.filter(business_unit=bu)
+
+    elif category == 'ARM':
+        arm = profile.user_arm or ''
+        if arm:
+            qs = qs.filter(arm=arm)
+
+    return qs
 
 
 def get_locked_filters(user):
+    """
+    Returns locked filter state based on user's RBAC category.
+    - Region user : nothing locked (sees everything)
+    - BU user     : region locked, BU locked to their assigned BU(s)
+    - ARM user    : region locked, BU locked, ARM locked to their assigned ARM
+    """
+    try:
+        profile = user.profile
+        category = profile.category  # 'Region' | 'BU' | 'ARM'
+    except Exception:
+        category = 'Region'
+
+    if category == 'BU':
+        # BU users: lock region open, lock BU to their value
+        bu_val = profile.user_business_unit or ''
+        # If comma-separated take first for display; scoping uses the full list
+        bu_display = bu_val.split(',')[0].strip() if bu_val else ''
+        return {
+            'category': 'BU',
+            'region':   {'locked': False, 'value': None},
+            'bu':       {'locked': True,  'value': bu_display},
+            'arm':      {'locked': False, 'value': None},
+        }
+
+    elif category == 'ARM':
+        arm_val = profile.user_arm or ''
+        # Derive BU from SiteData or ChannelDaily based on ARM
+        bu_val = (ChannelDaily.objects
+                  .filter(arm=arm_val)
+                  .values_list('business_unit', flat=True)
+                  .first()) or ''
+        return {
+            'category': 'ARM',
+            'region':   {'locked': True, 'value': 'Central B'},
+            'bu':       {'locked': True, 'value': bu_val},
+            'arm':      {'locked': True, 'value': arm_val},
+        }
+
+    # Region (default) — nothing locked
     return {
-        'category': None,
+        'category': 'Region',
         'region':   {'locked': False, 'value': None},
         'bu':       {'locked': False, 'value': None},
+        'arm':      {'locked': False, 'value': None},
     }
 
 

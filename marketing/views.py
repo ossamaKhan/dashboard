@@ -28,7 +28,9 @@ def get_scoped_qs(user):
     profile = get_or_create_profile(user)
     qs = SiteData.objects.all()
     if profile.category == 'BU' and profile.user_business_unit:
-        qs = qs.filter(business_unit=profile.user_business_unit)
+        bu = profile.user_business_unit.split(',')[0].strip()
+        if bu:
+            qs = qs.filter(business_unit=bu)
     elif profile.category == 'ARM' and profile.user_arm:
         qs = qs.filter(arm=profile.user_arm)
     return qs
@@ -38,14 +40,22 @@ def get_locked_filters(user):
     profile = get_or_create_profile(user)
     locked = {
         'category': profile.category,
-        'region':   {'locked': False},
-        'bu':       {'locked': False},
+        'region':   {'locked': False, 'value': None},
+        'bu':       {'locked': False, 'value': None},
+        'arm':      {'locked': False, 'value': None},
     }
     if profile.category == 'BU':
-        locked['bu'] = {'locked': True, 'value': profile.user_business_unit}
+        _bus = [b.strip() for b in profile.user_business_unit.split(',') if b.strip()]
+        locked['bu'] = {'locked': True, 'value': _bus[0] if _bus else ''}
     elif profile.category == 'ARM':
-        locked['region'] = {'locked': True, 'value': ''}
-        locked['bu']     = {'locked': True, 'value': ''}
+        arm_val = profile.user_arm or ''
+        # Derive BU from SiteData based on ARM
+        from marketing.models import SiteData
+        bu_val = (SiteData.objects.filter(arm=arm_val)
+                  .values_list('business_unit', flat=True).first()) or ''
+        locked['region'] = {'locked': True,  'value': 'Central B'}
+        locked['bu']     = {'locked': True,  'value': bu_val}
+        locked['arm']    = {'locked': True,  'value': arm_val}
     return locked
 
 

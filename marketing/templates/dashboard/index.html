@@ -33,7 +33,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .nv:hover{background:#fff5ee;color:#f58220}
 .nv.active{background:#fff5ee;color:#f58220;border-left-color:#f58220}
 .nv-ico{font-size:14px;width:18px;text-align:center;flex-shrink:0}
-.sb-footer{flex-shrink:0;padding:14px 18px;border-top:1px solid rgba(0,0,0,0.07);background:#ffffff;width:200px}
+.sb-.sb-footer{flex-shrink:0;padding:14px 18px;border-top:1px solid rgba(0,0,0,0.07);background:#ffffff;width:200px}
 .sb-user{font-size:11.5px;font-weight:700;color:#4a4570;margin-bottom:3px}
 .sb-email{font-size:10px;font-weight:500;color:#8a85a5;margin-bottom:12px;word-break:break-all}
 .logout-btn{display:flex;align-items:center;gap:8px;width:100%;background:rgba(255,61,0,0.07);border:1.5px solid rgba(255,61,0,0.2);border-radius:8px;padding:8px 12px;font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;color:#FF3D00;cursor:pointer;transition:all .2s;text-decoration:none}
@@ -278,7 +278,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <a href="/dashboard/" class="nv active" onclick="closeSidebar()">Executive Brief</a>
     <a href="/base/" class="nv" onclick="closeSidebar()">Base Analytics</a>
     <a href="/revenue/" class="nv" onclick="closeSidebar()">Revenue Analytics</a>
-   <div class="sb-sec">Channel</div>
+    <div class="sb-sec">Channel</div>
     <a href="/channel/" class="nv" onclick="closeSidebar()">Channel Brief</a>
     <a href="/channel/performance/" class="nv" onclick="closeSidebar()">Target Performance</a>
     <a href="/channel/enablers/" class="nv" onclick="closeSidebar()">Enablers</a>
@@ -340,15 +340,21 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <div class="fw {% if locked.bu.locked %}role-locked{% else %}disabled{% endif %}" id="fw-bu">
       <div class="fw-label"><span class="ldot ld-o"></span>BU{% if locked.bu.locked %} <span style="font-size:9px;opacity:.7">Locked</span>{% endif %}</div>
       <span class="fi-ico" style="font-size:11px;opacity:.5">◉</span>
-      <input class="fi" id="in-bu" placeholder="{% if locked.bu.locked %}{{ locked.bu.value|default:'Locked' }}{% else %}All BUs{% endif %}" readonly/>
+      <input class="fi" id="in-bu"
+        value="{% if locked.bu.locked %}{{ locked.bu.value|default:'' }}{% endif %}"
+        placeholder="{% if not locked.bu.locked %}All BUs{% endif %}"
+        {% if locked.bu.locked %}readonly disabled style="pointer-events:none;cursor:not-allowed;opacity:1;color:var(--purple);font-weight:700"{% else %}readonly{% endif %}/>
       {% if not locked.bu.locked %}<div class="fdd" id="dd-bu"></div>{% endif %}
     </div>
     <span class="f-arrow">›</span>
-    <div class="fw disabled" id="fw-arm">
-      <div class="fw-label"><span class="ldot ld-o"></span>ARM</div>
+    <div class="fw {% if locked.arm.locked %}role-locked{% else %}disabled{% endif %}" id="fw-arm">
+      <div class="fw-label"><span class="ldot ld-o"></span>ARM{% if locked.arm.locked %} <span style="font-size:9px;opacity:.7">Locked</span>{% endif %}</div>
       <span class="fi-ico" style="font-size:11px;opacity:.5">◉</span>
-      <input class="fi" id="in-arm" placeholder="All ARMs" readonly/>
-      <div class="fdd" id="dd-arm"></div>
+      <input class="fi" id="in-arm"
+        value="{% if locked.arm.locked %}{{ locked.arm.value|default:'' }}{% endif %}"
+        placeholder="{% if not locked.arm.locked %}All ARMs{% endif %}"
+        {% if locked.arm.locked %}readonly disabled style="pointer-events:none;cursor:not-allowed;opacity:1;color:var(--purple);font-weight:700"{% else %}readonly{% endif %}/>
+      {% if not locked.arm.locked %}<div class="fdd" id="dd-arm"></div>{% endif %}
     </div>
     <span class="f-arrow">›</span>
     <div class="fw disabled" id="fw-franchise">
@@ -556,7 +562,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 <script>
 Chart.register({id:'globalLabels',afterDatasetsDraw(c){const ctx=c.ctx;if(!ctx)return;if(['doughnut','polarArea','pie'].includes(c.config.type))return;if(c.config.options&&c.config.options.skipGlobalLabels)return;if(c.config.options&&c.config.options.indexAxis==='y')return;ctx.save();c.data.datasets.forEach((ds,i)=>{const m=c.getDatasetMeta(i);if(m.hidden)return;m.data.forEach((p,idx)=>{const v=ds.data[idx];if(v==null||v===0)return;const isMob=c.width<500;if(isMob&&idx%2!==0&&m.type==='line')return;const txt=fmt(v);ctx.font=`bold ${isMob?9:11}px Poppins`;ctx.textAlign='center';ctx.fillStyle=textColor();const ySafe=p.y<30?p.y+20:p.y-10;ctx.fillText(txt,p.x,ySafe);});});ctx.restore();}});
 
-const ROLE_CONFIG={category:'{{ locked.category }}',regionLocked:{{ locked.region.locked|yesno:"true,false" }},buLocked:{{ locked.bu.locked|yesno:"true,false" }},buValue:'{{ locked.bu.value|default:"" }}'};
+const ROLE_CONFIG={category:'{{ locked.category }}',regionLocked:{{ locked.region.locked|yesno:"true,false" }},buLocked:{{ locked.bu.locked|yesno:"true,false" }},buValue:'{{ locked.bu.value|default:"" }}',armLocked:{{ locked.arm.locked|yesno:"true,false" }},armValue:'{{ locked.arm.value|default:"" }}'};
 function toggleSidebar(){const s=document.getElementById('sidebar'),o=document.getElementById('sidebar-overlay'),b=document.getElementById('mob-nav-btn'),mab=document.getElementById('mob-action-bar');s.classList.toggle('open');o.classList.toggle('open');const isOpen=s.classList.contains('open');if(b)b.style.display=isOpen?'none':'flex';if(mab)mab.style.display=isOpen?'none':'flex';}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').classList.remove('open');const b=document.getElementById('mob-nav-btn');if(b)b.style.display='flex';const mab=document.getElementById('mob-action-bar');if(mab)mab.style.display='flex';}
 function toggleTheme(){const html=document.documentElement;const isDark=html.getAttribute('data-theme')==='dark';html.setAttribute('data-theme',isDark?'light':'dark');document.getElementById('toggle-icon').textContent=isDark?'☀️':'🌙';localStorage.setItem('theme',isDark?'light':'dark');if(lastData)buildCharts(lastData);syncMabThemeIco();}
@@ -620,13 +626,22 @@ function resetAll(){
   renderTags();loadOptions();fetchData();fetchMapData();
 }
 function applyRoleLocks(){
-  if(ROLE_CONFIG.buLocked&&ROLE_CONFIG.buValue){
-    // Set the visible input AND the state — without this S.business_unit stays null
-    // so loadOptions() never sends the BU param and franchise list stays empty
+  if(ROLE_CONFIG.armLocked&&ROLE_CONFIG.armValue){
+    if(ROLE_CONFIG.buValue){setVal('in-bu',ROLE_CONFIG.buValue,'ac-p');S.business_unit=ROLE_CONFIG.buValue;}
+    setVal('in-arm',ROLE_CONFIG.armValue,'ac-p');
+    S.arm=ROLE_CONFIG.armValue;
+    enable('fw-franchise');
+    document.getElementById('fw-region')?.classList.add('role-locked');
+    document.getElementById('fw-bu')?.classList.add('role-locked');
+    document.getElementById('fw-arm')?.classList.add('role-locked');
+  } else if(ROLE_CONFIG.buLocked&&ROLE_CONFIG.buValue){
     setVal('in-bu',ROLE_CONFIG.buValue,'ac-p');
     S.business_unit=ROLE_CONFIG.buValue;
-    // BU is pre-set so franchise is immediately accessible — enable it now
+    enable('fw-arm');
     enable('fw-franchise');
+    document.getElementById('fw-bu')?.classList.add('role-locked');
+    document.getElementById('fw-region')?.classList.add('role-locked');
+
   }
 }
 function loadOptions(isFirstLoad=false){
@@ -666,7 +681,7 @@ function loadOptions(isFirstLoad=false){
 }
 if(!ROLE_CONFIG.regionLocked){setupInput('in-region','dd-region');}
 setupInput('in-franchise','dd-franchise',true);
-setupInput('in-arm','dd-arm');
+if(!ROLE_CONFIG.armLocked){setupInput('in-arm','dd-arm');}
 if(!ROLE_CONFIG.buLocked){setupInput('in-bu','dd-bu');}
 setupInput('in-month','dd-month');setupInput('in-year','dd-year');
 function updateKPIs(data){
