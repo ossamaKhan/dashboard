@@ -278,6 +278,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <div class="sb-sec">Channel</div>
     <a href="/channel/" class="nv active" onclick="closeSidebar()">Channel Brief</a>
     <a href="/channel/performance/" class="nv" onclick="closeSidebar()">Target Performance</a>
+    <a href="/channel/retailers/" class="nv" onclick="closeSidebar()">Retailer Health</a>
     <a href="/channel/enablers/" class="nv" onclick="closeSidebar()">Enablers</a>
     <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
     <a href="/channel/kpi-summary/" class="nv" onclick="closeSidebar()">KPI Summary</a>
@@ -911,8 +912,8 @@ function updateKPIs(data){
 
   // ── ARPU calculations ────────────────────────────────────────────────────
   const arpu_map = [
-    ['ga',      k.m0_rev_ga,       k.cm_ga],
-    ['fca',     k.m0_rev_fca,      k.fca_ach],
+    ['ga',      k.m0_rev_ga,       k.fca_ach],
+    ['fca',     k.m0_rev_fca,      k.fca_m0],
     ['mnp',     k.m0_rev_mnp,      k.mnp_ach],
     ['mbb',     k.m0_rev_mbb,      k.mbb_ach],
     ['datasim', k.m0_rev_data_sim, k.data_sim_fca],

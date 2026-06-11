@@ -29,7 +29,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .nv:hover{background:#fff5ee;color:#f58220}
 .nv.active{background:#fff5ee;color:#f58220;border-left-color:#f58220}
 .nv-ico{font-size:14px;width:18px;text-align:center;flex-shrink:0}
-.sb-footer{flex-shrink:0;padding:14px 18px;border-top:1px solid rgba(0,0,0,0.07);background:#ffffff;width:200px}
+.sb-.sb-footer{flex-shrink:0;padding:14px 18px;border-top:1px solid rgba(0,0,0,0.07);background:#ffffff;width:200px}
 .sb-user{font-size:11.5px;font-weight:700;color:#4a4570;margin-bottom:3px}
 .sb-email{font-size:10px;font-weight:500;color:#8a85a5;margin-bottom:12px;word-break:break-all}
 .logout-btn{display:flex;align-items:center;gap:8px;width:100%;background:rgba(255,61,0,0.07);border:1.5px solid rgba(255,61,0,0.2);border-radius:8px;padding:8px 12px;font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;color:#FF3D00;cursor:pointer;transition:all .2s;text-decoration:none}
@@ -314,16 +314,14 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
       <img src="{% static 'images/logo1.jpg' %}" style="height:34px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
       <div><div style="font-size:12px;font-weight:800;color:var(--orange)">Ufone 5G</div></div>
     </div>
-    <div class="sb-sec">Marketing</div>
+    <div class="sb-sec">Main</div>
     <a href="/dashboard/" class="nv" onclick="closeSidebar()">Executive Brief</a>
     <a href="/base/" class="nv" onclick="closeSidebar()">Base Analytics</a>
     <a href="/revenue/" class="nv active" onclick="closeSidebar()">Revenue Analytics</a>
-       <div class="sb-sec">Channel</div>
+    <div class="sb-sec">Channel</div>
     <a href="/channel/" class="nv" onclick="closeSidebar()">Channel Brief</a>
     <a href="/channel/performance/" class="nv" onclick="closeSidebar()">Target Performance</a>
-    <a href="/channel/enablers/" class="nv" onclick="closeSidebar()">Enablers</a>
-    <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
-    <a href="/channel/kpi-summary/" class="nv" onclick="closeSidebar()">KPI Summary</a>
+    <a href="/channel/retailers/" class="nv" onclick="closeSidebar()">Retailer Health</a>
     <div class="sb-sec">Other</div>
     <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div class="sb-sec">Account</div>
@@ -379,17 +377,21 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <div class="fw {% if locked.bu.locked %}role-locked{% else %}disabled{% endif %}" id="fw-bu">
       <div class="fw-label"><span class="ldot ld-o"></span>BU{% if locked.bu.locked %} <span style="font-size:9px;opacity:.7">Locked</span>{% endif %}</div>
       <span class="fi-ico" style="font-size:11px;opacity:.5">&#9673;</span>
-      <input class="fi" id="in-bu" placeholder="{% if locked.bu.locked %}{{ locked.bu.value|default:'Locked' }}{% else %}All BUs{% endif %}" readonly/>
+      <input class="fi" id="in-bu"
+        value="{% if locked.bu.locked %}{{ locked.bu.value|default:'' }}{% endif %}"
+        placeholder="{% if not locked.bu.locked %}All BUs{% endif %}"
+        {% if locked.bu.locked %}readonly disabled style="pointer-events:none;cursor:not-allowed;opacity:1;color:var(--purple);font-weight:700"{% else %}readonly{% endif %}/>
       {% if not locked.bu.locked %}<div class="fdd" id="dd-bu"></div>{% endif %}
     </div>
         <span class="f-arrow">›</span>
-    <div class="fw disabled" id="fw-arm">
-      <div class="fw-label"><span class="ldot ld-o"></span>ARM</div>
+    <div class="fw {% if locked.arm.locked %}role-locked{% else %}disabled{% endif %}" id="fw-arm">
+      <div class="fw-label"><span class="ldot ld-o"></span>ARM{% if locked.arm.locked %} <span style="font-size:9px;opacity:.7">Locked</span>{% endif %}</div>
       <span class="fi-ico" style="font-size:11px;opacity:.5">◉</span>
-<input class="fi" id="in-arm"
-  value="{% if locked.arm.locked %}{{ locked.arm.value|default:'' }}{% endif %}"
-  placeholder="{% if not locked.arm.locked %}All ARMs{% endif %}"
-  {% if locked.arm.locked %}disabled style="pointer-events:none;cursor:not-allowed;color:var(--purple);font-weight:700"{% else %}readonly{% endif %}/>      <div class="fdd" id="dd-arm"></div>
+      <input class="fi" id="in-arm"
+        value="{% if locked.arm.locked %}{{ locked.arm.value|default:'' }}{% endif %}"
+        placeholder="{% if not locked.arm.locked %}All ARMs{% endif %}"
+        {% if locked.arm.locked %}readonly disabled style="pointer-events:none;cursor:not-allowed;opacity:1;color:var(--purple);font-weight:700"{% else %}readonly{% endif %}/>
+      {% if not locked.arm.locked %}<div class="fdd" id="dd-arm"></div>{% endif %}
     </div>
     <span class="f-arrow">&#8250;</span>
     <div class="fw disabled" id="fw-franchise">
@@ -442,7 +444,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
       <div class="kg-item"><div class="kg-label">YOY</div><div class="kg-badge" id="growth-revenue-yoy-badge">&mdash;</div><div class="kg-compare"><span class="kg-prev" id="growth-revenue-yoy-prev">&mdash;</span><span class="kg-arrow">&#8594;</span><span class="kg-curr" id="growth-revenue-yoy-curr">&mdash;</span></div></div>
     </div>
   </div>
-  <div class="chart-panel span-full h260"><div class="ph"><div><div class="pt">Monthly Revenue Trend</div><div class="ps">PKR by Month &middot; Multi-Year</div></div><span class="ptag">Bar</span></div><div style="height:260px;position:relative;"><canvas id="chart-rev-monthly"></canvas></div></div>
+  <div class="chart-panel span-full h260"><div class="ph"><div><div class="pt">Monthly Revenue Trend</div><div class="ps">PKR by Month &middot; Multi-Year</div></div></div><div style="height:260px;position:relative;"><canvas id="chart-rev-monthly"></canvas></div></div>
 
   <!-- ══ Total Recharge card + chart ══ -->
   <div class="kpi span-full k4">
@@ -457,7 +459,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
       <div class="kg-item"><div class="kg-label">YOY</div><div class="kg-badge" id="growth-recharge-yoy-badge">&mdash;</div><div class="kg-compare"><span class="kg-prev" id="growth-recharge-yoy-prev">&mdash;</span><span class="kg-arrow">&#8594;</span><span class="kg-curr" id="growth-recharge-yoy-curr">&mdash;</span></div></div>
     </div>
   </div>
-  <div class="chart-panel span-full h260"><div class="ph"><div><div class="pt">Monthly Recharge Trend</div><div class="ps">PKR by Month &middot; Multi-Year</div></div><span class="ptag">Bar</span></div><div style="height:260px;position:relative;"><canvas id="chart-rech-monthly"></canvas></div></div>
+  <div class="chart-panel span-full h260"><div class="ph"><div><div class="pt">Monthly Recharge Trend</div><div class="ps">PKR by Month &middot; Multi-Year</div></div></div><div style="height:260px;position:relative;"><canvas id="chart-rech-monthly"></canvas></div></div>
 
   <!-- ══ Digital + Conv cards side by side ══ -->
   <div class="kpi span-2 k12">
@@ -486,26 +488,26 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   </div>
 
   <!-- ══ Digital + Conv charts side by side ══ -->
-  <div class="chart-panel span-2 h260"><div class="ph"><div><div class="pt">Digital Recharge Trend</div><div class="ps">PKR by Month &middot; Multi-Year</div></div><span class="ptag">Bar</span></div><div style="height:260px;position:relative;"><canvas id="chart-digi-monthly"></canvas></div></div>
-  <div class="chart-panel span-2 h260"><div class="ph"><div><div class="pt">Conv. Recharge Trend</div><div class="ps">PKR by Month &middot; Multi-Year</div></div><span class="ptag">Bar</span></div><div style="height:260px;position:relative;"><canvas id="chart-conv-monthly"></canvas></div></div>
+  <div class="chart-panel span-2 h260"><div class="ph"><div><div class="pt">Digital Recharge Trend</div><div class="ps">PKR by Month &middot; Multi-Year</div></div></div><div style="height:260px;position:relative;"><canvas id="chart-digi-monthly"></canvas></div></div>
+  <div class="chart-panel span-2 h260"><div class="ph"><div><div class="pt">Conv. Recharge Trend</div><div class="ps">PKR by Month &middot; Multi-Year</div></div></div><div style="height:260px;position:relative;"><canvas id="chart-conv-monthly"></canvas></div></div>
 
   <!-- ══ Digital vs Conventional Recharge — Stacked Bar ══ -->
   <div class="chart-panel span-full">
     <div class="ph">
       <div><div class="pt">Digital vs Conventional Recharge Split</div><div class="ps">Monthly proportion · Stacked</div></div>
-      <span class="ptag">Stacked Bar</span>
+      
     </div>
     <div style="height:220px;position:relative;"><canvas id="chart-digi-conv-stack"></canvas></div>
   </div>
 
   <!-- ══ Recharge Breakdown polar (full) ══ -->
-  <div class="chart-panel span-full"><div class="ph"><div><div class="pt">Recharge Breakdown</div><div class="ps">MTD &middot; Total vs Digital vs Conventional</div></div><span class="ptag">Polar</span></div><div style="height:300px;position:relative;"><canvas id="chart-rc"></canvas></div></div>
+  <div class="chart-panel span-full"><div class="ph"><div><div class="pt">Recharge Breakdown</div><div class="ps">MTD &middot; Total vs Digital vs Conventional</div></div></div><div style="height:300px;position:relative;"><canvas id="chart-rc"></canvas></div></div>
 
   <!-- ══ Top Districts by Revenue (full) ══ -->
-  <div class="chart-panel span-full h300"><div class="ph"><div><div class="pt">Top Districts by Revenue</div><div class="ps">PKR Ranking &middot; % of Total</div></div><span class="ptag">Bar</span></div><div style="height:300px;position:relative;"><canvas id="chart-top-dist"></canvas></div></div>
+  <div class="chart-panel span-full h300"><div class="ph"><div><div class="pt">Top Districts by Revenue</div><div class="ps">PKR Ranking &middot; % of Total</div></div></div><div style="height:300px;position:relative;"><canvas id="chart-top-dist"></canvas></div></div>
 
   <!-- ══ Revenue by BU (full) ══ -->
-  <div class="chart-panel span-full h300"><div class="ph"><div><div class="pt">Revenue by BU</div><div class="ps">PKR Contribution &middot; % of Total</div></div><span class="ptag">Bar</span></div><div style="height:300px;position:relative;"><canvas id="chart-rb"></canvas></div></div>
+  <div class="chart-panel span-full h300"><div class="ph"><div><div class="pt">Revenue by BU</div><div class="ps">PKR Contribution &middot; % of Total</div></div></div><div style="height:300px;position:relative;"><canvas id="chart-rb"></canvas></div></div>
 
   <!-- ══ Site Performance Table ══ -->
   <div class="chart-panel span-full" id="site-table-panel">
@@ -573,7 +575,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 </div>
 </div>
 <script>
-const ROLE_CONFIG={category:'{{ locked.category }}',regionLocked:{{ locked.region.locked|yesno:"true,false" }},buLocked:{{ locked.bu.locked|yesno:"true,false" }},buValue:'{{ locked.bu.value|default:"" }}',armLocked: {{ locked.arm.locked|yesno:"true,false" }}, armValue:  '{{ locked.arm.value|default:"" }}'};
+const ROLE_CONFIG={category:'{{ locked.category }}',regionLocked:{{ locked.region.locked|yesno:"true,false" }},buLocked:{{ locked.bu.locked|yesno:"true,false" }},buValue:'{{ locked.bu.value|default:"" }}',armLocked:{{ locked.arm.locked|yesno:"true,false" }},armValue:'{{ locked.arm.value|default:"" }}'};
 function toggleSidebar(){const s=document.getElementById('sidebar'),o=document.getElementById('sidebar-overlay'),b=document.getElementById('mob-nav-btn'),mab=document.getElementById('mob-action-bar');s.classList.toggle('open');o.classList.toggle('open');const isOpen=s.classList.contains('open');if(b)b.style.display=isOpen?'none':'flex';if(mab)mab.style.display=isOpen?'none':'flex';}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').classList.remove('open');const b=document.getElementById('mob-nav-btn');if(b)b.style.display='flex';const mab=document.getElementById('mob-action-bar');if(mab)mab.style.display='flex';}
 function toggleTheme(){const html=document.documentElement;const isDark=html.getAttribute('data-theme')==='dark';html.setAttribute('data-theme',isDark?'light':'dark');document.getElementById('toggle-icon').textContent=isDark?'☀️':'🌙';localStorage.setItem('theme',isDark?'light':'dark');if(lastData)buildRevenueCharts(lastData);syncMabThemeIco();}
@@ -595,7 +597,7 @@ Chart.register({id:'globalLabels',afterDatasetsDraw(c){const ctx=c.ctx;if(!ctx||
 function fmt(n){if(n==null)return'\u2014';if(n>=1e9)return(n/1e9).toFixed(2)+'B';if(n>=1e6)return(n/1e6).toFixed(2)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return Math.round(n).toLocaleString();}
 function enable(id){document.getElementById(id)?.classList.remove('disabled');}
 function disable(id){document.getElementById(id)?.classList.add('disabled');}
-function buildDD(ddId,items,onSelect,allLabel){const dd=document.getElementById(ddId);if(!dd)return;dd.innerHTML='';const all=document.createElement('div');all.className='ddi ao';all.textContent=`\u2014 ${allLabel}`;all.addEventListener('mousedown',()=>onSelect(null));dd.appendChild(all);items.forEach(item=>{const el=document.createElement('div');el.className='ddi';const isObj=typeof item==='object'&&item!==null;el.textContent=isObj?item.label:item;el.addEventListener('mousedown',()=>onSelect(isObj?String(item.val):item));dd.appendChild(el);});}
+function buildDD(ddId,items,onSelect,allLabel){const dd=document.getElementById(ddId);if(!dd)return;dd.innerHTML='';items=[...new Set(items)];const all=document.createElement('div');all.className='ddi ao';all.textContent=`\u2014 ${allLabel}`;all.addEventListener('mousedown',()=>onSelect(null));dd.appendChild(all);items.forEach(item=>{const el=document.createElement('div');el.className='ddi';const isObj=typeof item==='object'&&item!==null;el.textContent=isObj?item.label:item;el.addEventListener('mousedown',()=>onSelect(isObj?String(item.val):item));dd.appendChild(el);});}
 function setupInput(inId,ddId,searchable=false){const inp=document.getElementById(inId),dd=document.getElementById(ddId);if(!inp||!dd)return;inp.addEventListener('focus',()=>dd.classList.add('open'));inp.addEventListener('blur',()=>setTimeout(()=>dd.classList.remove('open'),160));if(searchable){inp.removeAttribute('readonly');inp.addEventListener('input',()=>{const q=inp.value.toLowerCase();dd.querySelectorAll('.ddi').forEach(el=>{el.style.display=el.textContent.toLowerCase().includes(q)?'':'none';});dd.classList.add('open');});}}
 function setVal(inId,val,cls=''){const el=document.getElementById(inId);if(!el)return;el.value=val||'';el.title=val||'';el.classList.remove('ac-o','ac-p');if(val&&cls){el.classList.add(cls);el.closest('.fw')?.classList.add('has-val');}else{el.closest('.fw')?.classList.remove('has-val');}}
 
@@ -654,21 +656,10 @@ function resetAll(){
 
 /* ── applyRoleLocks: sets S.business_unit AND enables franchise for BU users ── */
 function applyRoleLocks(){
-  if(ROLE_CONFIG.armLocked && ROLE_CONFIG.armValue){
-    if(ROLE_CONFIG.buValue){ setVal('in-bu', ROLE_CONFIG.buValue, 'ac-p'); S.business_unit = ROLE_CONFIG.buValue; }
-    setVal('in-arm', ROLE_CONFIG.armValue, 'ac-p');
-    S.arm = ROLE_CONFIG.armValue;
+  if(ROLE_CONFIG.buLocked&&ROLE_CONFIG.buValue){
+    setVal('in-bu',ROLE_CONFIG.buValue,'ac-p');
+    S.business_unit=ROLE_CONFIG.buValue;
     enable('fw-franchise');
-    document.getElementById('fw-region')?.classList.add('role-locked');
-    document.getElementById('fw-bu')?.classList.add('role-locked');
-    document.getElementById('fw-arm')?.classList.add('role-locked');
-  } else if(ROLE_CONFIG.buLocked && ROLE_CONFIG.buValue){
-    setVal('in-bu', ROLE_CONFIG.buValue, 'ac-p');
-    S.business_unit = ROLE_CONFIG.buValue;
-    enable('fw-arm');
-    enable('fw-franchise');
-    document.getElementById('fw-bu')?.classList.add('role-locked');
-    document.getElementById('fw-region')?.classList.add('role-locked');
   }
 }
 
@@ -716,7 +707,7 @@ function loadOptions(isFirstLoad=false){
 /* ── setupInputs: no pta, no technology ── */
 if(!ROLE_CONFIG.regionLocked){setupInput('in-region','dd-region');}
 setupInput('in-franchise','dd-franchise',true);
-if(!ROLE_CONFIG.armLocked){ setupInput('in-arm', 'dd-arm'); }
+if(!ROLE_CONFIG.armLocked){setupInput('in-arm','dd-arm');}
 if(!ROLE_CONFIG.buLocked){setupInput('in-bu','dd-bu');}
 setupInput('in-month','dd-month');setupInput('in-year','dd-year');
 
@@ -795,7 +786,7 @@ function buildRevenueCharts(d){
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'}}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v)},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v)},border:{display:false}},
         }
       }
     });
@@ -933,7 +924,7 @@ function buildRevenueCharts(d){
           y:{
             stacked:true,
             min:0,max:100,
-            grid:{color:gridColor()},
+            grid:{display:false},
             ticks:{
               color:tickColor(),font:{size:10,weight:'600'},
               callback:v=>v+'%',
@@ -979,7 +970,7 @@ function buildRevenueCharts(d){
           return ` ${ctx.label}: PKR ${fmt(ctx.raw)} (${pct})`;
         }}}
       },
-      scales:{r:{grid:{color:gridColor()},ticks:{display:false}}}}
+      scales:{r:{grid:{display:false},ticks:{display:false}}}}
   });
 
   // ── Horizontal bar with value + % labels ─────────────────
@@ -1029,7 +1020,7 @@ function buildRevenueCharts(d){
           }}}
         },
         scales:{
-          x:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v)},border:{display:false}},
+          x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v)},border:{display:false}},
           y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'}},border:{display:false}}
         }
       }
@@ -1165,6 +1156,7 @@ function renderSiteTable(data){
       ytd_v:   r[pfx+'_ytd'],       ytd_p:  r[pfx+'_ytd_prev'],  ytd_pct: r[pfx+'_ytd_pct'],
       yoy_v:   r[pfx+'_yoy_curr'],  yoy_p:  r[pfx+'_yoy_prev'],  yoy_pct: r[pfx+'_yoy_pct'],
       mom_v:   r[pfx+'_mom_curr'],  mom_p:  r[pfx+'_mom_prev'],  mom_pct: r[pfx+'_mom_pct'],
+      ytd_base: r.churn_base_ytd, yoy_base: r.churn_base_cm, mom_base: r.churn_base_mp,
     };
   }
 
@@ -1177,27 +1169,37 @@ function renderSiteTable(data){
     return `<span style="display:inline-flex;align-items:center;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:800;background:${bg};color:${color}">${sign}${pct.toFixed(1)}%</span>`;
   }
 
-  function valCell(v, p, pct, isBorderLeft){
+  function churnRateBadge(churnVal, baseVal){
+    if(!churnVal||!baseVal) return '';
+    const rate = (churnVal / baseVal) * 100;
+    // Churn rate: positive = bad (red), any churn shown in red by default
+    const color = '#FF3D00'; const bg = 'rgba(255,61,0,0.10)';
+    return `<span style="display:inline-flex;align-items:center;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:800;background:${bg};color:${color}">${rate.toFixed(1)}% of base</span>`;
+  }
+
+  function valCell(v, p, pct, isBorderLeft, baseVal){
     const border=isBorderLeft?'border-left:2px solid var(--border2);':'';
+    const growthBadge = pctBadge(pct,isNeg);
+    const churnBadge  = (m==='churn'&&baseVal)?churnRateBadge(v,baseVal):'';
     return `<div style="text-align:right;padding:8px 10px;${border}">
       <div class="tbl-main-val">${fmtVal(v)}</div>
-      <div class="tbl-sub-row" style="margin-top:3px">${pctBadge(pct,isNeg)}<span style="font-size:9px;color:var(--muted);font-weight:600">prev: ${fmtVal(p)}</span></div>
+      <div class="tbl-sub-row" style="margin-top:3px;display:flex;align-items:center;gap:4px;justify-content:flex-end;flex-wrap:wrap">${growthBadge}${churnBadge}<span style="font-size:9px;color:var(--muted);font-weight:600">prev: ${fmtVal(p)}</span></div>
     </div>`;
   }
 
   tbody.innerHTML=data.rows.map((r,i)=>{
     const rank=startRank+i;
     const rankCls=rank===1?'r1':rank===2?'r2':rank===3?'r3':'';
-    const {ytd_v,ytd_p,ytd_pct,yoy_v,yoy_p,yoy_pct,mom_v,mom_p,mom_pct}=getVals(r);
+    const {ytd_v,ytd_p,ytd_pct,yoy_v,yoy_p,yoy_pct,mom_v,mom_p,mom_pct,ytd_base,yoy_base,mom_base}=getVals(r);
     const nameCell=gl==='BU'
       ?`<span class="tbl-bu-chip" style="${tblChipStyle(r.group)}">${r.group}</span>`
       :`<div class="tbl-name">${r.group||'—'}</div>`;
     return `<div style="display:grid;grid-template-columns:36px 1fr repeat(3,120px);gap:0;border-top:1px solid var(--border);align-items:center;transition:background .12s" onmouseover="this.style.background='rgba(245,130,32,0.04)'" onmouseout="this.style.background=''">
       <div class="tbl-rank ${rankCls}" style="text-align:center;padding:8px 4px">${rank}</div>
       <div style="padding:8px 12px">${nameCell}</div>
-      ${valCell(ytd_v,ytd_p,ytd_pct,true)}
-      ${valCell(yoy_v,yoy_p,yoy_pct,false)}
-      ${valCell(mom_v,mom_p,mom_pct,false)}
+      ${valCell(ytd_v,ytd_p,ytd_pct,true,ytd_base)}
+      ${valCell(yoy_v,yoy_p,yoy_pct,false,yoy_base)}
+      ${valCell(mom_v,mom_p,mom_pct,false,mom_base)}
     </div>`;
   }).join('');
 

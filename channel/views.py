@@ -29,12 +29,6 @@ def attainment(ach, target):
 
 
 def get_scoped_qs(user):
-    """
-    Returns a ChannelDaily queryset scoped to the user's RBAC role.
-    - Region : all data
-    - BU     : filtered to user's business_unit(s)
-    - ARM    : filtered to user's arm
-    """
     qs = ChannelDaily.objects.all()
     try:
         profile = user.profile
@@ -57,33 +51,24 @@ def get_scoped_qs(user):
 
 
 def get_locked_filters(user):
-    """
-    Returns locked filter state based on user's RBAC category.
-    - Region user : nothing locked (sees everything)
-    - BU user     : region locked, BU locked to their assigned BU(s)
-    - ARM user    : region locked, BU locked, ARM locked to their assigned ARM
-    """
     try:
         profile = user.profile
-        category = profile.category  # 'Region' | 'BU' | 'ARM'
+        category = profile.category
     except Exception:
         category = 'Region'
 
     if category == 'BU':
-        # BU users: lock region open, lock BU to their value
         bu_val = profile.user_business_unit or ''
-        # If comma-separated take first for display; scoping uses the full list
         bu_display = bu_val.split(',')[0].strip() if bu_val else ''
         return {
             'category': 'BU',
-            'region':   {'locked': False, 'value': None},
+            'region':   {'locked': True,  'value': 'Central B'},
             'bu':       {'locked': True,  'value': bu_display},
             'arm':      {'locked': False, 'value': None},
         }
 
     elif category == 'ARM':
         arm_val = profile.user_arm or ''
-        # Derive BU from SiteData or ChannelDaily based on ARM
         bu_val = (ChannelDaily.objects
                   .filter(arm=arm_val)
                   .values_list('business_unit', flat=True)
@@ -95,7 +80,6 @@ def get_locked_filters(user):
             'arm':      {'locked': True, 'value': arm_val},
         }
 
-    # Region (default) — nothing locked
     return {
         'category': 'Region',
         'region':   {'locked': False, 'value': None},
@@ -204,7 +188,7 @@ def channel_filters(request):
         'franchises': franchises, 'years': years, 'months': months,
         'latest_year': latest_year, 'latest_month': latest_month,
     }
-    cache.set(ck, data, 600)  # 10 min — filter lists rarely change
+    cache.set(ck, data, 600)
     return JsonResponse(data)
 
 
@@ -218,8 +202,7 @@ def channel_data(request):
     month_param   = request.GET.get('month')
     year_param    = request.GET.get('year')
 
-    # ── Cache check ──────────────────────────────────────────
-    ck = _cache_key('ch_data_', {
+    ck = _cache_key('ch_data_v9_', {
         'r': region, 'f': franchise, 'bu': business_unit,
         'a': arm, 'm': month_param, 'y': year_param,
         'uid': request.user.id,
@@ -228,7 +211,6 @@ def channel_data(request):
     if cached is not None:
         return JsonResponse(cached)
 
-    # ── Build querysets ──────────────────────────────────────
     qs_base = get_scoped_qs(request.user)
     if region:        qs_base = qs_base.filter(region=region)
     if business_unit: qs_base = qs_base.filter(business_unit=business_unit)
@@ -239,9 +221,9 @@ def channel_data(request):
     if year_param:  qs = qs.filter(date__year=int(year_param))
     if month_param: qs = qs.filter(date__month=int(month_param))
 
-    # ── KPI aggregation (1 query) ────────────────────────────
+    # ── KPI aggregation ──────────────────────────────────────
     agg_fields = {
-        'fca_target': Sum('fca_target'), 'fca_ach': Sum('fca_ach'),
+        'fca_target': Sum('fca_target'), 'fca_ach': Sum('fca_ach'), 'fca_m0': Sum('fca_m0'),
         'g4_target':  Sum('g4_target'),  'g4_ach':  Sum('g4_ach'),
         'mnp_target': Sum('mnp_target'), 'mnp_ach': Sum('mnp_ach'),
         'mbb_target': Sum('mbb_target'), 'mbb_ach': Sum('mbb_ach'),
@@ -294,21 +276,26 @@ def channel_data(request):
     kpis_raw = qs.aggregate(**agg_fields)
     kpis = {k: safe(v) for k, v in kpis_raw.items()}
 
-    # ── Base/stock fields: use closing value (latest date row) not sum ────────
-    # evc_retailer and cm_evc_active use closing value (latest row)
-    # evc_active_base and cm_964_active use Sum() from agg_fields (already correct)
-    _base_fields = ['evc_retailer', 'evc_active_base']
-    _latest_row = qs_base.filter(
-        cm_evc_active_platinum__gt=0
-    ).order_by('-date').values(*_base_fields).first()
-    if not _latest_row:
-        _latest_row = qs_base.order_by('-date').values(*_base_fields).first()
-    if _latest_row:
-        for _f in _base_fields:
-            kpis[_f] = safe(_latest_row.get(_f, 0))
-
-    # cm_evc_active_platinum/gold/silver are summed (already in agg_fields with Sum())
-    # so kpis already has correct summed values — no override needed
+    # ── Stock/closing fields: override with latest-month values ─────────────
+    # When no month is selected, qs covers the full year and Sum() inflates
+    # stock fields (EVC tiers, NPR, Active SO, retailer base).
+    # Fix: always use the latest available month for these fields.
+    _stock_fields = [
+        'cm_evc_active', 'cm_evc_active_platinum', 'cm_evc_active_gold', 'cm_evc_active_silver',
+        'cm_964_active', 'cm_964_active_platinum', 'cm_964_active_gold', 'cm_964_active_silver',
+        'evc_active_base', 'evc_retailer', 'npr', 'active_so_daily_avg',
+    ]
+    if not month_param:
+        # Find latest month within the filtered scope (respects year + dimension filters)
+        _latest = qs.aggregate(d=Max('date'))['d']
+        _stock_qs = qs_base.filter(
+            date__year=_latest.year, date__month=_latest.month
+        ) if _latest else qs
+    else:
+        _stock_qs = qs  # month already selected — qs is already the right month
+    _stock_agg = _stock_qs.aggregate(**{f: Sum(f) for f in _stock_fields})
+    for _f in _stock_fields:
+        kpis[_f] = safe(_stock_agg.get(_f, 0))
 
     for prefix, ach_f, tgt_f in [
         ('fca',       'fca_ach',        'fca_target'),
@@ -327,43 +314,12 @@ def channel_data(request):
     kpis['g4_penetration_pct'] = round((g4_ach / fca_ach) * 100, 1) if fca_ach else 0
     kpis['total_franchises']   = qs.exclude(franchise_id='').values('franchise_id').distinct().count()
 
-
-
-    # ── DEBUG: Performance page TVA calculations ──────────────
-    print("=" * 60)
-    print("PERFORMANCE PAGE — KPI VALUES")
-    print("=" * 60)
-    print(f"  FCA Achievement  : {kpis.get('fca_ach', 0)}")
-    print(f"  FCA Target       : {kpis.get('fca_target', 0)}")
-    print(f"  FCA Attainment   : {kpis.get('fca_attainment', 0)}%  ({kpis.get('fca_ach',0)} / {kpis.get('fca_target',0)} * 100)")
-    print()
-    print(f"  MNP Achievement  : {kpis.get('mnp_ach', 0)}")
-    print(f"  MNP Target       : {kpis.get('mnp_target', 0)}")
-    print(f"  MNP Attainment   : {kpis.get('mnp_attainment', 0)}%  ({kpis.get('mnp_ach',0)} / {kpis.get('mnp_target',0)} * 100)")
-    mnp_tva_by_fca = round((kpis.get('mnp_ach',0) / fca_ach * 100), 1) if fca_ach else 0
-    print(f"  MNP TVA by FCA   : {mnp_tva_by_fca}%  ({kpis.get('mnp_ach',0)} / fca_ach={fca_ach} * 100)")
-    print()
-    print(f"  GA (cm_ga)       : {kpis.get('cm_ga', 0)}")
-    ga_tva_by_fca = round((kpis.get('cm_ga',0) / fca_ach * 100), 1) if fca_ach else 0
-    print(f"  GA TVA by FCA    : {ga_tva_by_fca}%  ({kpis.get('cm_ga',0)} / fca_ach={fca_ach} * 100)")
-    print()
-    print(f"  Loading Ach      : {kpis.get('loading_ach', 0)}")
-    print(f"  Loading Target   : {kpis.get('loading_target', 0)}")
-    print(f"  Loading Attainmt : {kpis.get('loading_attainment', 0)}%  ({kpis.get('loading_ach',0)} / {kpis.get('loading_target',0)} * 100)")
-    loading_tgt = kpis.get('loading_target', 0) or 0
-    rech_tva = round((kpis.get('loading_ach',0) / loading_tgt * 100), 1) if loading_tgt else 0
-    print(f"  Recharge TVA     : {rech_tva}%  ({kpis.get('loading_ach',0)} / loading_target={loading_tgt} * 100)")
-    print("=" * 60)
-
-    # ── Growth: single Case/When query (was 6 separate queries) ─
     growth   = build_growth_dict(qs_base)
 
-    # ── Monthly trend ─────────────────────────────────────────
     trend_qs = qs_base
     if year_param: trend_qs = trend_qs.filter(date__year=int(year_param))
     monthly  = build_monthly_trend(trend_qs)
 
-    # ── Supporting breakdowns ─────────────────────────────────
     top_franchises   = build_top_franchises(qs)
     region_breakdown = build_region_breakdown(qs)
     bu_breakdown     = build_bu_breakdown(qs)
@@ -374,23 +330,25 @@ def channel_data(request):
         'region_breakdown': region_breakdown,
         'bu_breakdown': bu_breakdown,
     }
-    cache.set(ck, response, 300)  # 5 min TTL
+    cache.set(ck, response, 900)
     return JsonResponse(response)
 
 
 def build_growth_dict(qs_base):
     """Single conditional aggregation query for all growth periods."""
-    metrics = [
+    metrics = list(dict.fromkeys([
         'fca_ach', 'fca_target', 'g4_ach', 'g4_target',
         'mnp_ach', 'mnp_target', 'loading_ach', 'loading_target',
         'm0_revenue_ach', 'm0_revenue_target', 'bundle_ach', 'bundle_target',
         'hvc_ach', 'hvc_target', 'evc_active_base', 'evc_retailer',
         'cm_evc_active', 'cm_964_active', 'total_bundles_activated',
-        'cell_sites_count', 'female_fca_count', 'cm_ga', 'uload_recharge_ach', 'loading_ach_site_conv', 'total_site_loading',
-        'daily_active_served', 'daily_active_evc', 'npr', 'active_so_daily_avg', 'zr', 'zr_fca',
-        'qos_ach', 'sd_bundle', 'dormancy_count', 'female_fca_count',
-        'cm_disown', 'new_sim_sale_disowned_cnics', 'fca_within_90d_disowned', 'active_90d_base_disown', 'npr', 'active_so_daily_avg',
-    ]
+        'cell_sites_count', 'female_fca_count', 'cm_ga', 'uload_recharge_ach',
+        'loading_ach_site_conv', 'total_site_loading', 'daily_active_served',
+        'daily_active_evc', 'npr', 'active_so_daily_avg', 'zr', 'zr_fca',
+        'qos_ach', 'sd_bundle', 'dormancy_count', 'cm_disown',
+        'new_sim_sale_disowned_cnics', 'fca_within_90d_disowned',
+        'active_90d_base_disown', 'fca_m0',
+    ]))
 
     latest = qs_base.order_by('-date').values('date').first()
     if not latest:
@@ -402,15 +360,13 @@ def build_growth_dict(qs_base):
     prev_m   = lm - 1 if lm > 1 else 12
     prev_m_y = ly     if lm > 1 else prev_y
 
-    # ── Single query with 6 conditional buckets ───────────────
     annotations = {}
     for m in metrics:
-        annotations[f'{m}_ytd_c']  = Sum(Case(When(date__year=ly,       date__month__lte=lm, then=m), default=0, output_field=FloatField()))
-        annotations[f'{m}_ytd_p']  = Sum(Case(When(date__year=prev_y,   date__month__lte=lm, then=m), default=0, output_field=FloatField()))
-        annotations[f'{m}_mtd_c']  = Sum(Case(When(date__year=ly,       date__month=lm,      then=m), default=0, output_field=FloatField()))
-        annotations[f'{m}_mtd_p']  = Sum(Case(When(date__year=prev_m_y, date__month=prev_m,  then=m), default=0, output_field=FloatField()))
-        annotations[f'{m}_yoy_c']  = Sum(Case(When(date__year=ly,       date__month=lm,      then=m), default=0, output_field=FloatField()))
-        annotations[f'{m}_yoy_p']  = Sum(Case(When(date__year=prev_y,   date__month=lm,      then=m), default=0, output_field=FloatField()))
+        annotations[f'{m}_ytd_c'] = Sum(Case(When(date__year=ly,       date__month__lte=lm, then=m), default=0, output_field=FloatField()))
+        annotations[f'{m}_ytd_p'] = Sum(Case(When(date__year=prev_y,   date__month__lte=lm, then=m), default=0, output_field=FloatField()))
+        annotations[f'{m}_mtd_c'] = Sum(Case(When(date__year=ly,       date__month=lm,      then=m), default=0, output_field=FloatField()))
+        annotations[f'{m}_mtd_p'] = Sum(Case(When(date__year=prev_m_y, date__month=prev_m,  then=m), default=0, output_field=FloatField()))
+        annotations[f'{m}_yoy_p'] = Sum(Case(When(date__year=prev_y,   date__month=lm,      then=m), default=0, output_field=FloatField()))
 
     row = qs_base.aggregate(**annotations)
 
@@ -423,7 +379,7 @@ def build_growth_dict(qs_base):
         ytd_p = safe(row.get(f'{m}_ytd_p'))
         mtd_c = safe(row.get(f'{m}_mtd_c'))
         mtd_p = safe(row.get(f'{m}_mtd_p'))
-        yoy_c = safe(row.get(f'{m}_yoy_c'))
+        yoy_c = mtd_c
         yoy_p = safe(row.get(f'{m}_yoy_p'))
         out[m] = {
             'ytd_curr': ytd_c, 'ytd_prev': ytd_p, 'ytd_pct': pct(ytd_c, ytd_p),
@@ -431,67 +387,63 @@ def build_growth_dict(qs_base):
             'yoy_curr': yoy_c, 'yoy_prev': yoy_p, 'yoy_pct': pct(yoy_c, yoy_p),
         }
 
-    # ── Override base/stock fields in growth with closing values ────────────
-    _base_metrics = [
+    # Closing values for stock fields
+    _base_metrics = [m for m in [
         'evc_active_base', 'evc_retailer',
-        'cm_964_active', 'cm_evc_active_platinum', 'cm_evc_active_gold', 'cm_evc_active_silver',
-    ]
-    _base_in_metrics = [m for m in _base_metrics if m in out]
-    if _base_in_metrics:
-        # Get closing values for each period from the DB
-        def _closing(year, month):
-            row = qs_base.filter(date__year=year, date__month=month).order_by('-date').values(*_base_in_metrics).first()
-            return {f: safe(row.get(f, 0)) for f in _base_in_metrics} if row else {f: 0 for f in _base_in_metrics}
+        'cm_evc_active', 'cm_evc_active_platinum', 'cm_evc_active_gold', 'cm_evc_active_silver',
+        'cm_964_active', 'cm_964_active_platinum', 'cm_964_active_gold', 'cm_964_active_silver',
+        'npr', 'active_so_daily_avg',
+    ] if m in out]
 
-        _ytd_c_vals = _closing(ly,     lm)
-        _ytd_p_vals = _closing(prev_y, lm)
-        _mtd_c_vals = _ytd_c_vals   # MTD closing = same as current month closing
-        _mtd_p_vals = _closing(prev_m_y, prev_m)
-        _yoy_c_vals = _ytd_c_vals
-        _yoy_p_vals = _closing(prev_y, lm)
+    if _base_metrics:
+        closing_rows = (
+            qs_base
+            .filter(
+                Q(date__year=ly,       date__month=lm)       |
+                Q(date__year=prev_y,   date__month=lm)       |
+                Q(date__year=prev_m_y, date__month=prev_m)
+            )
+            .values('date__year', 'date__month')
+            .annotate(**{f: Sum(f) for f in _base_metrics})
+        )
+        closing = {(r['date__year'], r['date__month']): r for r in closing_rows}
 
-        for m in _base_in_metrics:
-            ytd_c = _ytd_c_vals[m]; ytd_p = _ytd_p_vals[m]
-            mtd_c = _mtd_c_vals[m]; mtd_p = _mtd_p_vals[m]
-            yoy_c = _yoy_c_vals[m]; yoy_p = _yoy_p_vals[m]
+        def _cv(year, month, field):
+            return safe(closing.get((year, month), {}).get(field, 0))
+
+        for m in _base_metrics:
+            ytd_c = _cv(ly, lm, m);         ytd_p = _cv(prev_y, lm, m)
+            mtd_c = ytd_c;                   mtd_p = _cv(prev_m_y, prev_m, m)
+            yoy_c = ytd_c;                   yoy_p = ytd_p
             out[m] = {
                 'ytd_curr': ytd_c, 'ytd_prev': ytd_p, 'ytd_pct': pct(ytd_c, ytd_p),
                 'mtd_curr': mtd_c, 'mtd_prev': mtd_p, 'mtd_pct': pct(mtd_c, mtd_p),
                 'yoy_curr': yoy_c, 'yoy_prev': yoy_p, 'yoy_pct': pct(yoy_c, yoy_p),
             }
 
-    # ── DEBUG: Growth rows for performance page metrics ───────
-    print()
-    print("PERFORMANCE PAGE — GROWTH ROWS")
-    print(f"  Reference period: year={ly}, month={lm}  |  prev_year={prev_y}, prev_month={prev_m}")
-    for m in ['mnp_ach', 'cm_ga', 'loading_ach']:
-        if m in out:
-            g = out[m]
-            print(f"  {m}:")
-            print(f"    YTD  : {g['ytd_curr']} vs {g['ytd_prev']}  =>  {g['ytd_pct']}%  (curr-prev)/prev*100")
-            print(f"    GOLM : {g['mtd_curr']} vs {g['mtd_prev']}  =>  {g['mtd_pct']}%")
-            print(f"    YOY  : {g['yoy_curr']} vs {g['yoy_prev']}  =>  {g['yoy_pct']}%")
-    print("=" * 60)
-
     return out
 
 
 def build_monthly_trend(qs):
     metric_list = [
-        'fca_ach', 'mnp_ach', 'mnp_target', 'mbb_ach', 'mbb_target',
-        'loading_ach', 'loading_target', 'm0_revenue_ach',
-        'bundle_ach', 'hvc_ach', 'cm_ga', 'uload_recharge_ach',
-        'data_sim_fca', 'data_sim_m0', 'evc_active_base', 'loading_ach_site_conv', 'total_site_loading', 'cm_964_active',
-        'daily_active_served', 'daily_active_evc', 'npr', 'active_so_daily_avg', 'zr', 'zr_fca',
-        'qos_ach', 'sd_bundle', 'dormancy_count', 'female_fca_count',
-        'cm_disown', 'new_sim_sale_disowned_cnics', 'fca_within_90d_disowned', 'active_90d_base_disown',
+        'fca_ach', 'fca_target', 'g4_ach', 'g4_target',
+        'mnp_ach', 'mnp_target', 'mbb_ach', 'mbb_target',
+        'loading_ach', 'loading_target',
+        'm0_revenue_ach', 'bundle_ach', 'hvc_ach',
+        'loading_ach_site_conv', 'total_site_loading', 'uload_recharge_ach',
+        'data_sim_fca', 'cm_ga',
+        'qos_ach', 'sd_bundle', 'zr', 'zr_fca',
+        'dormancy_count', 'female_fca_count',
+        'cm_disown', 'new_sim_sale_disowned_cnics',
+        'fca_within_90d_disowned', 'active_90d_base_disown',
+        'evc_active_base', 'cm_evc_active',
+        'cm_evc_active_platinum', 'cm_evc_active_gold', 'cm_evc_active_silver',
+        'daily_active_evc', 'daily_active_served',
+        'npr', 'active_so_daily_avg', 'cm_964_active',
     ]
-    # Closing fields use Max() per month (last value not sum)
-    _closing_fields = {'evc_active_base'}
-    _trend_annot = {
-        f: (Max(f) if f in _closing_fields else Sum(f))
-        for f in metric_list
-    }
+    # Stock fields: use Sum() per month — each month's value is already the
+    # closing snapshot for that month, so summing daily rows within a month is correct.
+    _trend_annot = {f: Sum(f) for f in metric_list}
     rows = (qs.exclude(date__isnull=True)
               .values('date__year', 'date__month')
               .annotate(**_trend_annot))
@@ -663,7 +615,6 @@ def channel_throughput(request):
     if year_param:    qs = qs.filter(date__year=int(year_param))
     if month_param:   qs = qs.filter(date__month=int(month_param))
 
-    # Determine grouping level based on filters applied
     if franchise:
         group_field = 'key'
         group_label = 'Site'
@@ -680,7 +631,6 @@ def channel_throughput(request):
         group_field = 'region'
         group_label = 'Region'
 
-    # For site-level grouping 'key' may have nulls — filter differently
     base_qs = qs.filter(**{f'{group_field}__isnull': False})
     if group_field != 'key':
         base_qs = base_qs.exclude(**{f'{group_field}': ''})
@@ -704,7 +654,7 @@ def channel_throughput(request):
         cnt1      = safe(r['cnt1'])
         cnt2      = safe(r['cnt2'])
         evc       = safe(r['total_evc'])
-        retailers = cnt1 + cnt2   # total low-throughput retailers
+        retailers = cnt1 + cnt2
         ge3_pct   = round(safe(r['ge3_pct_sum']) / r['row_count'], 1) if r['row_count'] else 0
         cnt3plus  = max(0, evc - cnt1 - cnt2)
 
@@ -724,7 +674,6 @@ def channel_throughput(request):
             'ge3_pct':    ge3_pct,
         })
 
-    # Compute percentages relative to each row's total
     for row in rows:
         t = row['total'] or 1
         row['cnt1_pct']     = round(row['cnt1']    / t * 100, 1)
@@ -732,7 +681,6 @@ def channel_throughput(request):
         row['cnt3plus_pct'] = round(row['cnt3plus']/ t * 100, 1)
         row['retailers_pct']= round(row['retailers']/ t * 100, 1)
 
-    # Overall totals
     total_cnt3plus = max(0, total_evc - total_cnt1 - total_cnt2)
     tt = total_evc or 1
     totals = {
@@ -765,14 +713,13 @@ def channel_kpi_summary(request):
 
 @login_required(login_url='login')
 def channel_kpi_table(request):
-    """Returns hierarchical KPI table data with TVA, growth periods, and suggestions."""
     region        = request.GET.get('region')
     business_unit = request.GET.get('business_unit')
     arm           = request.GET.get('arm')
     franchise     = request.GET.get('franchise')
     year_param    = request.GET.get('year')
     month_param   = request.GET.get('month')
-    period        = request.GET.get('period', 'ytd')   # ytd | golm | yoy
+    period        = request.GET.get('period', 'ytd')
 
     qs = get_scoped_qs(request.user)
     if region:        qs = qs.filter(region=region)
@@ -782,7 +729,6 @@ def channel_kpi_table(request):
     if year_param:    qs = qs.filter(date__year=int(year_param))
     if month_param:   qs = qs.filter(date__month=int(month_param))
 
-    # Determine group level
     if franchise:
         group_field, group_label = 'key',          'Site'
     elif arm:
@@ -794,26 +740,24 @@ def channel_kpi_table(request):
     else:
         group_field, group_label = 'region',       'Region'
 
-    # KPI definitions: (field, target_field or None, label, has_tva)
     KPI_DEFS = [
-        ('fca_ach',      'fca_target',      'FCA',         True),
-        ('mnp_ach',      'mnp_target',       'MNP',         True),
-        ('g4_ach',       'g4_target',        '4G',          True),
-        ('loading_ach',  'loading_target',   'Recharge',    True),
-        ('hvc_ach',      'hvc_target',       'HVC',         True),
-        ('bundle_ach',   'bundle_target',    'Bundle',      True),
-        ('m0_revenue_ach','m0_revenue_target','M0 Revenue', True),
-        ('cm_ga',        None,               'CM GA',       False),
-        ('evc_active_base', None,            'EVC Active',  False),
-        ('cm_evc_active',   None,            'CM EVC',      False),
-        ('zr',           'zr_fca',           'ZR',          True),
-        ('qos_ach',      None,               'QOS',         False),
+        ('fca_ach',      'fca_target',       'FCA',         True),
+        ('mnp_ach',      'mnp_target',        'MNP',         True),
+        ('g4_ach',       'g4_target',         '4G',          True),
+        ('loading_ach',  'loading_target',    'Recharge',    True),
+        ('hvc_ach',      'hvc_target',        'HVC',         True),
+        ('bundle_ach',   'bundle_target',     'Bundle',      True),
+        ('m0_revenue_ach','m0_revenue_target','M0 Revenue',  True),
+        ('cm_ga',        None,                'CM GA',       False),
+        ('evc_active_base', None,             'EVC Active',  False),
+        ('cm_evc_active',   None,             'CM EVC',      False),
+        ('zr',           'zr_fca',            'ZR',          True),
+        ('qos_ach',      None,                'QOS',         False),
     ]
 
     ach_fields  = [d[0] for d in KPI_DEFS]
     tgt_fields  = [d[1] for d in KPI_DEFS if d[1]]
     all_fields  = list(set(ach_fields + tgt_fields))
-
     annot = {f: Sum(f) for f in all_fields}
 
     rows_qs = (qs.exclude(**{f'{group_field}__isnull': True})
@@ -828,7 +772,6 @@ def channel_kpi_table(request):
         if not prev: return None
         return round((curr - prev) / abs(prev) * 100, 1)
 
-    # Growth: get qs_base (no year/month filter) for growth comparison
     growth_qs = get_scoped_qs(request.user)
     if region:        growth_qs = growth_qs.filter(region=region)
     if business_unit: growth_qs = growth_qs.filter(business_unit=business_unit)
@@ -851,7 +794,6 @@ def channel_kpi_table(request):
         if m_exact: q = q.filter(date__month=m_exact)
         return q
 
-    # Per-group growth data
     def group_growth(grp_val):
         def agg(q):
             return q.filter(**{group_field: grp_val}).aggregate(**{f: Sum(f) for f in ach_fields})
@@ -861,12 +803,11 @@ def channel_kpi_table(request):
         elif period == 'golm':
             curr = agg(period_qs(ly,   m_exact=lm))
             prev = agg(period_qs(prev_m_y, m_exact=prev_m))
-        else:  # yoy
+        else:
             curr = agg(period_qs(ly,   m_exact=lm))
             prev = agg(period_qs(prev_y, m_exact=lm))
         return curr, prev
 
-    # Suggestions based on TVA
     def suggest(kpi_label, tva_val, chg):
         issues = []
         if tva_val is not None and tva_val < 80:
@@ -882,41 +823,24 @@ def channel_kpi_table(request):
         grp = r[group_field] or '—'
         kpis_row = []
         all_issues = []
-
         curr_g, prev_g = group_growth(grp)
 
         for ach_f, tgt_f, label, has_tva in KPI_DEFS:
-            ach  = s(r.get(ach_f))
-            tgt  = s(r.get(tgt_f)) if tgt_f else None
+            ach   = s(r.get(ach_f))
+            tgt   = s(r.get(tgt_f)) if tgt_f else None
             tva_v = tva(ach, tgt) if tgt else None
-
             curr_v = s(curr_g.get(ach_f)) if curr_g else ach
             prev_v = s(prev_g.get(ach_f)) if prev_g else 0
             chg    = pct_change(curr_v, prev_v)
-
             all_issues += suggest(label, tva_v, chg)
+            kpis_row.append({'label': label, 'ach': ach, 'tgt': tgt,
+                             'tva': tva_v, 'chg': chg, 'has_tva': has_tva})
 
-            kpis_row.append({
-                'label': label,
-                'ach':   ach,
-                'tgt':   tgt,
-                'tva':   tva_v,
-                'chg':   chg,
-                'has_tva': has_tva,
-            })
-
-        rows.append({
-            'group':   grp,
-            'kpis':    kpis_row,
-            'issues':  all_issues[:3],   # max 3 suggestions per row
-        })
+        rows.append({'group': grp, 'kpis': kpis_row, 'issues': all_issues[:3]})
 
     kpi_defs = [{'label': d[2], 'has_tva': d[3]} for d in KPI_DEFS]
     return JsonResponse({
-        'rows':        rows,
-        'group_label': group_label,
-        'kpi_defs':    kpi_defs,
-        'period':      period,
-        'ref_year':    ly,
-        'ref_month':   lm,
+        'rows': rows, 'group_label': group_label,
+        'kpi_defs': kpi_defs, 'period': period,
+        'ref_year': ly, 'ref_month': lm,
     })

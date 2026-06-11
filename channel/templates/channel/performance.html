@@ -373,6 +373,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <div class="sb-sec">Channel</div>
     <a href="/channel/" class="nv" onclick="closeSidebar()">Channel Brief</a>
     <a href="/channel/performance/" class="nv active" onclick="closeSidebar()">Target Performance</a>
+    <a href="/channel/retailers/" class="nv" onclick="closeSidebar()">Retailer Health</a>
     <a href="/channel/enablers/" class="nv" onclick="closeSidebar()">Enablers</a>
     <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
     <a href="/channel/kpi-summary/" class="nv" onclick="closeSidebar()">KPI Summary</a>
@@ -507,7 +508,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   </div>
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">FCA Monthly Trend</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">FCA Monthly Trend</div></div></div>
     <div class="h260" style="position:relative"><canvas id="chart-ga"></canvas></div>
   </div>
 
@@ -529,12 +530,12 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   </div>
 
   <div class="chart-panel span-2">
-    <div class="ph"><div><div class="pt">MNP Monthly Trend</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">MNP Monthly Trend</div></div></div>
     <div class="h260" style="position:relative"><canvas id="chart-mnp"></canvas></div>
   </div>
 
   <div class="chart-panel span-2">
-    <div class="ph"><div><div class="pt">MNP Target vs Achievement</div></div><span class="ptag">Target</span></div>
+    <div class="ph"><div><div class="pt">MNP Target vs Achievement</div></div></div>
     <div class="h260" style="position:relative"><canvas id="chart-mnp2"></canvas></div>
   </div>
 
@@ -556,37 +557,37 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   </div>
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">Channel Recharge</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">Channel Recharge</div></div></div>
     <div class="h260" style="position:relative"><canvas id="chart-rech"></canvas></div>
   </div>
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">Conventional Recharge</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">Conventional Recharge</div></div></div>
     <div class="h260" style="position:relative"><canvas id="chart-conv"></canvas></div>
   </div>
 
   <div class="chart-panel span-2">
-    <div class="ph"><div><div class="pt">Site Recharge Trend</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">Site Recharge Trend</div></div></div>
     <div class="h260" style="position:relative"><canvas id="chart-rech-site"></canvas></div>
   </div>
 
   <div class="chart-panel span-2">
-    <div class="ph"><div><div class="pt">Recharge Target vs Achievement</div></div><span class="ptag">Target</span></div>
+    <div class="ph"><div><div class="pt">Recharge Target vs Achievement</div></div></div>
     <div class="h260" style="position:relative"><canvas id="chart-rech2"></canvas></div>
   </div>
 
   <div class="chart-panel span-2">
-    <div class="ph"><div><div class="pt">Digital vs Conventional Recharge</div></div><span class="ptag">Pie</span></div>
+    <div class="ph"><div><div class="pt">Digital vs Conventional Recharge</div></div></div>
     <div class="h260" style="position:relative"><canvas id="chart-rech-polar"></canvas></div>
   </div>
 
   <div class="chart-panel span-2">
-    <div class="ph"><div><div class="pt">MBB Growth</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">MBB Growth</div></div></div>
     <div class="h260" style="position:relative"><canvas id="chart-mbb"></canvas></div>
   </div>
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">Data SIM Growth</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">Data SIM Growth</div></div></div>
     <div class="h260" style="position:relative"><canvas id="chart-datasim"></canvas></div>
   </div>
 
@@ -848,7 +849,7 @@ function buildCharts(d){
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
         }
       }
     });
@@ -917,7 +918,7 @@ function buildCharts(d){
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
         }
       }
     });
@@ -1018,7 +1019,7 @@ function buildCharts(d){
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
           y2:{position:'right',grid:{display:false},ticks:{color:'#AB1DFE',font:{size:9,weight:'700'},callback:v=>v+'%'},border:{display:false},suggestedMin:0,suggestedMax:150},
         }
       }
@@ -1027,6 +1028,101 @@ function buildCharts(d){
 
 
   // ── Generic growth chart: multi-year bars + optional target line + callouts ──
+  function chartFcaVsTarget(canvasId, d){
+    const achSrc = d.monthly['fca_ach'];
+    const tgtSrc = d.monthly['fca_target'];
+    if(!achSrc||!achSrc.datasets||!tgtSrc||!tgtSrc.datasets) return;
+
+    const latestAchDs  = achSrc.datasets[achSrc.datasets.length-1];
+    const latestTgtDs  = tgtSrc.datasets[tgtSrc.datasets.length-1];
+    const latestYear   = latestAchDs.label;
+
+    let lastIdx=-1;
+    latestAchDs.data.forEach((v,i)=>{if(v!=null&&v!==0&&i>lastIdx)lastIdx=i;});
+    if(lastIdx<0) return;
+    const labels = achSrc.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
+
+    const achData = latestAchDs.data.slice(0,lastIdx+1);
+    const tgtData = latestTgtDs.data.slice(0,lastIdx+1);
+    const tvaData = tgtData.map((t,j)=>(t&&t>0)?parseFloat((achData[j]/t*100).toFixed(1)):null);
+
+    const datasets = [
+      {
+        label: 'Target '+latestYear,
+        data: tgtData,
+        backgroundColor: COLORS[3]+'bb',
+        borderColor:     COLORS[3],
+        borderWidth:1.5, borderRadius:3, borderSkipped:false,
+        type:'bar', order:2, _showCallout:true, _isTarget:true,
+      },
+      {
+        label: 'Ach '+latestYear,
+        data: achData,
+        backgroundColor: COLORS[2]+'bb',
+        borderColor:     COLORS[2],
+        borderWidth:1.5, borderRadius:3, borderSkipped:false,
+        type:'bar', order:1, _showCallout:true, _isTarget:false,
+      },
+      {
+        label: 'TVA%',
+        data: tvaData,
+        type:'line',
+        borderColor:'#FF3D00', backgroundColor:'transparent',
+        borderWidth:2, borderDash:[4,4],
+        pointRadius:3, pointBackgroundColor:'#FF3D00',
+        tension:0.3, order:0, spanGaps:true,
+        yAxisID:'y2',
+        _showCallout:true, _isTva:true,
+      },
+    ];
+
+    dc(canvasId);
+    const el = document.getElementById(canvasId); if(!el) return;
+
+    const fcaCallout = {id:'fcaVsTargetCallout', afterDatasetsDraw(chart){
+      const ctx = chart.ctx;
+      chart.data.datasets.forEach((ds,di)=>{
+        if(!ds._showCallout) return;
+        const meta = chart.getDatasetMeta(di); if(meta.hidden) return;
+        meta.data.forEach((point,j)=>{
+          const v = ds.data[j]; if(v==null||v===0) return;
+          ctx.save();
+          ctx.textAlign='center'; ctx.textBaseline='bottom';
+          if(ds._isTva){
+            ctx.font='bold 9px Poppins'; ctx.fillStyle='#FF3D00';
+            ctx.fillText(v+'%', point.x, point.y-8);
+          } else {
+            ctx.font='bold 9px Poppins'; ctx.fillStyle=textColor();
+            ctx.fillText(fmt(v), point.x, point.y-6);
+          }
+          ctx.restore();
+        });
+      });
+    }};
+
+    charts[canvasId] = new Chart(el,{
+      type:'bar', plugins:[fcaCallout],
+      data:{labels, datasets},
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:{duration:800},
+        skipGlobalLabels:true,
+        plugins:{
+          legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
+          tooltip:{...tip(),callbacks:{
+            label:ctx=>{
+              if(ctx.dataset.label==='TVA%') return ` TVA: ${ctx.raw}%`;
+              return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+            }
+          }},
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y2:{position:'right',grid:{display:false},ticks:{color:'#FF3D00',font:{size:9,weight:'700'},callback:v=>v+'%'},border:{display:false},suggestedMin:0,suggestedMax:150},
+        }
+      }
+    });
+  }
   function chartGrowth(canvasId, achKey, tgtKey, colorOff){
     const achSrc = d.monthly[achKey];
     if(!achSrc||!achSrc.datasets||!achSrc.datasets.length) return;
@@ -1084,13 +1180,13 @@ function buildCharts(d){
           ctx.textAlign='center'; ctx.textBaseline='bottom';
           ctx.font='bold 9px Poppins';
           if(ds._isTvaLine){
-            // trendline: show TVA%
+            // trendline: show TVA% or Ach%
             const pct = ds._pctData ? ds._pctData[j] : null;
             if(pct==null){ctx.restore();return;}
-            ctx.fillStyle=textColor();
+            ctx.fillStyle = textColor();
+            ctx.font = 'bold 9px Poppins';
             ctx.fillText(pct+'%', point.x, point.y-8);
           } else {
-            // bars: show absolute + % of year
             ctx.fillStyle=textColor();
             ctx.fillText(fmt(v), point.x, point.y-6);
           }
@@ -1121,7 +1217,7 @@ function buildCharts(d){
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
         }
       }
     });
@@ -1212,7 +1308,7 @@ function buildCharts(d){
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
           y2:{position:'right',grid:{display:false},ticks:{color:'#AB1DFE',font:{size:9,weight:'700'},callback:v=>v+'%'},border:{display:false},suggestedMin:0,suggestedMax:150},
         }
       }
@@ -1331,7 +1427,7 @@ function buildCharts(d){
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
         }
       }
     });
@@ -1387,7 +1483,7 @@ function buildCharts(d){
         scales: {
           r: {
             ticks: {color:tickColor(), backdropColor:'transparent', font:{size:9,weight:'600'}, callback:v=>fmt(v)},
-            grid:  {color:gridColor()},
+            grid:  {display:false},
             pointLabels: {color:textColor(), font:{size:10,weight:'700'}},
           }
         }
@@ -1418,7 +1514,7 @@ function buildCharts(d){
   setTimeout(()=>{
     chartMnpTrend('chart-mnp', d);
     chartMnpVsTarget('chart-mnp2', d);
-    chartGrowth('chart-ga', 'fca_ach', null, 2);
+    chartFcaVsTarget('chart-ga', d);
     chartGrowth('chart-rech',      'loading_ach',      null, 1);
     chartGrowth('chart-conv',      'loading_ach_site_conv', null, 3);
     chartGrowth('chart-rech-site', 'total_site_loading',null, 6);

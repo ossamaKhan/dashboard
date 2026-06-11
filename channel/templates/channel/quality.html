@@ -373,8 +373,9 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <div class="sb-sec">Channel</div>
     <a href="/channel/" class="nv" onclick="closeSidebar()">Channel Brief</a>
     <a href="/channel/performance/" class="nv" onclick="closeSidebar()">Target Performance</a>
+    <a href="/channel/retailers/" class="nv" onclick="closeSidebar()">Retailer Health</a>
     <a href="/channel/enablers/" class="nv" onclick="closeSidebar()">Enablers</a>
-    <a href="/channel/quality/" class="nv active" onclick="closeSidebar()">Quality</a>
+    <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
     <a href="/channel/kpi-summary/" class="nv" onclick="closeSidebar()">KPI Summary</a>
     <div class="sb-sec">Account</div>
     <a href="/profile/" class="nv" onclick="closeSidebar()">Profile Settings</a>
@@ -490,53 +491,58 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 <main class="base-layout">
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">ZR Monthly Trend</div><div class="ps">ZR vs ZR FCA + Achievement %</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">ZR Monthly Trend</div><div class="ps">ZR vs ZR FCA + Achievement %</div></div></div>
     <div class="h320" style="position:relative"><canvas id="chart-zr"></canvas></div>
   </div>
 
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">QOS Achievement Monthly Trend</div><div class="ps">QOS Ach + QOS Ach% (QOS / FCA)</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">QOS Achievement Monthly Trend</div><div class="ps">QOS Ach + QOS Ach% (QOS / FCA)</div></div></div>
     <div class="h320" style="position:relative"><canvas id="chart-qos"></canvas></div>
   </div>
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">SD Bundle Monthly Trend</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">SD Bundle Monthly Trend</div></div></div>
     <div class="h320" style="position:relative"><canvas id="chart-sd"></canvas></div>
   </div>
+  <div class="chart-panel span-full">
+    <div class="ph"><div><div class="pt">4G Target vs Achievement</div><div class="ps">Monthly Trend &middot; TVA%</div></div></div>
+    <div class="h320" style="position:relative;"><canvas id="chart-g4"></canvas></div>
+  </div>
+
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">Dormancy Monthly Trend</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">Dormancy Monthly Trend</div></div></div>
     <div class="h320" style="position:relative"><canvas id="chart-dormancy"></canvas></div>
   </div>
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">Female FCA Monthly Trend</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">Female FCA Monthly Trend</div></div></div>
     <div class="h320" style="position:relative"><canvas id="chart-female-fca"></canvas></div>
   </div>
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">Bundle Achievement Monthly Trend</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">Bundle Achievement Monthly Trend</div></div></div>
     <div class="h320" style="position:relative"><canvas id="chart-bundle"></canvas></div>
   </div>
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">CM Disown Monthly Trend</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">CM Disown Monthly Trend</div></div></div>
     <div class="h320" style="position:relative"><canvas id="chart-disown-cm"></canvas></div>
   </div>
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">New SIM Sale (Disowned CNICs) Monthly Trend</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">New SIM Sale (Disowned CNICs) Monthly Trend</div></div></div>
     <div class="h320" style="position:relative"><canvas id="chart-disown-sim"></canvas></div>
   </div>
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">FCA Date within 90 Days Disowned Monthly Trend</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">FCA Date within 90 Days Disowned Monthly Trend</div></div></div>
     <div class="h320" style="position:relative"><canvas id="chart-disown-fca90"></canvas></div>
   </div>
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">90 Days Active Base Disown Monthly Trend</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">90 Days Active Base Disown Monthly Trend</div></div></div>
     <div class="h320" style="position:relative"><canvas id="chart-disown-base90"></canvas></div>
   </div>
 
@@ -790,7 +796,7 @@ function buildCharts(d){
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
           y2:{position:'right',grid:{display:false},ticks:{color:'#AB1DFE',font:{size:9,weight:'700'},callback:v=>v+'%'},border:{display:false},suggestedMin:0},
         }
       }
@@ -871,7 +877,7 @@ function buildCharts(d){
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
           y2:{position:'right',grid:{display:false},ticks:{color:'#AB1DFE',font:{size:9,weight:'700'},callback:v=>v+'%'},border:{display:false},suggestedMin:0},
         }
       }
@@ -879,7 +885,8 @@ function buildCharts(d){
   }
 
   function chartSD(canvasId, d){
-    const src = d.monthly['sd_bundle'];
+    const src    = d.monthly['sd_bundle'];
+    const fcaSrc = d.monthly['fca_ach'];
     if(!src||!src.datasets||!src.datasets.length) return;
     let lastIdx=-1;
     src.datasets.forEach(ds=>ds.data.forEach((v,i)=>{if(v!=null&&v!==0&&i>lastIdx)lastIdx=i;}));
@@ -897,6 +904,24 @@ function buildCharts(d){
       type:'bar', order:1, _showCallout: i===latestYearIdx,
     }));
 
+    // Trendline: SD Bundle / FCA Ach * 100
+    if(fcaSrc&&fcaSrc.datasets&&fcaSrc.datasets.length){
+      const latestSD  = src.datasets[latestYearIdx].data.slice(0,lastIdx+1);
+      const latestFCA = fcaSrc.datasets[fcaSrc.datasets.length-1].data.slice(0,lastIdx+1);
+      const pctData = latestSD.map((v,i)=>{
+        const f=latestFCA[i];
+        return (f&&f>0)?parseFloat((v/f*100).toFixed(1)):null;
+      });
+      datasets.push({
+        label:'SD Ach%', data:pctData,
+        type:'line', borderColor:'#AB1DFE', backgroundColor:'transparent',
+        borderWidth:2.5, borderDash:[4,4],
+        pointRadius:4, pointBackgroundColor:'#AB1DFE',
+        tension:0.3, order:0, spanGaps:true,
+        yAxisID:'y2', _showCallout:true, _isTva:true,
+      });
+    }
+
     dc(canvasId);
     const el=document.getElementById(canvasId); if(!el) return;
     const sdCallout={id:'sdCallout',afterDatasetsDraw(chart){
@@ -904,11 +929,13 @@ function buildCharts(d){
       chart.data.datasets.forEach((ds,di)=>{
         if(!ds._showCallout) return;
         const meta=chart.getDatasetMeta(di); if(meta.hidden) return;
-        meta.data.forEach((bar,j)=>{
+        meta.data.forEach((point,j)=>{
           const v=ds.data[j]; if(v==null||v===0) return;
           ctx.save(); ctx.textAlign='center'; ctx.textBaseline='bottom';
-          ctx.font='bold 9px Poppins'; ctx.fillStyle=textColor();
-          ctx.fillText(fmt(v), bar.x, bar.y-6); ctx.restore();
+          ctx.font='bold 9px Poppins';
+          if(ds._isTva){ctx.fillStyle=textColor();ctx.fillText(v+'%',point.x,point.y-10);}
+          else{ctx.fillStyle=textColor();ctx.fillText(fmt(v),point.x,point.y-6);}
+          ctx.restore();
         });
       });
     }};
@@ -920,11 +947,12 @@ function buildCharts(d){
         skipGlobalLabels:true,
         plugins:{
           legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
-          tooltip:{...tip(),callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmt(ctx.raw)}`}},
+          tooltip:{...tip(),callbacks:{label:ctx=>ctx.dataset._isTva?` SD Ach: ${ctx.raw}%`:` ${ctx.dataset.label}: ${fmt(ctx.raw)}`}},
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y2:{position:'right',grid:{display:false},ticks:{color:'#AB1DFE',font:{size:9,weight:'700'},callback:v=>v+'%'},border:{display:false},suggestedMin:0},
         }
       }
     });
@@ -1011,8 +1039,96 @@ function buildCharts(d){
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
           y2:{position:'right',grid:{display:false},ticks:{color:'#AB1DFE',font:{size:9,weight:'700'},callback:v=>v+'%'},border:{display:false},suggestedMin:0},
+        }
+      }
+    });
+  }
+
+  function chartG4VsTarget(canvasId, d){
+    const achSrc = d.monthly['g4_ach'];
+    const tgtSrc = d.monthly['g4_target'];
+    const fcaSrc = d.monthly['fca_ach'];
+    if(!achSrc||!achSrc.datasets||!tgtSrc||!tgtSrc.datasets||!fcaSrc||!fcaSrc.datasets) return;
+
+    const latestAchDs = achSrc.datasets[achSrc.datasets.length-1];
+    const latestTgtDs = tgtSrc.datasets[tgtSrc.datasets.length-1];
+    const latestYear  = latestAchDs.label;
+
+    // Match FCA dataset to same year as G4
+    const fcaDs = fcaSrc.datasets.find(ds=>ds.label===latestYear)
+                  || fcaSrc.datasets[fcaSrc.datasets.length-1];
+
+    let lastIdx=-1;
+    latestAchDs.data.forEach((v,i)=>{if(v!=null&&v!==0&&i>lastIdx)lastIdx=i;});
+    if(lastIdx<0) return;
+    const labels = achSrc.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
+
+    const achData = latestAchDs.data.slice(0,lastIdx+1);
+    const tgtData = latestTgtDs.data.slice(0,lastIdx+1);
+    const fcaData = fcaDs.data.slice(0,lastIdx+1);
+
+    // % of 4G in FCA = g4_ach / fca_ach * 100
+    const tvaData = achData.map((v,j)=>{
+      const f=fcaData[j];
+      return (f&&f>0)?parseFloat((v/f*100).toFixed(1)):null;
+    });
+
+    const datasets = [
+      {
+        label:'Target '+latestYear, data:tgtData,
+        backgroundColor:COLORS[3]+'bb', borderColor:COLORS[3],
+        borderWidth:1.5, borderRadius:3, borderSkipped:false,
+        type:'bar', order:2, _showCallout:true, _isTarget:true,
+      },
+      {
+        label:'Ach '+latestYear, data:achData,
+        backgroundColor:COLORS[4]+'bb', borderColor:COLORS[4],
+        borderWidth:1.5, borderRadius:3, borderSkipped:false,
+        type:'bar', order:1, _showCallout:true, _isTarget:false,
+      },
+      {
+        label:'4G % of FCA', data:tvaData,
+        type:'line', borderColor:'#FF3D00', backgroundColor:'transparent',
+        borderWidth:2.5, borderDash:[4,4],
+        pointRadius:4, pointBackgroundColor:'#FF3D00',
+        tension:0.3, order:0, spanGaps:true,
+        yAxisID:'y2', _showCallout:true, _isTva:true,
+      },
+    ];
+
+    dc(canvasId);
+    const el=document.getElementById(canvasId); if(!el) return;
+    const g4Callout={id:'g4Callout',afterDatasetsDraw(chart){
+      const ctx=chart.ctx;
+      chart.data.datasets.forEach((ds,di)=>{
+        if(!ds._showCallout) return;
+        const meta=chart.getDatasetMeta(di); if(meta.hidden) return;
+        meta.data.forEach((point,j)=>{
+          const v=ds.data[j]; if(v==null||v===0) return;
+          ctx.save(); ctx.textAlign='center'; ctx.textBaseline='bottom';
+          ctx.font='bold 9px Poppins';
+          if(ds._isTva){ctx.fillStyle='#FF3D00';ctx.fillText(v+'%',point.x,point.y-10);}
+          else{ctx.fillStyle=textColor();ctx.fillText(fmt(v),point.x,point.y-6);}
+          ctx.restore();
+        });
+      });
+    }};
+    charts[canvasId]=new Chart(el,{
+      type:'bar', plugins:[g4Callout],
+      data:{labels,datasets},
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:{duration:800},
+        skipGlobalLabels:true,
+        plugins:{
+          legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
+          tooltip:{...tip(),callbacks:{label:ctx=>ctx.dataset._isTva?` 4G % of FCA: ${ctx.raw}%`:` ${ctx.dataset.label}: ${fmt(ctx.raw)}`}},
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y2:{position:'right',grid:{display:false},ticks:{color:'#FF3D00',font:{size:9,weight:'700'},callback:v=>v+'%'},border:{display:false},suggestedMin:0,suggestedMax:150},
         }
       }
     });
@@ -1022,6 +1138,7 @@ function buildCharts(d){
     chartZR('chart-zr', d);
     chartQOS('chart-qos', d);
     chartSD('chart-sd', d);
+    chartG4VsTarget('chart-g4', d);
     chartGrowthBar('chart-dormancy',   'dormancy_count',    '#FF3D00', d);
     chartGrowthBar('chart-female-fca', 'female_fca_count',  '#AB1DFE', d);
     chartGrowthBar('chart-bundle',     'bundle_ach',        '#FFD600', d);

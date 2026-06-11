@@ -12,7 +12,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
-
 <style>
 :root{--orange:#f58220;--purple:#AB1DFE;--purple2:#5E35B1;--teal:#00BCD4;--green:#00C853;--red:#FF3D00;--yellow:#FFD600;--font:'Poppins',sans-serif}
 [data-theme="light"]{--bg:#e8e9ed;--border:rgba(0,0,0,0.09);--border2:rgba(245,130,32,0.2);--text:#1a1235;--text2:#4a4570;--muted:#8a85a5;--shadow:0 2px 10px rgba(0,0,0,0.07);--shadow-lg:0 8px 30px rgba(0,0,0,0.12);--header-bg:#ffffff;--filter-bg:#f0f1f5;--panel-bg:#ffffff;--input-bg:#e8e9ed;--dd-bg:#ffffff;--chart-grid:rgba(0,0,0,0.05);--chart-tick:#8a85a5}
@@ -167,7 +166,6 @@ main{position:relative;z-index:5;padding:20px 24px;display:grid;grid-template-co
 .map-popup-row:last-child{border-bottom:none}
 .map-popup-label{color:var(--muted);font-weight:500}
 .map-popup-divider{height:1px;background:var(--border);margin:6px 0}
-.leaflet-popup-content-wrapper-radius:50%;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);flex-shrink:0}
 .bu-legend-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bu-legend-count{font-size:9px;font-weight:700;color:var(--muted);background:var(--input-bg);padding:1px 6px;border-radius:10px}
 footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px solid var(--border2);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;transition:background .35s;margin-top:8px}
@@ -305,7 +303,6 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     </div>
   </div>
   <div class="header-right">
-    
     <button class="export-btn" onclick="exportFile('excel')" title="Download Excel"><span>Excel</span></button>
     <button class="export-btn export-pdf" onclick="exportFile('pdf')" title="Download PDF"><span>PDF</span></button>
     <div class="act-menu-wrap" style="display:none">
@@ -333,7 +330,10 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <div class="fw {% if locked.region.locked %}role-locked{% endif %}" id="fw-region">
       <div class="fw-label"><span class="ldot ld-o"></span>Region{% if locked.region.locked %} <span style="font-size:9px;opacity:.7">Locked</span>{% endif %}</div>
       <span class="fi-ico" style="font-size:11px;opacity:.5">◉</span>
-      <input class="fi" id="in-region" placeholder="{% if locked.region.locked %}Locked{% else %}All Regions{% endif %}" readonly/>
+      <input class="fi" id="in-region"
+        value="{% if locked.region.locked %}{{ locked.region.value|default:'' }}{% endif %}"
+        placeholder="{% if not locked.region.locked %}All Regions{% endif %}"
+        {% if locked.region.locked %}readonly disabled style="pointer-events:none;cursor:not-allowed;opacity:1;color:var(--purple);font-weight:700"{% else %}readonly{% endif %}/>
       {% if not locked.region.locked %}<div class="fdd" id="dd-region"></div>{% endif %}
     </div>
     <span class="f-arrow">›</span>
@@ -366,13 +366,13 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <div class="spacer"></div>
     <div class="fw" id="fw-month" style="max-width:110px">
       <div class="fw-label"><span class="ldot ld-p"></span>Month</div>
-      <span class="fi-ico" style="font-size:11px;opacity:.5">▦</span>
+      <span class="fi-ico" style="font-size:11px;opacity:.5">▆</span>
       <input class="fi" id="in-month" placeholder="—" readonly/>
       <div class="fdd" id="dd-month"></div>
     </div>
     <div class="fw" id="fw-year" style="max-width:110px">
       <div class="fw-label"><span class="ldot ld-p"></span>Year</div>
-      <span class="fi-ico" style="font-size:11px;opacity:.5">▦</span>
+      <span class="fi-ico" style="font-size:11px;opacity:.5">▆</span>
       <input class="fi" id="in-year" placeholder="—" readonly/>
       <div class="fdd" id="dd-year"></div>
     </div>
@@ -393,68 +393,31 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   <button class="mab-btn" onclick="toggleTheme()"><span class="mab-ico" id="mab-theme-ico">☀️</span>Theme</button>
 </div>
 <main>
-  <div class="kpi k1"><div class="kpi-icon"></div><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="kpi-revenue" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('monthly-line','rev_monthly','Monthly Revenue','PKR · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">—</div><div class="kpi-sub">PKR All Sites</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-revenue-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-revenue-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-revenue-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-revenue-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-revenue-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-revenue-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-revenue-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-revenue-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-revenue-yoy-curr">—</span></div></div></div></div>
-  <div class="kpi k4"><div class="kpi-icon"></div><div class="kpi-label">Total Recharge</div><div class="kpi-value" id="kpi-recharge" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('monthly-line','rech_monthly','Monthly Total Recharge','PKR · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">—</div><div class="kpi-sub">PKR MTD</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-recharge-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-recharge-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-recharge-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-recharge-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-recharge-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-recharge-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-recharge-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-recharge-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-recharge-yoy-curr">—</span></div></div></div></div>
-  <div class="kpi k12"><div class="kpi-icon"></div><div class="kpi-label">Digital Recharge</div><div class="kpi-value" id="kpi-digi" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('monthly-line','digi_monthly','Monthly Digital Recharge','PKR · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">—</div><div class="kpi-sub">PKR Digital Channel</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-digi-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-digi-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-digi-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-digi-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-digi-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-digi-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-digi-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-digi-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-digi-yoy-curr">—</span></div></div></div></div>
-  <div class="kpi k13"><div class="kpi-icon"></div><div class="kpi-label">Conv. Recharge</div><div class="kpi-value" id="kpi-conv" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('monthly-line','conv_monthly','Monthly Conventional Recharge','PKR · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">—</div><div class="kpi-sub">PKR Conventional</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-conv-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-conv-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-conv-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-conv-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-conv-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-conv-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-conv-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-conv-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-conv-yoy-curr">—</span></div></div></div></div>
-  <div class="kpi k9"><div class="kpi-icon"></div><div class="kpi-label">ARPU</div><div class="kpi-value" id="kpi-arpu">—</div><div class="kpi-sub">PKR Per Activation</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-arpu-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-arpu-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-arpu-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-arpu-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-arpu-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-arpu-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-arpu-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-arpu-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-arpu-yoy-curr">—</span></div></div></div></div>
-  <div class="kpi k10"><div class="kpi-icon"></div><div class="kpi-label">90D Base</div><div class="kpi-value" id="kpi-base90" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('base-trend','base90','90D Active Base Trend','Monthly · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">—</div><div class="kpi-sub">90-Day Active Base</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-base90-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base90-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base90-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-base90-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base90-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base90-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-base90-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base90-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base90-yoy-curr">—</span></div></div></div></div>
-  <div class="kpi k11"><div class="kpi-icon"></div><div class="kpi-label">4G Base</div><div class="kpi-value" id="kpi-base4g" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('base-trend','base4g','4G Base Trend','Monthly · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">—</div><div class="kpi-sub" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('base-trend','pen4g','4G Penetration % Trend','Monthly · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">4G Pen: <span id="kpi-pen4g" style="color:var(--orange);font-weight:800">—</span></div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-base4g-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base4g-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base4g-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-base4g-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base4g-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base4g-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-base4g-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base4g-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base4g-yoy-curr">—</span></div></div></div></div>
-  <div class="kpi k7"><div class="kpi-icon"></div><div class="kpi-label">HVC Base</div><div class="kpi-value" id="kpi-hvc" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('base-trend','hvc','HVC Base Trend','Monthly · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">—</div><div class="kpi-sub">High Value Customers</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-hvc-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-hvc-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-hvc-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-hvc-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-hvc-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-hvc-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-hvc-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-hvc-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-hvc-yoy-curr">—</span></div></div></div></div>
-  <div class="kpi k14"><div class="kpi-icon"></div><div class="kpi-label">30D Base</div><div class="kpi-value" id="kpi-base30" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('base-trend','base30','30D Base Trend','Monthly · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">—</div><div class="kpi-sub">30-Day Active Base</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-base30-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base30-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base30-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-base30-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base30-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base30-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-base30-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base30-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base30-yoy-curr">—</span></div></div></div></div>
-  <div class="kpi k3"><div class="kpi-icon"></div><div class="kpi-label">Net Additions</div><div class="kpi-value" id="kpi-netadd" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('base-trend','net_adds','Net Additions Trend','Monthly · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">—</div><div class="kpi-sub">Subscribers</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-netadd-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-netadd-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-netadd-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-netadd-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-netadd-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-netadd-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-netadd-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-netadd-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-netadd-yoy-curr">—</span></div></div></div></div>
-  <div class="kpi k5"><div class="kpi-icon"></div><div class="kpi-label">Total Sites</div><div class="kpi-value" id="kpi-sites" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('region-bar','revenue_by_region','Revenue by Region','Current Period')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">—</div><div class="kpi-sub">Network Nodes</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-sites-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-sites-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-sites-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-sites-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-sites-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-sites-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-sites-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-sites-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-sites-yoy-curr">—</span></div></div></div></div>
-  <div class="kpi k6"><div class="kpi-icon"></div><div class="kpi-label">Gross Churn</div><div class="kpi-value" id="kpi-churn" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('base-trend','churn','Gross Churn Trend','Monthly · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">—</div><div class="kpi-sub">Subscribers Lost</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-churn-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-churn-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-churn-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-churn-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-churn-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-churn-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-churn-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-churn-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-churn-yoy-curr">—</span></div></div></div></div>
-  <div class="kpi k8"><div class="kpi-icon"></div><div class="kpi-label">Avg Rev / Site</div><div class="kpi-value" id="kpi-avg" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('bu-bar','rev_by_bu','Revenue by BU','Current Period')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">—</div><div class="kpi-sub">PKR Per Site</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-avg-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-avg-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-avg-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-avg-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-avg-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-avg-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-avg-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-avg-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-avg-yoy-curr">—</span></div></div></div></div>
-
-  <!-- Technology Breakdown card -->
-  <div class="kpi k2">
-    <div class="kpi-icon"></div>
-    <div class="kpi-label">Sites by Technology</div>
-    <div style="display:flex;align-items:flex-end;gap:16px;margin:6px 0 4px">
-      <div style="text-align:center">
-        <div style="font-size:18px;font-weight:900;color:var(--teal)" id="kpi-sites-4g">—</div>
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px">4G</div>
-      </div>
-      <div style="width:1px;height:36px;background:var(--border)"></div>
-      <div style="text-align:center">
-        <div style="font-size:18px;font-weight:900;color:var(--purple)" id="kpi-sites-3g">—</div>
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px">3G</div>
-      </div>
-      <div style="width:1px;height:36px;background:var(--border)"></div>
-      <div style="text-align:center">
-        <div style="font-size:18px;font-weight:900;color:var(--orange)" id="kpi-sites-2g">—</div>
-        <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px">2G</div>
-      </div>
-    </div>
-    <div class="kpi-sub">Distinct Sites · <span id="kpi-sites-total-tech" style="color:var(--orange);font-weight:800">—</span> Total</div>
-    <div style="margin-top:8px;height:6px;border-radius:6px;overflow:hidden;display:flex;gap:2px">
-      <div id="tech-bar-4g" style="height:100%;background:var(--teal);border-radius:6px 0 0 6px;transition:width .6s"></div>
-      <div id="tech-bar-3g" style="height:100%;background:var(--purple);transition:width .6s"></div>
-      <div id="tech-bar-2g" style="height:100%;background:var(--orange);border-radius:0 6px 6px 0;transition:width .6s"></div>
-    </div>
-    <div class="kpi-divider" style="margin-top:10px"></div>
-    <div class="kpi-growth">
-      <div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-sites-tech-ytd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-sites-tech-ytd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-sites-tech-ytd-curr">&mdash;</span></div></div>
-      <div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-sites-tech-mtd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-sites-tech-mtd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-sites-tech-mtd-curr">&mdash;</span></div></div>
-      <div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-sites-tech-yoy-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-sites-tech-yoy-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-sites-tech-yoy-curr">&mdash;</span></div></div>
-    </div>
-  </div>
-
-  <!-- Revenue to Recharge Ratio card -->
+  <div class="kpi k1"><div class="kpi-icon"></div><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="kpi-revenue" onclick="openTrend('monthly-line','rev_monthly','Monthly Revenue','PKR · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''" >—</div><div class="kpi-sub">PKR All Sites</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-revenue-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-revenue-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-revenue-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-revenue-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-revenue-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-revenue-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-revenue-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-revenue-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-revenue-yoy-curr">—</span></div></div></div></div>
+  <div class="kpi k4"><div class="kpi-icon"></div><div class="kpi-label">Total Recharge</div><div class="kpi-value" id="kpi-recharge" onclick="openTrend('monthly-line','rech_monthly','Monthly Total Recharge','PKR · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''" >—</div><div class="kpi-sub">PKR MTD</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-recharge-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-recharge-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-recharge-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-recharge-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-recharge-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-recharge-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-recharge-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-recharge-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-recharge-yoy-curr">—</span></div></div></div></div>
+  <div class="kpi k13"><div class="kpi-icon"></div><div class="kpi-label">Conv. Recharge</div><div class="kpi-value" id="kpi-conv" onclick="openTrend('monthly-line','conv_monthly','Monthly Conventional Recharge','PKR · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''" >—</div><div class="kpi-sub">PKR Conventional</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-conv-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-conv-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-conv-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-conv-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-conv-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-conv-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-conv-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-conv-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-conv-yoy-curr">—</span></div></div></div></div>
+  <div class="kpi k12"><div class="kpi-icon"></div><div class="kpi-label">Digital Recharge</div><div class="kpi-value" id="kpi-digi" onclick="openTrend('monthly-line','digi_monthly','Monthly Digital Recharge','PKR · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''" >—</div><div class="kpi-sub">PKR Digital Channel</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-digi-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-digi-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-digi-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-digi-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-digi-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-digi-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-digi-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-digi-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-digi-yoy-curr">—</span></div></div></div></div>
+  <div class="kpi k9"><div class="kpi-icon"></div><div class="kpi-label">ARPU</div><div class="kpi-value" id="kpi-arpu">—</div><div class="kpi-sub">PKR Per Subscriber Base</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-arpu-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-arpu-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-arpu-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-arpu-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-arpu-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-arpu-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-arpu-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-arpu-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-arpu-yoy-curr">—</span></div></div></div></div>
+  <div class="kpi k10"><div class="kpi-icon"></div><div class="kpi-label">90D Base</div><div class="kpi-value" id="kpi-base90" onclick="openTrend('base-trend','base90','90D Active Base Trend','Monthly · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''" >—</div><div class="kpi-sub">90-Day Active Base</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-base90-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base90-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base90-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-base90-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base90-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base90-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-base90-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base90-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base90-yoy-curr">—</span></div></div></div></div>
+  <div class="kpi k14"><div class="kpi-icon"></div><div class="kpi-label">30D Base</div><div class="kpi-value" id="kpi-base30" onclick="openTrend('base-trend','base30','30D Base Trend','Monthly · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''" >—</div><div class="kpi-sub" id="kpi-base30-sub">30-Day Active Base</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-base30-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base30-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base30-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-base30-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base30-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base30-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-base30-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base30-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base30-yoy-curr">—</span></div></div></div></div>
+  <div class="kpi k11"><div class="kpi-icon"></div><div class="kpi-label">4G Base</div><div class="kpi-value" id="kpi-base4g" onclick="openTrend('base-trend','base4g','4G Base Trend','Monthly · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''" >—</div><div class="kpi-sub" id="kpi-base4g-sub">4G Active Subscribers</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-base4g-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base4g-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base4g-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-base4g-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base4g-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base4g-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-base4g-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-base4g-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-base4g-yoy-curr">—</span></div></div></div></div>
+  <div class="kpi k7"><div class="kpi-icon"></div><div class="kpi-label">HVC Base</div><div class="kpi-value" id="kpi-hvc" onclick="openTrend('base-trend','hvc','HVC Base Trend','Monthly · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''" >—</div><div class="kpi-sub" id="kpi-hvc-sub">High Value Customers</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-hvc-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-hvc-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-hvc-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-hvc-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-hvc-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-hvc-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-hvc-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-hvc-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-hvc-yoy-curr">—</span></div></div></div></div>
+  <div class="kpi k3"><div class="kpi-icon"></div><div class="kpi-label">Net Additions</div><div class="kpi-value" id="kpi-netadd" onclick="openTrend('base-trend','net_adds','Net Additions Trend','Monthly · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''" >—</div><div class="kpi-sub">Subscribers</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-netadd-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-netadd-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-netadd-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-netadd-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-netadd-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-netadd-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-netadd-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-netadd-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-netadd-yoy-curr">—</span></div></div></div></div>
+  <div class="kpi k6"><div class="kpi-icon"></div><div class="kpi-label">Gross Churn</div><div class="kpi-value" id="kpi-churn" onclick="openTrend('base-trend','churn','Gross Churn Trend','Monthly · Multi-Year')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''" >—</div><div class="kpi-sub">Subscribers Lost</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-churn-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-churn-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-churn-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-churn-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-churn-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-churn-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-churn-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-churn-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-churn-yoy-curr">—</span></div></div></div></div>
+  <div class="kpi k5"><div class="kpi-icon"></div><div class="kpi-label">Daily Active</div><div class="kpi-value" id="kpi-daily-act">&mdash;</div><div class="kpi-sub">Avg Daily Active · <span id="kpi-daily-pct" style="color:var(--teal);font-weight:700">&mdash;</span> of 90D Base</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-dailyact-ytd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-dailyact-ytd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-dailyact-ytd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-dailyact-mtd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-dailyact-mtd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-dailyact-mtd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-dailyact-yoy-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-dailyact-yoy-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-dailyact-yoy-curr">&mdash;</span></div></div></div></div>
   <div class="kpi k2">
     <div class="kpi-icon"></div>
     <div class="kpi-label">Rev / Recharge Ratio</div>
-    <div class="kpi-value" id="kpi-rev-rech-ratio" style="color:var(--purple)">—</div>
+    <div class="kpi-value" id="kpi-rev-rech-ratio" style="color:var(--purple)">&mdash;</div>
     <div class="kpi-sub">Revenue as % of Total Recharge</div>
     <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:10px;font-weight:700;color:var(--muted)">Revenue</span>
-        <span style="font-size:12px;font-weight:800;color:var(--orange)" id="kpi-rr-rev">—</span>
+        <span style="font-size:12px;font-weight:800;color:var(--orange)" id="kpi-rr-rev">&mdash;</span>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center">
         <span style="font-size:10px;font-weight:700;color:var(--muted)">Recharge</span>
-        <span style="font-size:12px;font-weight:800;color:var(--purple)" id="kpi-rr-rech">—</span>
+        <span style="font-size:12px;font-weight:800;color:var(--purple)" id="kpi-rr-rech">&mdash;</span>
       </div>
       <div style="height:1px;background:var(--border)"></div>
       <div style="height:8px;border-radius:8px;background:var(--input-bg);overflow:hidden;position:relative">
@@ -462,52 +425,50 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
       </div>
       <div style="display:flex;justify-content:space-between">
         <span style="font-size:9px;font-weight:600;color:var(--muted)">0%</span>
-        <span style="font-size:9px;font-weight:700;color:var(--purple2)" id="kpi-rr-ratio2">—</span>
+        <span style="font-size:9px;font-weight:700;color:var(--purple2)" id="kpi-rr-ratio2">&mdash;</span>
         <span style="font-size:9px;font-weight:600;color:var(--muted)">100%</span>
       </div>
     </div>
     <div class="kpi-divider" style="margin-top:10px"></div>
-    <div class="kpi-growth">
-      <div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-rr-ytd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-rr-ytd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-rr-ytd-curr">&mdash;</span></div></div>
-      <div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-rr-mtd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-rr-mtd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-rr-mtd-curr">&mdash;</span></div></div>
-      <div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-rr-yoy-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-rr-yoy-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-rr-yoy-curr">&mdash;</span></div></div>
-    </div>
+<div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-rr-ytd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-rr-ytd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-rr-ytd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-rr-mtd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-rr-mtd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-rr-mtd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-rr-yoy-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-rr-yoy-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-rr-yoy-curr">&mdash;</span></div></div></div>
   </div>
 
-  <!-- BVS &amp; EVC Retailer card -->
+  <!-- BVS Retailer card -->
   <div class="kpi k5">
     <div class="kpi-icon"></div>
-    <div class="kpi-label" onmouseout="this.style.transform='';this.style.boxShadow=''" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('traffic-bar','traffic','Voice Traffic by Region','Outgoing & Incoming')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''" onclick="openTrend('churn-bar','churn_revival','Churn & Revival by Region','Current Period')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''">BVS &amp; EVC Retailer</div>
-    <div style="display:flex;align-items:flex-end;gap:12px;margin:4px 0">
-      <div style="flex:1">
-        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">BVS</div>
-        <div style="font-size:20px;font-weight:900;letter-spacing:-1px;color:var(--teal)" id="kpi-bvs">—</div>
-        <div style="font-size:10px;font-weight:600;color:var(--muted);margin-top:2px">Avg: <span id="kpi-bvs-per-site" style="color:var(--orange);font-weight:800">—</span>/site</div>
-      </div>
-      <div style="width:1px;height:44px;background:var(--border);flex-shrink:0"></div>
-      <div style="flex:1">
-        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px">EVC</div>
-        <div style="font-size:20px;font-weight:900;letter-spacing:-1px;color:var(--purple)" id="kpi-evc">—</div>
-        <div style="font-size:10px;font-weight:600;color:var(--muted);margin-top:2px">Avg: <span id="kpi-evc-per-site" style="color:var(--orange);font-weight:800">—</span>/site</div>
-      </div>
-    </div>
+    <div class="kpi-label">BVS Retailer</div>
+    <div class="kpi-value" id="kpi-bvs">&mdash;</div>
+    <div class="kpi-sub">Avg: <span id="kpi-bvs-per-site" style="color:var(--orange);font-weight:800">&mdash;</span> / site</div>
     <div class="kpi-divider" style="margin-top:10px"></div>
-    <div class="kpi-growth">
-      <div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-bvsevc-ytd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-bvsevc-ytd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-bvsevc-ytd-curr">&mdash;</span></div></div>
-      <div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-bvsevc-mtd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-bvsevc-mtd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-bvsevc-mtd-curr">&mdash;</span></div></div>
-      <div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-bvsevc-yoy-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-bvsevc-yoy-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-bvsevc-yoy-curr">&mdash;</span></div></div>
-    </div>
+    <div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-bvs-ytd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-bvs-ytd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-bvs-ytd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-bvs-mtd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-bvs-mtd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-bvs-mtd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-bvs-yoy-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-bvs-yoy-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-bvs-yoy-curr">&mdash;</span></div></div></div>
   </div>
+
+  <!-- EVC Retailer card -->
+  <div class="kpi k2">
+    <div class="kpi-icon"></div>
+    <div class="kpi-label">EVC Retailer</div>
+    <div class="kpi-value" id="kpi-evc">&mdash;</div>
+    <div class="kpi-sub">Avg: <span id="kpi-evc-per-site" style="color:var(--orange);font-weight:800">&mdash;</span> / site</div>
+    <div class="kpi-divider" style="margin-top:10px"></div>
+    <div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-evc-ytd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-evc-ytd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-evc-ytd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-evc-mtd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-evc-mtd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-evc-mtd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-evc-yoy-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-evc-yoy-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-evc-yoy-curr">&mdash;</span></div></div></div>
+  </div>
+
+  <div class="kpi k8"><div class="kpi-icon"></div><div class="kpi-label">Avg Rev / Site</div><div class="kpi-value" id="kpi-avg" onclick="openTrend('bu-bar','rev_by_bu','Revenue by BU','Current Period')" style="cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.015)';this.style.boxShadow='0 8px 24px rgba(245,130,32,0.15)'" onmouseout="this.style.transform='';this.style.boxShadow=''" >—</div><div class="kpi-sub">PKR Per Site</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-avg-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-avg-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-avg-ytd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-avg-mtd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-avg-mtd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-avg-mtd-curr">—</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-avg-yoy-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="growth-avg-yoy-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="growth-avg-yoy-curr">—</span></div></div></div></div>
+  <!-- Daily Active card -->
+  <div class="kpi k3"><div class="kpi-icon"></div><div class="kpi-label">Active Rechargers</div><div class="kpi-value" id="kpi-act-rch">&mdash;</div><div class="kpi-sub">Monthly · <span id="kpi-actrch-pct" style="color:var(--green);font-weight:700">&mdash;</span> of 90D Base</div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-actrch-ytd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-actrch-ytd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-actrch-ytd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-actrch-mtd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-actrch-mtd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-actrch-mtd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-actrch-yoy-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-actrch-yoy-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-actrch-yoy-curr">&mdash;</span></div></div></div></div>
+  <div class="kpi k4"><div class="kpi-icon"></div><div class="kpi-label">&#11088; PLATINUM</div><div class="kpi-value" id="kpi-tier-plat" style="color:var(--purple2)">&mdash;</div><div class="kpi-sub">Sites &middot; <span style="color:var(--muted);font-weight:600">&gt;700K</span></div><div style="height:3px;border-radius:3px;background:var(--input-bg);overflow:hidden;margin:8px 0 4px"><div id="tier-bar-plat" style="height:100%;background:var(--purple2);border-radius:3px;transition:width .6s;width:0%"></div></div><div class="kpi-divider"></div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-tier-plat-ytd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-tier-plat-ytd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-tier-plat-ytd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-tier-plat-mtd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-tier-plat-mtd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-tier-plat-mtd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-tier-plat-yoy-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-tier-plat-yoy-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-tier-plat-yoy-curr">&mdash;</span></div></div></div></div>
+  <div class="kpi k9"><div class="kpi-icon"></div><div class="kpi-label">&#127775; GOLD</div><div class="kpi-value" id="kpi-tier-gold" style="color:#FFD700">&mdash;</div><div class="kpi-sub">Sites &middot; <span style="color:var(--muted);font-weight:600">400K&ndash;700K</span></div><div style="height:3px;border-radius:3px;background:var(--input-bg);overflow:hidden;margin:8px 0 4px"><div id="tier-bar-gold" style="height:100%;background:#FFD700;border-radius:3px;transition:width .6s;width:0%"></div></div><div class="kpi-divider"></div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-tier-gold-ytd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-tier-gold-ytd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-tier-gold-ytd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-tier-gold-mtd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-tier-gold-mtd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-tier-gold-mtd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-tier-gold-yoy-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-tier-gold-yoy-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-tier-gold-yoy-curr">&mdash;</span></div></div></div></div>
+  <div class="kpi k8"><div class="kpi-icon"></div><div class="kpi-label">&#11090; SILVER</div><div class="kpi-value" id="kpi-tier-silv" style="color:#C0C0C0">&mdash;</div><div class="kpi-sub">Sites &middot; <span style="color:var(--muted);font-weight:600">&le;400K</span></div><div style="height:3px;border-radius:3px;background:var(--input-bg);overflow:hidden;margin:8px 0 4px"><div id="tier-bar-silv" style="height:100%;background:#C0C0C0;border-radius:3px;transition:width .6s;width:0%"></div></div><div class="kpi-divider"></div><div class="kpi-growth"><div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="growth-tier-silv-ytd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-tier-silv-ytd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-tier-silv-ytd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">GOLM</span><span class="growth-badge" id="growth-tier-silv-mtd-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-tier-silv-mtd-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-tier-silv-mtd-curr">&mdash;</span></div></div><div class="growth-row"><div class="growth-header"><span class="growth-label">YOY</span><span class="growth-badge" id="growth-tier-silv-yoy-badge">&mdash;</span></div><div class="growth-compare"><span class="growth-prev" id="growth-tier-silv-yoy-prev">&mdash;</span><span class="growth-arrow">&#8594;</span><span class="growth-curr" id="growth-tier-silv-yoy-curr">&mdash;</span></div></div></div></div>
 
   <div class="map-panel span-full">
     <div class="map-header">
       <div class="map-header-left">
         <div class="map-title">Network Site Map</div>
-        <div class="map-subtitle" id="map-subtitle">Central B Region · Color-coded by Business Unit</div>
+        <div class="map-subtitle" id="map-subtitle">Central B Region &middot; Color-coded by Business Unit</div>
       </div>
       <div class="map-header-right">
         <div class="map-stat-chip"><span class="map-live-dot"></span> Live</div>
-        <div class="map-stat-chip">Sites: <span id="map-count">—</span></div>
+        <div class="map-stat-chip">Sites: <span id="map-count">&mdash;</span></div>
         <div class="map-stat-chip">BUs: <span id="map-bu-count">4</span></div>
         <button class="map-action-btn" id="nearby-btn" onclick="findNearbySites()">Nearby</button>
         <button class="map-action-btn map-action-btn-alt" id="coord-btn" onclick="openCoordPanel()">By Coords</button>
@@ -519,24 +480,18 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
         <div class="bu-legend-title">Business Units</div>
         <div id="bu-legend-body"></div>
       </div>
-      <div class="map-zoom-hint">Scroll to zoom · Click marker for details</div>
+      <div class="map-zoom-hint">Scroll to zoom &middot; Click marker for details</div>
     </div>
   </div>
-  
-  
-  
-  
-  
-  
 
-<!-- ══ Trend Chart Modal ══════════════════════════════════════ -->
+<!-- Trend Chart Modal -->
 <div id="trend-modal" style="display:none;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;padding:20px">
   <div id="trend-modal-backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(3px)" onclick="closeTrendModal()"></div>
   <div id="trend-modal-box" style="position:relative;background:var(--panel-bg);border:1.5px solid var(--border);border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,0.25);width:min(720px,94vw);max-height:86vh;overflow:hidden;display:flex;flex-direction:column;animation:modalIn .22s ease">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid var(--border)">
       <div>
         <div id="trend-modal-title" style="font-size:15px;font-weight:900;color:var(--text)">Trend</div>
-        <div id="trend-modal-sub" style="font-size:11px;font-weight:500;color:var(--muted);margin-top:2px">Monthly · Multi-Year</div>
+        <div id="trend-modal-sub" style="font-size:11px;font-weight:500;color:var(--muted);margin-top:2px">Monthly &middot; Multi-Year</div>
       </div>
       <button onclick="closeTrendModal()" style="background:var(--input-bg);border:none;border-radius:10px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:18px;font-weight:700;transition:background .15s" onmouseover="this.style.background='rgba(245,130,32,0.12)'" onmouseout="this.style.background='var(--input-bg)'">&times;</button>
     </div>
@@ -547,15 +502,13 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 </div>
 <style>
 @keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
-
 .kpi[onclick]::after{content:"↗";position:absolute;top:12px;right:14px;font-size:11px;opacity:0;color:var(--orange);font-weight:900;transition:opacity .2s}
 .kpi[onclick]:hover::after{opacity:0.7}
 </style>
 
-</main>
-<footer>
+</main><footer>
   <img src="{% static 'images/logo1.jpg' %}" style="height:40px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
-  <div class="footer-right"><div class="footer-region">Central B · Multan</div><div class="footer-copy">© 2026 All Rights Reserved</div></div>
+  <div class="footer-right"><div class="footer-region">Central B &middot; Multan</div><div class="footer-copy">&copy; 2026 All Rights Reserved</div></div>
 </footer>
 </div>
 </div>
@@ -580,7 +533,7 @@ function textColor(){return getTheme()==='dark'?'#b8b0e8':'#4a4570';}
 function fmt(n){if(n==null)return'—';if(n>=1e9)return(n/1e9).toFixed(2)+'B';if(n>=1e6)return(n/1e6).toFixed(2)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return Math.round(n).toLocaleString();}
 function enable(id){document.getElementById(id)?.classList.remove('disabled');}
 function disable(id){document.getElementById(id)?.classList.add('disabled');}
-function buildDD(ddId,items,onSelect,allLabel){const dd=document.getElementById(ddId);if(!dd)return;dd.innerHTML='';const all=document.createElement('div');all.className='ddi ao';all.textContent=`— ${allLabel}`;all.addEventListener('mousedown',()=>onSelect(null));dd.appendChild(all);items.forEach(item=>{const el=document.createElement('div');el.className='ddi';const isObj=typeof item==='object'&&item!==null;el.textContent=isObj?item.label:item;el.addEventListener('mousedown',()=>onSelect(isObj?String(item.val):item));dd.appendChild(el);});}
+function buildDD(ddId,items,onSelect,allLabel){const dd=document.getElementById(ddId);if(!dd)return;dd.innerHTML='';items=[...new Set(items)];const all=document.createElement('div');all.className='ddi ao';all.textContent=`— ${allLabel}`;all.addEventListener('mousedown',()=>onSelect(null));dd.appendChild(all);items.forEach(item=>{const el=document.createElement('div');el.className='ddi';const isObj=typeof item==='object'&&item!==null;el.textContent=isObj?item.label:item;el.addEventListener('mousedown',()=>onSelect(isObj?String(item.val):item));dd.appendChild(el);});}
 function setupInput(inId,ddId,searchable=false){const inp=document.getElementById(inId),dd=document.getElementById(ddId);if(!inp||!dd)return;inp.addEventListener('focus',()=>dd.classList.add('open'));inp.addEventListener('blur',()=>setTimeout(()=>dd.classList.remove('open'),160));if(searchable){inp.removeAttribute('readonly');inp.addEventListener('input',()=>{const q=inp.value.toLowerCase();dd.querySelectorAll('.ddi').forEach(el=>{el.style.display=el.textContent.toLowerCase().includes(q)?'':'none';});dd.classList.add('open');});}}
 function setVal(inId,val,cls=''){const el=document.getElementById(inId);if(!el)return;el.value=val||'';el.title=val||'';el.classList.remove('ac-o','ac-p');if(val&&cls){el.classList.add(cls);el.closest('.fw')?.classList.add('has-val');}else{el.closest('.fw')?.classList.remove('has-val');}}
 const TAG_META={region:{label:'Region',cascade:true},franchise:{label:'Franchise',cascade:true},business_unit:{label:'BU',cascade:true},arm:{label:'ARM',cascade:true},month:{label:'Month',cascade:false},year:{label:'Year',cascade:false}};
@@ -589,20 +542,15 @@ function updateLogoSub(){
   const el=document.getElementById('logo-sub');
   if(!el)return;
   const parts=['EXECUTIVE BRIEF'];
-  if(S.region) parts.push(S.region);
-  if(S.business_unit) parts.push(S.business_unit);
-  if(S.franchise) parts.push(S.franchise);
+  if(S.region)parts.push(S.region);
+  if(S.business_unit)parts.push(S.business_unit);
+  if(S.franchise)parts.push(S.franchise);
   el.textContent=parts.join(' · ');
 }
 
 function renderTags(){saveFiltersToStorage();const bar=document.getElementById('af-bar');bar.querySelectorAll('.af-tag').forEach(t=>t.remove());const none=document.getElementById('af-none'),btn=document.getElementById('reset-btn');let count=0;Object.entries(S).forEach(([k,v])=>{if(!v)return;if(k==='region'&&ROLE_CONFIG.regionLocked)return;if(k==='business_unit'&&ROLE_CONFIG.buLocked)return;count++;const m=TAG_META[k],tag=document.createElement('div');tag.className=`af-tag ${m.cascade?'tc':'ti'}`;tag.innerHTML=`<span>${m.label}: ${v}</span><span class="af-x">✕</span>`;tag.querySelector('.af-x').addEventListener('click',()=>clearOne(k));bar.insertBefore(tag,btn);});none.style.display=count?'none':'';btn.style.display=count?'':'none';updateFilterBadge();updateLogoSub();}
 function clearOne(key){
-  if(key==='region'){
-    S.region=null;S.franchise=null;S.business_unit=null;
-    setVal('in-region',null);setVal('in-franchise',null);setVal('in-bu',null);
-    if(ROLE_CONFIG.buLocked&&ROLE_CONFIG.buValue){S.business_unit=ROLE_CONFIG.buValue;enable('fw-franchise');}
-    else{if(!ROLE_CONFIG.buLocked)disable('fw-bu');disable('fw-arm');disable('fw-franchise');}
-  }
+  if(key==='region'){S.region=null;S.franchise=null;S.business_unit=null;setVal('in-region',null);setVal('in-franchise',null);setVal('in-bu',null);if(ROLE_CONFIG.buLocked&&ROLE_CONFIG.buValue){S.business_unit=ROLE_CONFIG.buValue;enable('fw-franchise');}else{if(!ROLE_CONFIG.buLocked)disable('fw-bu');disable('fw-arm');disable('fw-franchise');}}
   else if(key==='business_unit'){S.business_unit=null;S.arm=null;S.franchise=null;setVal('in-bu',null);setVal('in-arm',null);setVal('in-franchise',null);disable('fw-arm');disable('fw-franchise');}
   else if(key==='arm'){S.arm=null;S.franchise=null;setVal('in-arm',null);setVal('in-franchise',null);disable('fw-franchise');}
   else if(key==='franchise'){S.franchise=null;setVal('in-franchise',null);}
@@ -618,30 +566,24 @@ function resetAll(){
   S.month=null;S.year=null;localStorage.removeItem('ufone_initialized');
   const mEl=document.getElementById('in-month');if(mEl){mEl.value='';mEl.placeholder='-';mEl.classList.remove('ac-p','ac-o');}
   const yEl=document.getElementById('in-year');if(yEl){yEl.value='';yEl.placeholder='-';yEl.classList.remove('ac-p','ac-o');}
-  disable('fw-franchise');
-  disable('fw-arm');
+  disable('fw-franchise');disable('fw-arm');
   if(!ROLE_CONFIG.buLocked)disable('fw-bu');
-  // BU-locked users: re-enable franchise immediately since BU is always pre-set
   if(ROLE_CONFIG.buLocked){enable('fw-arm');enable('fw-franchise');}
   renderTags();loadOptions();fetchData();fetchMapData();
 }
 function applyRoleLocks(){
   if(ROLE_CONFIG.armLocked&&ROLE_CONFIG.armValue){
     if(ROLE_CONFIG.buValue){setVal('in-bu',ROLE_CONFIG.buValue,'ac-p');S.business_unit=ROLE_CONFIG.buValue;}
-    setVal('in-arm',ROLE_CONFIG.armValue,'ac-p');
-    S.arm=ROLE_CONFIG.armValue;
+    setVal('in-arm',ROLE_CONFIG.armValue,'ac-p');S.arm=ROLE_CONFIG.armValue;
     enable('fw-franchise');
     document.getElementById('fw-region')?.classList.add('role-locked');
     document.getElementById('fw-bu')?.classList.add('role-locked');
     document.getElementById('fw-arm')?.classList.add('role-locked');
   } else if(ROLE_CONFIG.buLocked&&ROLE_CONFIG.buValue){
-    setVal('in-bu',ROLE_CONFIG.buValue,'ac-p');
-    S.business_unit=ROLE_CONFIG.buValue;
-    enable('fw-arm');
-    enable('fw-franchise');
-    document.getElementById('fw-bu')?.classList.add('role-locked');
+    setVal('in-bu',ROLE_CONFIG.buValue,'ac-p');S.business_unit=ROLE_CONFIG.buValue;
+    enable('fw-arm');enable('fw-franchise');
     document.getElementById('fw-region')?.classList.add('role-locked');
-
+    document.getElementById('fw-bu')?.classList.add('role-locked');
   }
 }
 function loadOptions(isFirstLoad=false){
@@ -658,13 +600,13 @@ function loadOptions(isFirstLoad=false){
       buildDD('dd-region',data.regions,v=>{
         S.region=v;S.franchise=null;S.arm=null;S.business_unit=null;
         setVal('in-region',v,'ac-o');setVal('in-franchise',null);setVal('in-arm',null);setVal('in-bu',null);
-        if(v){if(!ROLE_CONFIG.buLocked)document.getElementById('fw-bu')?.classList.remove('disabled');}else{if(!ROLE_CONFIG.buLocked)document.getElementById('fw-bu')?.classList.add('disabled');document.getElementById('fw-arm')?.classList.add('disabled');document.getElementById('fw-franchise')?.classList.add('disabled');}
-        renderTags();loadOptions();fetchData();fetchMapData();
+        if(v){if(!ROLE_CONFIG.buLocked)document.getElementById('fw-bu')?.classList.remove('disabled');}
+        else{if(!ROLE_CONFIG.buLocked)document.getElementById('fw-bu')?.classList.add('disabled');document.getElementById('fw-arm')?.classList.add('disabled');document.getElementById('fw-franchise')?.classList.add('disabled');}
+        applyRoleLocks();renderTags();loadOptions();fetchData();fetchMapData();
       },'All Regions');
     }
     buildDD('dd-arm',data.arms||[],v=>{
-      S.arm=v;S.franchise=null;
-      setVal('in-arm',v,'ac-p');setVal('in-franchise',null);
+      S.arm=v;S.franchise=null;setVal('in-arm',v,'ac-p');setVal('in-franchise',null);
       if(v){document.getElementById('fw-franchise')?.classList.remove('disabled');}else{document.getElementById('fw-franchise')?.classList.add('disabled');}
       renderTags();loadOptions();fetchData();
     },'All ARMs');
@@ -684,6 +626,7 @@ setupInput('in-franchise','dd-franchise',true);
 if(!ROLE_CONFIG.armLocked){setupInput('in-arm','dd-arm');}
 if(!ROLE_CONFIG.buLocked){setupInput('in-bu','dd-bu');}
 setupInput('in-month','dd-month');setupInput('in-year','dd-year');
+
 function updateKPIs(data){
   const k=data.kpis||{},g=data.growth||{};
   const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
@@ -691,7 +634,6 @@ function updateKPIs(data){
   set('kpi-revenue',   fmt(k.total_revenue));
   set('kpi-netadd',    fmt(k.total_net_add));
   set('kpi-recharge',  fmt(k.total_recharge));
-  set('kpi-sites',     fmt(k.total_sites));
   set('kpi-churn',     fmt(k.total_churn));
   set('kpi-hvc',       fmt(k.total_hvc));
   set('kpi-avg',       fmt(k.avg_revenue));
@@ -703,301 +645,178 @@ function updateKPIs(data){
   set('kpi-base30',    fmt(k.total_base_30d));
   const penEl=document.getElementById('kpi-pen4g');
   if(penEl){penEl.textContent=(k.penetration_4g||0).toFixed(1)+'%';}
-  set('record-count',  fmt(k.total_sites)+' sites');
+  set('record-count', fmt(k.total_sites)+' sites');
+  const b90_idx=k.total_base_90d||0;
+  const actrchVal=k.total_act_recharge||0,dailyActVal=k.total_avg_daily_active||0;
+  set('kpi-act-rch',   fmt(actrchVal));
+  set('kpi-daily-act', fmt(dailyActVal));
+  set('kpi-actrch-pct', b90_idx?(actrchVal/b90_idx*100).toFixed(1)+'%':'—');
+  set('kpi-daily-pct',  b90_idx?(dailyActVal/b90_idx*100).toFixed(1)+'%':'—');
 
-  // ── BVS and EVC per-site cards ────────────────────────────
-  const bvs=k.total_bvs||0, evc=k.total_evc||0;
-  const sitesCount=k.total_sites||1;
-  set('kpi-bvs', fmt(bvs));
-  set('kpi-evc', fmt(evc));
-  set('kpi-bvs-per-site', (bvs/sitesCount).toFixed(1));
-  set('kpi-evc-per-site', (evc/sitesCount).toFixed(1));
+  // ── BVS and EVC ────────────────────────────────────────────
+  const bvs=k.total_bvs||0,evc=k.total_evc||0,sitesCount=k.total_sites||1;
+  set('kpi-bvs',fmt(bvs));set('kpi-evc',fmt(evc));
+  set('kpi-bvs-per-site',(bvs/sitesCount).toFixed(1));
+  set('kpi-evc-per-site',(evc/sitesCount).toFixed(1));
 
-  // ── Technology breakdown card ──────────────────────────────
-  const s4g=k.sites_4g||0, s3g=k.sites_3g||0, s2g=k.sites_2g||0;
-  const sTot=s4g+s3g+s2g||1;
-  set('kpi-sites-4g',       fmt(s4g));
-  set('kpi-sites-3g',       fmt(s3g));
-  set('kpi-sites-2g',       fmt(s2g));
-  set('kpi-sites-total-tech', fmt(s4g+s3g+s2g));
-  ['4g','3g','2g'].forEach(t=>{
-    const el=document.getElementById(`tech-bar-${t}`);
-    const val=t==='4g'?s4g:t==='3g'?s3g:s2g;
-    if(el)el.style.width=(val/sTot*100).toFixed(1)+'%';
+  // ── Revenue Tier Breakdown ─────────────────────────────────
+  const platCount=k.tier_platinum||0,goldCount=k.tier_gold||0,silvCount=k.tier_silver||0;
+  const tierTot=platCount+goldCount+silvCount||1;
+  set('kpi-tier-plat',fmt(platCount));
+  set('kpi-tier-gold',fmt(goldCount));
+  set('kpi-tier-silv',fmt(silvCount));
+  set('kpi-tier-total',fmt(platCount+goldCount+silvCount));
+  ['plat','gold','silv'].forEach(t=>{
+    const el=document.getElementById(`tier-bar-${t}`);
+    const val=t==='plat'?platCount:t==='gold'?goldCount:silvCount;
+    if(el)el.style.width=(val/tierTot*100).toFixed(1)+'%';
   });
 
-  // ── Revenue to Recharge ratio card ─────────────────────────
-  const ratioRaw=k.rev_rech_ratio||0;
-  const ratioPct=Math.round(ratioRaw*100);
-  set('kpi-rev-rech-ratio', ratioPct+'%');
-  set('kpi-rr-rev',   fmt(k.total_revenue));
-  set('kpi-rr-rech',  fmt(k.total_recharge));
-  set('kpi-rr-ratio2', ratioPct+'%');
+  // ── % of 90D Base for other base cards ────────────────────
+  const base90val=k.total_base_90d||1;
+  const base4gPct=((k.total_base_4g||0)/base90val*100).toFixed(1);
+  const hvcPct=((k.total_hvc||0)/base90val*100).toFixed(1);
+  const base30Pct=((k.total_base_30d||0)/base90val*100).toFixed(1);
+  const b4gSub=document.getElementById('kpi-base4g-sub');
+  const hvcSub=document.getElementById('kpi-hvc-sub');
+  const b30Sub=document.getElementById('kpi-base30-sub');
+  if(b4gSub)b4gSub.innerHTML=`4G Pen: <span id="kpi-pen4g" style="color:var(--orange);font-weight:800">${(k.penetration_4g||0).toFixed(1)}%</span> · <span style="color:var(--teal);font-weight:700">${base4gPct}% of 90D</span>`;
+  if(hvcSub)hvcSub.textContent=`${hvcPct}% of 90D Base`;
+  if(b30Sub)b30Sub.textContent=`${base30Pct}% of 90D Base`;
+
+  // ── Revenue to Recharge ratio ──────────────────────────────
+  const ratioRaw=k.rev_rech_ratio||0,ratioPct=Math.round(ratioRaw*100);
+  set('kpi-rev-rech-ratio',ratioPct+'%');
+  set('kpi-rr-rev',fmt(k.total_revenue));
+  set('kpi-rr-rech',fmt(k.total_recharge));
+  set('kpi-rr-ratio2',ratioPct+'%');
   const barEl=document.getElementById('kpi-rr-bar');
   if(barEl)barEl.style.width=Math.min(ratioPct,100)+'%';
 
   const map={
-    revenue:'total_revenue', netadd:'total_net_add', recharge:'total_recharge',
-    sites:'total_sites', churn:'total_churn', hvc:'total_hvc',
-    avg:'avg_revenue', arpu:'total_arpu', base90:'total_base_90d',
-    base4g:'total_base_4g', digi:'total_digi_recharge', conv:'total_conv_recharge',
-    base30:'total_base_30d',
-    'sites-tech':'total_sites',
-    rr:'rev_rech_ratio',
-    bvsevc:'total_bvs',
+    revenue:'total_revenue',netadd:'total_net_add',recharge:'total_recharge',
+    churn:'total_churn',hvc:'total_hvc',avg:'avg_revenue',arpu:'total_arpu',
+    base90:'total_base_90d',base4g:'total_base_4g',digi:'total_digi_recharge',
+    conv:'total_conv_recharge',base30:'total_base_30d',
+    rr:'rev_rech_ratio',bvs:'total_bvs',evc:'total_evc',
+    actrch:'total_act_recharge',dailyact:'total_avg_daily_active',
   };
-
-  // Label configs: what "prev" and "curr" mean for each period
   const periodMeta={
-    ytd: {label:'YTD',  prevKey:'ytd_prev', currKey:'ytd_curr', pctKey:'ytd_pct'},
-    mtd: {label:'GOLM', prevKey:'mtd_prev', currKey:'mtd_curr', pctKey:'mtd_pct'},
-    yoy: {label:'YOY',  prevKey:'yoy_prev', currKey:'yoy_curr', pctKey:'yoy_pct'},
+    ytd:{label:'YTD',prevKey:'ytd_prev',currKey:'ytd_curr',pctKey:'ytd_pct'},
+    mtd:{label:'GOLM',prevKey:'mtd_prev',currKey:'mtd_curr',pctKey:'mtd_pct'},
+    yoy:{label:'YOY',prevKey:'yoy_prev',currKey:'yoy_curr',pctKey:'yoy_pct'},
   };
-
-  // Suffixes for metrics that need a unit appended to prev/curr values
   const suffixMap={rr:'%'};
-
+  const invertBadge=new Set(['churn']); // positive churn = bad (red), negative = good (green)
   Object.entries(map).forEach(([prefix,key])=>{
     const gg=g[key]||{};
     const suffix=suffixMap[prefix]||'';
     Object.entries(periodMeta).forEach(([type,meta])=>{
-      const pct   = gg[meta.pctKey]  ?? 0;
-      const prev  = gg[meta.prevKey] ?? 0;
-      const curr  = gg[meta.currKey] ?? 0;
-      const isPos = pct >= 0;
-      const sign  = isPos ? '+' : '';
+      const pct=gg[meta.pctKey]??0,prev=gg[meta.prevKey]??0,curr=gg[meta.currKey]??0;
+      const isPos=pct>=0,sign=isPos?'+':'';
+      const good=invertBadge.has(prefix)?!isPos:isPos;
+      const badge=document.getElementById(`growth-${prefix}-${type}-badge`);
+      const prevEl=document.getElementById(`growth-${prefix}-${type}-prev`);
+      const currEl=document.getElementById(`growth-${prefix}-${type}-curr`);
+      if(badge){badge.textContent=`${sign}${pct.toFixed(1)}%`;badge.className=`growth-badge ${good?'positive':'negative'}`;}
+      if(prevEl)prevEl.textContent=fmt(prev)+suffix;
+      if(currEl)currEl.textContent=fmt(curr)+suffix;
+    });
+  });
 
-      const badge = document.getElementById(`growth-${prefix}-${type}-badge`);
-      const prevEl = document.getElementById(`growth-${prefix}-${type}-prev`);
-      const currEl = document.getElementById(`growth-${prefix}-${type}-curr`);
-
-      if(badge){
-        badge.textContent = `${sign}${pct.toFixed(1)}%`;
-        badge.className = `growth-badge ${isPos?'positive':'negative'}`;
-      }
-      if(prevEl) prevEl.textContent = fmt(prev)+suffix;
-      if(currEl) currEl.textContent = fmt(curr)+suffix;
+  // ── Tier Platinum / Gold / Silver growth rows ─────────────
+  const tierDefs = [
+    {key:'tier_platinum', prefix:'tier-plat'},
+    {key:'tier_gold',     prefix:'tier-gold'},
+    {key:'tier_silver',   prefix:'tier-silv'},
+  ];
+  const tierPeriods = [
+    {type:'ytd', pctKey:'ytd_pct', prevKey:'ytd_prev', currKey:'ytd_curr'},
+    {type:'mtd', pctKey:'mtd_pct', prevKey:'mtd_prev', currKey:'mtd_curr'},
+    {type:'yoy', pctKey:'yoy_pct', prevKey:'yoy_prev', currKey:'yoy_curr'},
+  ];
+  tierDefs.forEach(({key,prefix})=>{
+    const gg=g[key]||{};
+    tierPeriods.forEach(({type,pctKey,prevKey,currKey})=>{
+      const pct=gg[pctKey]??0, prev=gg[prevKey]??0, curr=gg[currKey]??0;
+      const isPos=pct>=0, sign=isPos?'+':'';
+      const badge=document.getElementById(`growth-${prefix}-${type}-badge`);
+      const prevEl=document.getElementById(`growth-${prefix}-${type}-prev`);
+      const currEl=document.getElementById(`growth-${prefix}-${type}-curr`);
+      if(badge){badge.textContent=`${sign}${pct.toFixed(1)}%`;badge.className=`growth-badge ${isPos?'positive':'negative'}`;}
+      if(prevEl)prevEl.textContent=fmt(prev)+' sites';
+      if(currEl)currEl.textContent=fmt(curr)+' sites';
     });
   });
 }
-let map=null,markerLayer=null,boundaryLayer=null,mapInitialised=false;
 
+let map=null,markerLayer=null,boundaryLayer=null,mapInitialised=false;
 const BU_COLOR_MAP={};
 const BU_PALETTE=['#f58220','#AB1DFE','#5E35B1','#00BCD4','#00C853','#FF3D00','#FFD600','#E91E8C','#7C4DFF','#ff9a45'];
-function colorForBU(bu){
-  if(!bu)bu='Unknown';
-  if(!(bu in BU_COLOR_MAP)){BU_COLOR_MAP[bu]=BU_PALETTE[Object.keys(BU_COLOR_MAP).length%BU_PALETTE.length];}
-  return BU_COLOR_MAP[bu];
-}
+function colorForBU(bu){if(!bu)bu='Unknown';if(!(bu in BU_COLOR_MAP)){BU_COLOR_MAP[bu]=BU_PALETTE[Object.keys(BU_COLOR_MAP).length%BU_PALETTE.length];}return BU_COLOR_MAP[bu];}
 
 function initMap(){
-  if(mapInitialised)return;
-  mapInitialised=true;
-  map=L.map('site-map',{
-    zoomControl:true,attributionControl:false,
-    preferCanvas:true,zoomAnimationThreshold:4,
-    fadeAnimation:false,markerZoomAnimation:false,
-    closePopupOnClick:false,
-    tap:false,
-  });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
-    attribution:'© OpenStreetMap contributors © CARTO',
-    subdomains:'abcd',maxZoom:19,updateWhenIdle:true,keepBuffer:1,
-  }).addTo(map);
+  if(mapInitialised)return;mapInitialised=true;
+  map=L.map('site-map',{zoomControl:true,attributionControl:false,preferCanvas:true,zoomAnimationThreshold:4,fadeAnimation:false,markerZoomAnimation:false,closePopupOnClick:false,tap:false});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap contributors © CARTO',subdomains:'abcd',maxZoom:19,updateWhenIdle:true,keepBuffer:1}).addTo(map);
   map.setView([30.5,71.5],7);
-  // Prevent map clicks from closing popups on mobile
-  map.on('click', function(e){ L.DomEvent.stopPropagation(e); });
-  markerLayer=L.markerClusterGroup({
-    chunkedLoading:true,chunkInterval:50,chunkDelay:10,
-    maxClusterRadius:50,spiderfyOnMaxZoom:true,
-    showCoverageOnHover:false,disableClusteringAtZoom:12,
-    iconCreateFunction:function(cluster){
-      const c=cluster.getChildCount();
-      return L.divIcon({
-        html:`<div style="background:var(--orange);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-size:10px;font-weight:800;box-shadow:0 2px 8px rgba(245,130,32,.5)">${c}</div>`,
-        className:'',iconSize:[32,32],
-      });
-    },
-  }).addTo(map);
+  map.on('click',function(e){L.DomEvent.stopPropagation(e);});
+  markerLayer=L.markerClusterGroup({chunkedLoading:true,chunkInterval:50,chunkDelay:10,maxClusterRadius:50,spiderfyOnMaxZoom:true,showCoverageOnHover:false,disableClusteringAtZoom:12,iconCreateFunction:function(cluster){const c=cluster.getChildCount();return L.divIcon({html:`<div style="background:var(--orange);color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-size:10px;font-weight:800;box-shadow:0 2px 8px rgba(245,130,32,.5)">${c}</div>`,className:'',iconSize:[32,32]});}}).addTo(map);
   boundaryLayer=L.layerGroup().addTo(map);
   fetchMapData();
 }
 
-// Initialise map immediately on page load
-
 function fetchMapData(){
   const p=new URLSearchParams();
   Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});
-
-  // Boundary style per BU — distinct professional colors
-  const BOUNDARY_STYLES={
-    'MULTAN':     {stroke:'#E65100',fill:'#FF6D00',label:'#E65100'},
-    'DG KHAN':    {stroke:'#4527A0',fill:'#7C4DFF',label:'#4527A0'},
-    'SARGODHA':   {stroke:'#00695C',fill:'#00BFA5',label:'#00695C'},
-    'FAISALABAD': {stroke:'#1565C0',fill:'#448AFF',label:'#1565C0'},
-  };
-
+  const BOUNDARY_STYLES={'MULTAN':{stroke:'#E65100',fill:'#FF6D00',label:'#E65100'},'DG KHAN':{stroke:'#4527A0',fill:'#7C4DFF',label:'#4527A0'},'SARGODHA':{stroke:'#00695C',fill:'#00BFA5',label:'#00695C'},'FAISALABAD':{stroke:'#1565C0',fill:'#448AFF',label:'#1565C0'}};
   Promise.all([
     fetch('/api/bu-boundaries/').then(r=>r.json()).catch(()=>null),
     fetch('/api/map/?'+p).then(r=>r.json()),
-  ]).then(([gj, data])=>{
+  ]).then(([gj,data])=>{
     document.getElementById('map-count').textContent=data.total||0;
-    markerLayer.clearLayers();
-    boundaryLayer.clearLayers();
-
-    // ── BU boundaries ─────────────────────────────────────────
+    markerLayer.clearLayers();boundaryLayer.clearLayers();
     if(gj&&gj.features){
       gj.features.forEach(feature=>{
         const buName=feature.properties.bu_name||'';
         const style=BOUNDARY_STYLES[buName]||{stroke:'#607D8B',fill:'#90A4AE',label:'#607D8B'};
-
-        L.geoJSON(feature,{
-          style:{
-            color:style.stroke,
-            weight:2,
-            opacity:1,
-            fillColor:style.fill,
-            fillOpacity:0.06,
-            dashArray:'6 4',
-          },
-          interactive:false,
-        }).addTo(boundaryLayer);
-
-        // BU label — centered, clean
-        try{
-          const bounds=L.geoJSON(feature).getBounds();
-          const center=bounds.getCenter();
-          L.marker(center,{
-            icon:L.divIcon({
-              className:'',
-              html:`<div style="font-family:'Poppins',sans-serif;font-size:12px;font-weight:900;color:${style.label};background:rgba(255,255,255,0.82);backdrop-filter:blur(4px);padding:3px 10px;border-radius:20px;border:1.5px solid ${style.stroke};white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);pointer-events:none">${buName}</div>`,
-              iconAnchor:[0,12],
-            }),
-            interactive:false,zIndexOffset:-200,
-          }).addTo(boundaryLayer);
-        }catch(e){}
+        L.geoJSON(feature,{style:{color:style.stroke,weight:2,opacity:1,fillColor:style.fill,fillOpacity:0.06,dashArray:'6 4'},interactive:false}).addTo(boundaryLayer);
+        try{const bounds=L.geoJSON(feature).getBounds();const center=bounds.getCenter();L.marker(center,{icon:L.divIcon({className:'',html:`<div style="font-family:'Poppins',sans-serif;font-size:12px;font-weight:900;color:${style.label};background:rgba(255,255,255,0.82);backdrop-filter:blur(4px);padding:3px 10px;border-radius:20px;border:1.5px solid ${style.stroke};white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);pointer-events:none">${buName}</div>`,iconAnchor:[0,12]}),interactive:false,zIndexOffset:-200}).addTo(boundaryLayer);}catch(e){}
       });
     }
-
-    if(!data.markers||!data.markers.length){
-      document.getElementById('bu-legend').style.display='none';
-      return;
-    }
-
-    // ── Site markers ──────────────────────────────────────────
-    const bounds=[];
-    const buCounts={};
-
+    if(!data.markers||!data.markers.length){document.getElementById('bu-legend').style.display='none';return;}
+    const bounds=[],buCounts={};
     data.markers.forEach(m=>{
       bounds.push([m.lat,m.lng]);
-      const bu=m.business_unit||'Unknown';
-      buCounts[bu]=(buCounts[bu]||0)+1;
+      const bu=m.business_unit||'Unknown';buCounts[bu]=(buCounts[bu]||0)+1;
       const bStyle=BOUNDARY_STYLES[bu]||{stroke:'#607D8B',fill:'#90A4AE',label:'#607D8B'};
       const color=bStyle.stroke;
-
-      const icon=L.divIcon({
-        className:'',
-        html:`<div style="width:9px;height:9px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.9);box-shadow:0 1px 5px rgba(0,0,0,0.45)"></div>`,
-        iconSize:[9,9],iconAnchor:[4,4],
-      });
-
-      // Popup — click only, no redundant fields
-      const totalRech = m.total_recharge || (m.digi_recharge + m.conv_recharge);
-      const digiPct  = totalRech ? ((m.digi_recharge/totalRech)*100).toFixed(0)+'%' : '—';
-      const convPct  = totalRech ? ((m.conv_recharge/totalRech)*100).toFixed(0)+'%' : '—';
-      const statusColor = m.site_status==='Active'?'#00C853':'#FF3D00';
-      const popup=`<div style="min-width:260px;max-width:300px;font-family:'Poppins',sans-serif">
-        <div class="map-popup-title" style="background:linear-gradient(135deg,${color},${bStyle.fill})">
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <span style="font-size:13px;font-weight:900">📡 ${m.key||'Unknown'}</span>
-            <span style="font-size:9px;padding:2px 8px;border-radius:20px;background:${statusColor}22;color:${statusColor};border:1px solid ${statusColor};font-weight:800">${m.site_status||'—'}</span>
-          </div>
-          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:4px">${bu} · ${m.district||'—'}</div>
-          ${m.franchise?`<div style="font-size:9px;opacity:.7;margin-top:1px">FR: ${m.franchise}${m.arm?' · ARM: '+m.arm:''}</div>`:''}
-        </div>
-        <div class="map-popup-body">
-          <div style="display:flex;gap:6px;margin-bottom:8px">
-            <div style="flex:1;background:rgba(0,200,83,0.08);border:1px solid rgba(0,200,83,0.2);border-radius:8px;padding:6px 8px;text-align:center">
-              <div style="font-size:9px;font-weight:700;color:#8a85a5;text-transform:uppercase;letter-spacing:1px">Revenue</div>
-              <div style="font-size:12px;font-weight:900;color:${color};margin-top:2px">PKR ${fmt(m.revenue)}</div>
-            </div>
-            <div style="flex:1;background:rgba(0,188,212,0.08);border:1px solid rgba(0,188,212,0.2);border-radius:8px;padding:6px 8px;text-align:center">
-              <div style="font-size:9px;font-weight:700;color:#8a85a5;text-transform:uppercase;letter-spacing:1px">90D Base</div>
-              <div style="font-size:12px;font-weight:900;color:#00BCD4;margin-top:2px">${fmt(m.activations)}</div>
-            </div>
-          </div>
-          <div class="map-popup-row"><span class="map-popup-label">Technology</span><span style="font-weight:800;color:${color}">${m.technology||'—'}</span></div>
-          <div class="map-popup-row"><span class="map-popup-label">4G Base</span><span>${fmt(m.base_4g)}</span></div>
-          <div class="map-popup-row"><span class="map-popup-label">Net Additions</span><span style="color:${(m.net_add||0)>=0?'#00C853':'#FF3D00'};font-weight:800">${fmt(m.net_add)}</span></div>
-          <div class="map-popup-row"><span class="map-popup-label">Gross Churn</span><span style="color:#FF3D00;font-weight:700">${fmt(m.churn)}</span></div>
-          <div class="map-popup-row"><span class="map-popup-label">HVC Base</span><span>${fmt(m.hvc)}</span></div>
-          <div class="map-popup-divider"></div>
-          <div class="map-popup-row"><span class="map-popup-label">EVC Retailer</span><span>${fmt(m.evc_base)}</span></div>
-          <div class="map-popup-row"><span class="map-popup-label">BVS Retailer</span><span>${fmt(m.bvs_base)}</span></div>
-          <div class="map-popup-divider"></div>
-          <div class="map-popup-row"><span class="map-popup-label">Total Recharge</span><span style="color:${color};font-weight:800">PKR ${fmt(totalRech)}</span></div>
-          <div class="map-popup-row"><span class="map-popup-label">Digital</span><span>PKR ${fmt(m.digi_recharge)} <span style="color:#00BCD4;font-size:9px;font-weight:800">(${digiPct})</span></span></div>
-          <div class="map-popup-row"><span class="map-popup-label">Conventional</span><span>PKR ${fmt(m.conv_recharge)} <span style="color:#AB1DFE;font-size:9px;font-weight:800">(${convPct})</span></span></div>
-        </div>
-      </div>`;
-
-      const popupW = Math.min(260, window.innerWidth - 40);
+      const icon=L.divIcon({className:'',html:`<div style="width:9px;height:9px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.9);box-shadow:0 1px 5px rgba(0,0,0,0.45)"></div>`,iconSize:[9,9],iconAnchor:[4,4]});
+      const totalRech=m.total_recharge||(m.digi_recharge+m.conv_recharge);
+      const digiPct=totalRech?((m.digi_recharge/totalRech)*100).toFixed(0)+'%':'—';
+      const convPct=totalRech?((m.conv_recharge/totalRech)*100).toFixed(0)+'%':'—';
+      const statusColor=m.site_status==='Active'?'#00C853':'#FF3D00';
+      const popup=`<div style="min-width:260px;max-width:300px;font-family:'Poppins',sans-serif"><div class="map-popup-title" style="background:linear-gradient(135deg,${color},${bStyle.fill})"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:900">📡 ${m.key||'Unknown'}</span><span style="font-size:9px;padding:2px 8px;border-radius:20px;background:${statusColor}22;color:${statusColor};border:1px solid ${statusColor};font-weight:800">${m.site_status||'—'}</span></div><div style="font-size:10px;font-weight:600;opacity:.85;margin-top:4px">${bu} · ${m.district||'—'}</div>${m.franchise?`<div style="font-size:9px;opacity:.7;margin-top:1px">FR: ${m.franchise}${m.arm?' · ARM: '+m.arm:''}</div>`:''}</div><div class="map-popup-body"><div style="display:flex;gap:6px;margin-bottom:8px"><div style="flex:1;background:rgba(0,200,83,0.08);border:1px solid rgba(0,200,83,0.2);border-radius:8px;padding:6px 8px;text-align:center"><div style="font-size:9px;font-weight:700;color:#8a85a5;text-transform:uppercase;letter-spacing:1px">Revenue</div><div style="font-size:12px;font-weight:900;color:${color};margin-top:2px">PKR ${fmt(m.revenue)}</div></div><div style="flex:1;background:rgba(0,188,212,0.08);border:1px solid rgba(0,188,212,0.2);border-radius:8px;padding:6px 8px;text-align:center"><div style="font-size:9px;font-weight:700;color:#8a85a5;text-transform:uppercase;letter-spacing:1px">90D Base</div><div style="font-size:12px;font-weight:900;color:#00BCD4;margin-top:2px">${fmt(m.activations)}</div></div></div><div class="map-popup-row"><span class="map-popup-label">Technology</span><span style="font-weight:800;color:${color}">${m.technology||'—'}</span></div><div class="map-popup-row"><span class="map-popup-label">4G Base</span><span>${fmt(m.base_4g)}</span></div><div class="map-popup-row"><span class="map-popup-label">Net Additions</span><span style="color:${(m.net_add||0)>=0?'#00C853':'#FF3D00'};font-weight:800">${fmt(m.net_add)}</span></div><div class="map-popup-row"><span class="map-popup-label">Gross Churn</span><span style="color:#FF3D00;font-weight:700">${fmt(m.churn)}</span></div><div class="map-popup-row"><span class="map-popup-label">HVC Base</span><span>${fmt(m.hvc)}</span></div><div class="map-popup-divider"></div><div class="map-popup-row"><span class="map-popup-label">EVC Retailer</span><span>${fmt(m.evc_base)}</span></div><div class="map-popup-row"><span class="map-popup-label">BVS Retailer</span><span>${fmt(m.bvs_base)}</span></div><div class="map-popup-divider"></div><div class="map-popup-row"><span class="map-popup-label">Total Recharge</span><span style="color:${color};font-weight:800">PKR ${fmt(totalRech)}</span></div><div class="map-popup-row"><span class="map-popup-label">Digital</span><span>PKR ${fmt(m.digi_recharge)} <span style="color:#00BCD4;font-size:9px;font-weight:800">(${digiPct})</span></span></div><div class="map-popup-row"><span class="map-popup-label">Conventional</span><span>PKR ${fmt(m.conv_recharge)} <span style="color:#AB1DFE;font-size:9px;font-weight:800">(${convPct})</span></span></div></div></div>`;
+      const popupW=Math.min(260,window.innerWidth-40);
       const marker=L.marker([m.lat,m.lng],{icon});
-      // Use manual click handler instead of bindPopup to fix mobile tap-closes-immediately bug
-      // The bug: on touch devices, tap fires → popup opens → touch bubbles to map → popup closes
-      // Fix: stop propagation + use a standalone popup not bound to the marker
-      marker.on('click', function(e){
-        L.DomEvent.stopPropagation(e);
-        const p = L.popup({
-          maxWidth: popupW,
-          autoPan: true,
-          autoPanPadding: [20, 20],
-          closeButton: true,
-          autoClose: false,
-          closeOnClick: false,
-          closeOnEscapeKey: true,
-        })
-        .setLatLng(e.latlng)
-        .setContent(popup)
-        .openOn(map);
-      });
+      marker.on('click',function(e){L.DomEvent.stopPropagation(e);L.popup({maxWidth:popupW,autoPan:true,autoPanPadding:[20,20],closeButton:true,autoClose:false,closeOnClick:false,closeOnEscapeKey:true}).setLatLng(e.latlng).setContent(popup).openOn(map);});
       marker.addTo(markerLayer);
     });
-
     if(bounds.length)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
-
-    // ── BU legend ─────────────────────────────────────────────
-    const legend=document.getElementById('bu-legend');
-    const body=document.getElementById('bu-legend-body');
+    const legend=document.getElementById('bu-legend'),body=document.getElementById('bu-legend-body');
     const sortedBUs=Object.keys(buCounts).sort((a,b)=>buCounts[b]-buCounts[a]);
-    const buCountEl=document.getElementById('map-bu-count');
-    if(buCountEl)buCountEl.textContent=sortedBUs.length;
-    const totalSites = sortedBUs.reduce((s,bu)=>s+buCounts[bu],0);
-    body.innerHTML=sortedBUs.map(bu=>{
-      const bs=BOUNDARY_STYLES[bu]||{stroke:'#607D8B'};
-      const cnt=buCounts[bu];
-      const barW=totalSites?((cnt/totalSites)*100).toFixed(0)+'%':'0%';
-      return `<div class="bu-legend-row" style="flex-direction:column;align-items:stretch;padding:6px 0;gap:3px">
-        <div style="display:flex;align-items:center;gap:7px">
-          <div style="width:8px;height:8px;border-radius:50%;background:${bs.stroke};flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>
-          <span style="flex:1;font-size:10px;font-weight:800;color:var(--text)">${bu}</span>
-          <span style="font-size:10px;font-weight:900;color:${bs.stroke}">${cnt}</span>
-        </div>
-        <div style="margin-left:15px;height:3px;border-radius:3px;background:var(--input-bg);overflow:hidden">
-          <div style="height:100%;width:${barW};background:${bs.stroke};border-radius:3px;transition:width .6s"></div>
-        </div>
-      </div>`;
-    }).join('');
+    const buCountEl=document.getElementById('map-bu-count');if(buCountEl)buCountEl.textContent=sortedBUs.length;
+    const totalSites=sortedBUs.reduce((s,bu)=>s+buCounts[bu],0);
+    body.innerHTML=sortedBUs.map(bu=>{const bs=BOUNDARY_STYLES[bu]||{stroke:'#607D8B'};const cnt=buCounts[bu];const barW=totalSites?((cnt/totalSites)*100).toFixed(0)+'%':'0%';return`<div class="bu-legend-row" style="flex-direction:column;align-items:stretch;padding:6px 0;gap:3px"><div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:50%;background:${bs.stroke};flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div><span style="flex:1;font-size:10px;font-weight:800;color:var(--text)">${bu}</span><span style="font-size:10px;font-weight:900;color:${bs.stroke}">${cnt}</span></div><div style="margin-left:15px;height:3px;border-radius:3px;background:var(--input-bg);overflow:hidden"><div style="height:100%;width:${barW};background:${bs.stroke};border-radius:3px;transition:width .6s"></div></div></div>`;}).join('');
     legend.style.display='block';
   });
 }
+
 function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/api/data/?'+p).then(r=>r.json()).then(data=>{lastData=data;_lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});}
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function tip(extra={}){return{backgroundColor:panelColor(),borderColor:'#f58220',borderWidth:1.5,titleColor:'#f58220',bodyColor:textColor(),padding:12,titleFont:{weight:'700',size:12},bodyFont:{weight:'600',size:11},...extra};}
 function bo(x={}){return{responsive:true,maintainAspectRatio:true,animation:{duration:900,easing:'easeOutQuart'},plugins:{legend:{display:false},tooltip:tip()},scales:{x:{grid:{color:gridColor(),drawBorder:false},ticks:{color:tickColor(),font:{weight:'600',size:10}}},y:{grid:{color:gridColor(),drawBorder:false},ticks:{color:tickColor(),font:{weight:'600',size:10},callback:v=>fmt(v)}}},...x};}
-function buildCharts(d){
-  // Charts removed — see revenue and base pages
-}
+function buildCharts(d){}
 function exportFile(type){const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});window.location.href=`/api/export/${type}/?${p}`;}
 function closeNearby(){document.getElementById('nearby-modal-bg').classList.remove('open');}
 function findNearbySites(){const btn=document.getElementById('nearby-btn'),modal=document.getElementById('nearby-modal-bg'),body=document.getElementById('nearby-body'),sub=document.getElementById('nearby-sub');if(!navigator.geolocation){alert('Geolocation is not supported by your browser.');return;}modal.classList.add('open');body.innerHTML='<div class="nearby-loading">📡 Locating you…</div>';sub.textContent='Requesting location permission…';btn.disabled=true;navigator.geolocation.getCurrentPosition(pos=>{const lat=pos.coords.latitude,lng=pos.coords.longitude;sub.textContent=`Your location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;body.innerHTML='<div class="nearby-loading">🔍 Finding nearest sites…</div>';fetch(`/api/nearby/?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(data=>{btn.disabled=false;if(!data.sites||data.sites.length===0){body.innerHTML='<div class="nearby-empty">No sites found in your scope with valid coordinates.</div>';return;}const cards=data.sites.map((s,i)=>`<div class="nearby-card rank-${i+1}"><span class="nearby-rank">#${i+1} Nearest</span><div class="nearby-key">${s.key}</div><div class="nearby-dist">📏 ${s.distance_km} km away</div><div class="nearby-row"><span class="lbl">Region</span><span class="val">${s.region}</span></div><div class="nearby-row"><span class="lbl">District</span><span class="val">${s.pta_district}</span></div><div class="nearby-row"><span class="lbl">Franchise</span><span class="val">${s.franchise}</span></div><div class="nearby-row"><span class="lbl">BU</span><span class="val">${s.business_unit}</span></div><div class="nearby-row"><span class="lbl">Tech</span><span class="val">${s.technology}</span></div><div class="nearby-row"><span class="lbl">Status</span><span class="val">${s.site_status}</span></div><div class="nearby-row"><span class="lbl">Revenue</span><span class="val">PKR ${fmt(s.revenue)}</span></div><div class="nearby-row"><span class="lbl">90D Base</span><span class="val">${fmt(s.act_90d)}</span></div><div class="nearby-row"><span class="lbl">4G Base</span><span class="val">${fmt(s.act_90d_4g)}</span></div><div class="nearby-row"><span class="lbl">Net Add</span><span class="val">${fmt(s.net_add)}</span></div><div class="nearby-row"><span class="lbl">HVC</span><span class="val">${fmt(s.hvc_base)}</span></div><div class="nearby-row"><span class="lbl">Period</span><span class="val">${s.period}</span></div></div>`).join('');body.innerHTML=`<div class="nearby-grid">${cards}</div>`;}).catch(err=>{btn.disabled=false;body.innerHTML=`<div class="nearby-empty">⚠️ Error: ${err.message}</div>`;});},err=>{btn.disabled=false;let msg='Unable to retrieve your location.';if(err.code===1)msg='Location permission denied.';else if(err.code===2)msg='Location unavailable.';else if(err.code===3)msg='Location request timed out.';body.innerHTML=`<div class="nearby-empty">⚠️ ${msg}</div>`;sub.textContent='Location error';},{enableHighAccuracy:true,timeout:10000,maximumAge:60000});}
@@ -1009,178 +828,73 @@ function toggleActMenu(){const d=document.getElementById('act-menu-drop');d.clas
 function closeActMenu(){const d=document.getElementById('act-menu-drop');if(d)d.classList.remove('open');}
 document.addEventListener('click',function(e){const wrap=document.querySelector('.act-menu-wrap');if(wrap&&!wrap.contains(e.target))closeActMenu();});
 let filtersOpen=true;
-function toggleFilters(){filtersOpen=!filtersOpen;const fc=document.getElementById('filter-collapsible');const arrow=document.getElementById('ftb-arrow');const btn=document.getElementById('filter-toggle-btn');if(fc)fc.classList.toggle('collapsed',!filtersOpen);if(arrow)arrow.classList.toggle('open',filtersOpen);if(btn)btn.querySelector('span:first-child').textContent='Filters';}
-function updateFilterBadge(){const count=Object.entries(S).filter(function([k,v]){if(k==='region'&&ROLE_CONFIG.regionLocked)return false;if(k==='business_unit'&&ROLE_CONFIG.buLocked)return false;return !!v;}).length;const badge=document.getElementById('ftb-badge');if(badge){badge.textContent=count?count+' active':'';badge.style.display=count?'':'none';}}
+function toggleFilters(){filtersOpen=!filtersOpen;const fc=document.getElementById('filter-collapsible');const arrow=document.getElementById('ftb-arrow');if(fc)fc.classList.toggle('collapsed',!filtersOpen);if(arrow)arrow.classList.toggle('open',filtersOpen);}
+function updateFilterBadge(){const count=Object.entries(S).filter(function([k,v]){if(k==='region'&&ROLE_CONFIG.regionLocked)return false;if(k==='business_unit'&&ROLE_CONFIG.buLocked)return false;return!!v;}).length;const badge=document.getElementById('ftb-badge');if(badge){badge.textContent=count?count+' active':'';badge.style.display=count?'':'none';}}
 function syncMabThemeIco(){const ico=document.getElementById('mab-theme-ico');if(ico)ico.textContent=document.documentElement.getAttribute('data-theme')==='dark'?'🌙':'☀️';}
-if(window.innerWidth<=768){filtersOpen=false;const fc=document.getElementById('filter-collapsible');const arrow=document.getElementById('ftb-arrow');const btn=document.getElementById('filter-toggle-btn');if(fc)fc.classList.add('collapsed');if(arrow)arrow.classList.remove('open');if(btn)btn.querySelector('span:first-child').textContent='Filters';}
+if(window.innerWidth<=768){filtersOpen=false;const fc=document.getElementById('filter-collapsible');const arrow=document.getElementById('ftb-arrow');if(fc)fc.classList.add('collapsed');if(arrow)arrow.classList.remove('open');}
 syncMabThemeIco();
 function restoreFilterUI(){
-  if(S.region&&!ROLE_CONFIG.regionLocked){
-    setVal('in-region',S.region,'ac-o');
-    if(!ROLE_CONFIG.buLocked)enable('fw-bu');
-  }
+  if(S.region&&!ROLE_CONFIG.regionLocked){setVal('in-region',S.region,'ac-o');if(!ROLE_CONFIG.buLocked)enable('fw-bu');}
   if(ROLE_CONFIG.buLocked){enable('fw-arm');enable('fw-franchise');}
-  if(S.business_unit&&!ROLE_CONFIG.buLocked){
-    setVal('in-bu',S.business_unit,'ac-p');
-    enable('fw-arm');
-  }
+  if(S.business_unit&&!ROLE_CONFIG.buLocked){setVal('in-bu',S.business_unit,'ac-p');enable('fw-arm');}
   if(S.arm){setVal('in-arm',S.arm,'ac-p');enable('fw-franchise');}
   if(S.franchise){setVal('in-franchise',S.franchise,'ac-o');}
   if(S.month){const mEl=document.getElementById('in-month');if(mEl){mEl.value='Month '+S.month;mEl.classList.add('ac-p');}}
   if(S.year){const yEl=document.getElementById('in-year');if(yEl){yEl.value=String(S.year);yEl.classList.add('ac-p');}}
 }
-
 function saveFiltersToStorage(){try{localStorage.setItem('ufone_filters_v2',JSON.stringify(S));}catch(e){}}
 function loadFiltersFromStorage(){try{const saved=localStorage.getItem('ufone_filters_v2');if(!saved)return;const parsed=JSON.parse(saved);Object.keys(S).forEach(k=>{if(parsed[k]!==undefined)S[k]=parsed[k]!==null?String(parsed[k]):null;});}catch(e){}}
 loadFiltersFromStorage();
 applyRoleLocks();initMap();loadOptions(true);renderTags();updateFilterBadge();
 
-// ── Trend Chart Modal ──────────────────────────────────────────
-let _trendChart = null;
-let _lastData   = null;
-
-function closeTrendModal(){
-  const modal = document.getElementById('trend-modal');
-  if(modal) modal.style.display = 'none';
-  if(_trendChart){ _trendChart.destroy(); _trendChart = null; }
-}
-
-function openTrend(type, dataKey, title, sub){
-  if(!_lastData){ console.warn('openTrend: no data yet'); return; }
-  const modal = document.getElementById('trend-modal');
-  document.getElementById('trend-modal-title').textContent = title;
-  document.getElementById('trend-modal-sub').textContent   = sub;
-  modal.style.display = 'flex';
-  if(_trendChart){ _trendChart.destroy(); _trendChart = null; }
-
+// Trend Chart Modal
+let _trendChart=null,_lastData=null;
+function closeTrendModal(){const modal=document.getElementById('trend-modal');if(modal)modal.style.display='none';if(_trendChart){_trendChart.destroy();_trendChart=null;}}
+function openTrend(type,dataKey,title,sub){
+  if(!_lastData){console.warn('openTrend: no data yet');return;}
+  const modal=document.getElementById('trend-modal');
+  document.getElementById('trend-modal-title').textContent=title;
+  document.getElementById('trend-modal-sub').textContent=sub;
+  modal.style.display='flex';
+  if(_trendChart){_trendChart.destroy();_trendChart=null;}
   setTimeout(()=>{
-  const canvas = document.getElementById('trend-modal-canvas');
-  const MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const C  = COLORS;
-  const d  = _lastData;
-
-  if(type === 'monthly-line'){
-    const src = d[dataKey];
-    if(!src||!src.datasets||!src.datasets.length) return;
-    let lastIdx = -1;
-    src.datasets.forEach(ds => ds.data.forEach((v,i)=>{ if(v!=null&&i>lastIdx) lastIdx=i; }));
-    if(lastIdx<0) lastIdx = 11;
-    const labels = src.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
-    // Pre-compute yearly totals so tooltip can show % of annual total
-    const datasets = src.datasets.map((ds,i)=>{
-      const sliced = ds.data.slice(0,lastIdx+1);
-      const yearTotal = sliced.reduce((s,v)=>s+(v||0), 0);
-      return {
-        label: String(ds.label), data: sliced,
-        _yearTotal: yearTotal,
-        borderColor:C[i%C.length], backgroundColor:C[i%C.length]+'22',
-        fill:src.datasets.length===1, tension:0.4, pointRadius:4,
-        pointHoverRadius:6, borderWidth:2.5, spanGaps:true,
-      };
-    });
-    _trendChart = new Chart(canvas,{
-      type:'line', data:{labels,datasets},
-      options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
-        plugins:{
-          legend:{display:datasets.length>1,position:'top',labels:{color:textColor(),font:{weight:'700',size:11}}},
-          tooltip:{...tip(),callbacks:{
-            label:ctx=>{
-              const v = ctx.raw;
-              const total = ctx.dataset._yearTotal || 0;
-              const pct = (total > 0) ? (v / total * 100).toFixed(1) + '%' : '—';
-              return ` ${ctx.dataset.label}: ${pct}`;
-            }
-          }},
-        },
-        scales:{x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'}}},
-                y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}}}}
-    });
-  }
-  else if(type === 'base-trend'){
-    const bt = d.base_trends;
-    if(!bt||!bt[dataKey]) return;
-    const years = bt.years||[];
-    const rawMonths = bt.labels||[];
-    const seriesData = bt[dataKey];
-    let lastIdx = -1;
-    seriesData.forEach(arr=>{ if(arr) arr.forEach((v,i)=>{ if(v!=null&&v!==0&&i>lastIdx) lastIdx=i; }); });
-    if(lastIdx<0) lastIdx = rawMonths.length-1;
-    const labels   = rawMonths.slice(0,lastIdx+1).map(m=>MN[m-1]);
-    const datasets = seriesData.map((data,i)=>({
-      label: String(years[i]||i), data: data ? data.slice(0,lastIdx+1) : [],
-      backgroundColor:C[i%C.length]+'bb', borderColor:C[i%C.length],
-      borderWidth:1.5, borderRadius:3, borderSkipped:false,
-    }));
-    _trendChart = new Chart(canvas,{
-      type:'bar', data:{labels,datasets},
-      options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
-        plugins:{legend:{display:years.length>1,position:'top',labels:{color:textColor(),font:{weight:'700',size:11}}},
-          tooltip:{...tip(),callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmt(ctx.raw)}`}}},
-        scales:{x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'}}},
-                y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}}}}
-    });
-  }
-  else if(type === 'region-bar'){
-    const src = d.revenue_by_region;
-    if(!src||!src.labels||!src.labels.length) return;
-    _trendChart = new Chart(canvas,{
-      type:'bar',
-      data:{labels:src.labels,datasets:[{label:'Revenue',data:src.values,
-        backgroundColor:C[0]+'bb',borderColor:C[0],borderWidth:1.5,borderRadius:3}]},
-      options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:{duration:600},
-        plugins:{legend:{display:false},tooltip:{...tip(),callbacks:{label:ctx=>` PKR ${fmt(ctx.raw)}`}}},
-        scales:{x:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}},
-                y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'700'}}}}}
-    });
-  }
-  else if(type === 'bu-bar'){
-    const src = d.rev_by_bu;
-    if(!src||!src.labels||!src.labels.length) return;
-    _trendChart = new Chart(canvas,{
-      type:'bar',
-      data:{labels:src.labels,datasets:[{label:'Revenue',data:src.values,
-        backgroundColor:C[1]+'bb',borderColor:C[1],borderWidth:1.5,borderRadius:3}]},
-      options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:{duration:600},
-        plugins:{legend:{display:false},tooltip:{...tip(),callbacks:{label:ctx=>` PKR ${fmt(ctx.raw)}`}}},
-        scales:{x:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}},
-                y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'700'}}}}}
-    });
-  }
-  else if(type === 'traffic-bar'){
-    const src = d.traffic;
-    if(!src||!src.labels||!src.labels.length) return;
-    _trendChart = new Chart(canvas,{
-      type:'bar',
-      data:{labels:src.labels,datasets:[
-        {label:'Outgoing',data:src.outgoing,backgroundColor:C[0]+'bb',borderColor:C[0],borderWidth:1.5,borderRadius:3},
-        {label:'Incoming',data:src.incoming,backgroundColor:C[2]+'bb',borderColor:C[2],borderWidth:1.5,borderRadius:3},
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
-        plugins:{legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11}}},tooltip:{...tip()}},
-        scales:{x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'}}},
-                y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}}}}
-    });
-  }
-  else if(type === 'churn-bar'){
-    const src = d.churn_revival;
-    if(!src||!src.labels||!src.labels.length) return;
-    _trendChart = new Chart(canvas,{
-      type:'bar',
-      data:{labels:src.labels,datasets:[
-        {label:'Churn',  data:src.churn,  backgroundColor:'rgba(255,61,0,0.7)',  borderColor:'#FF3D00',borderWidth:1.5,borderRadius:3},
-        {label:'Revival',data:src.revival,backgroundColor:'rgba(0,200,83,0.7)',  borderColor:'#00C853',borderWidth:1.5,borderRadius:3},
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},
-        plugins:{legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11}}},tooltip:{...tip()}},
-        scales:{x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'}}},
-                y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}}}}
-    });
-  }
-  }, 50);
+    const canvas=document.getElementById('trend-modal-canvas');
+    const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const C=COLORS,d=_lastData;
+    if(type==='monthly-line'){
+      const src=d[dataKey];if(!src||!src.datasets||!src.datasets.length)return;
+      let lastIdx=-1;src.datasets.forEach(ds=>ds.data.forEach((v,i)=>{if(v!=null&&i>lastIdx)lastIdx=i;}));if(lastIdx<0)lastIdx=11;
+      const labels=src.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
+      const datasets=src.datasets.map((ds,i)=>{const sliced=ds.data.slice(0,lastIdx+1);const yearTotal=sliced.reduce((s,v)=>s+(v||0),0);return{label:String(ds.label),data:sliced,_yearTotal:yearTotal,borderColor:C[i%C.length],backgroundColor:C[i%C.length]+'22',fill:src.datasets.length===1,tension:0.4,pointRadius:4,pointHoverRadius:6,borderWidth:2.5,spanGaps:true};});
+      _trendChart=new Chart(canvas,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},plugins:{legend:{display:datasets.length>1,position:'top',labels:{color:textColor(),font:{weight:'700',size:11}}},tooltip:{...tip(),callbacks:{label:ctx=>{const v=ctx.raw,total=ctx.dataset._yearTotal||0,pct=total>0?(v/total*100).toFixed(1)+'%':'—';return` ${ctx.dataset.label}: ${pct}`;}}},},scales:{x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'}}},y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}}}}});
+    }
+    else if(type==='base-trend'){
+      const bt=d.base_trends;if(!bt||!bt[dataKey])return;
+      const years=bt.years||[],rawMonths=bt.labels||[],seriesData=bt[dataKey];
+      let lastIdx=-1;seriesData.forEach(arr=>{if(arr)arr.forEach((v,i)=>{if(v!=null&&v!==0&&i>lastIdx)lastIdx=i;});});if(lastIdx<0)lastIdx=rawMonths.length-1;
+      const labels=rawMonths.slice(0,lastIdx+1).map(m=>MN[m-1]);
+      const datasets=seriesData.map((data,i)=>({label:String(years[i]||i),data:data?data.slice(0,lastIdx+1):[],backgroundColor:C[i%C.length]+'bb',borderColor:C[i%C.length],borderWidth:1.5,borderRadius:3,borderSkipped:false}));
+      _trendChart=new Chart(canvas,{type:'bar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},plugins:{legend:{display:years.length>1,position:'top',labels:{color:textColor(),font:{weight:'700',size:11}}},tooltip:{...tip(),callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmt(ctx.raw)}`}}},scales:{x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'}}},y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}}}}});
+    }
+    else if(type==='region-bar'){
+      const src=d.revenue_by_region;if(!src||!src.labels||!src.labels.length)return;
+      _trendChart=new Chart(canvas,{type:'bar',data:{labels:src.labels,datasets:[{label:'Revenue',data:src.values,backgroundColor:C[0]+'bb',borderColor:C[0],borderWidth:1.5,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:{duration:600},plugins:{legend:{display:false},tooltip:{...tip(),callbacks:{label:ctx=>` PKR ${fmt(ctx.raw)}`}}},scales:{x:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}},y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'700'}}}}}});
+    }
+    else if(type==='bu-bar'){
+      const src=d.rev_by_bu;if(!src||!src.labels||!src.labels.length)return;
+      _trendChart=new Chart(canvas,{type:'bar',data:{labels:src.labels,datasets:[{label:'Revenue',data:src.values,backgroundColor:C[1]+'bb',borderColor:C[1],borderWidth:1.5,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:{duration:600},plugins:{legend:{display:false},tooltip:{...tip(),callbacks:{label:ctx=>` PKR ${fmt(ctx.raw)}`}}},scales:{x:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}},y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'700'}}}}}});
+    }
+    else if(type==='traffic-bar'){
+      const src=d.traffic;if(!src||!src.labels||!src.labels.length)return;
+      _trendChart=new Chart(canvas,{type:'bar',data:{labels:src.labels,datasets:[{label:'Outgoing',data:src.outgoing,backgroundColor:C[0]+'bb',borderColor:C[0],borderWidth:1.5,borderRadius:3},{label:'Incoming',data:src.incoming,backgroundColor:C[2]+'bb',borderColor:C[2],borderWidth:1.5,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},plugins:{legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11}}},tooltip:{...tip()}},scales:{x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'}}},y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}}}}});
+    }
+    else if(type==='churn-bar'){
+      const src=d.churn_revival;if(!src||!src.labels||!src.labels.length)return;
+      _trendChart=new Chart(canvas,{type:'bar',data:{labels:src.labels,datasets:[{label:'Churn',data:src.churn,backgroundColor:'rgba(255,61,0,0.7)',borderColor:'#FF3D00',borderWidth:1.5,borderRadius:3},{label:'Revival',data:src.revival,backgroundColor:'rgba(0,200,83,0.7)',borderColor:'#00C853',borderWidth:1.5,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},plugins:{legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11}}},tooltip:{...tip()}},scales:{x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'}}},y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10},callback:v=>fmt(v)},border:{display:false}}}}});
+    }
+  },50);
 }
-
-document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeTrendModal(); });
-
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTrendModal();});
 </script>
 <div class="nearby-modal-bg" id="nearby-modal-bg" onclick="if(event.target===this)closeNearby()">
   <div class="nearby-modal">

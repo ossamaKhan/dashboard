@@ -384,9 +384,8 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <div class="sb-sec">Channel</div>
     <a href="/channel/" class="nv" onclick="closeSidebar()">Channel Brief</a>
     <a href="/channel/performance/" class="nv" onclick="closeSidebar()">Target Performance</a>
+    <a href="/channel/retailers/" class="nv" onclick="closeSidebar()">Retailer Health</a>
     <a href="/channel/enablers/" class="nv active" onclick="closeSidebar()">Enablers</a>
-    <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
-    <a href="/channel/kpi-summary/" class="nv" onclick="closeSidebar()">KPI Summary</a>
     <div class="sb-sec">Account</div>
     <a href="/profile/" class="nv" onclick="closeSidebar()">Profile Settings</a>
     <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
@@ -502,12 +501,12 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 
   <!-- EVC Charts -->
   <div class="chart-panel span-2">
-    <div class="ph"><div><div class="pt">EVC Active Monthly</div></div><span class="ptag">Bar</span></div>
+    <div class="ph"><div><div class="pt">EVC Active Monthly</div></div></div>
     <div class="h260" style="position:relative"><canvas id="chart-evc"></canvas></div>
   </div>
 
   <div class="chart-panel span-2">
-    <div class="ph"><div><div class="pt">EVC Tier Breakdown</div></div><span class="ptag">Polar</span></div>
+    <div class="ph"><div><div class="pt">EVC Tier Breakdown</div></div></div>
     <div class="h260" style="position:relative"><canvas id="chart-evc-pie"></canvas></div>
   </div>
 
@@ -687,7 +686,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 
   <!-- Throughput charts -->
   <div class="chart-panel span-2">
-    <div class="ph"><div><div class="pt">Retailer Transaction Distribution</div></div><span class="ptag">Pie</span></div>
+    <div class="ph"><div><div class="pt">Retailer Transaction Distribution</div></div></div>
     <div class="h260" style="position:relative"><canvas id="chart-tput-pie"></canvas></div>
   </div>
 
@@ -697,7 +696,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   <div class="chart-panel span-full" id="tput-table-panel">
     <div class="ph">
       <div><div class="pt" id="tput-table-title">Retailer Throughput Breakdown</div><div class="ps" id="tput-table-sub">Grouped by Region · drill down via filters</div></div>
-      <span class="ptag">Table</span>
+      
     </div>
     <div style="overflow-x:auto">
       <table id="tput-table" style="width:100%;border-collapse:collapse;font-size:11px">
@@ -868,7 +867,7 @@ function updateKPIs(data){
   setGrowthRows('npr','npr');
   setGrowthRows('aso','active_so_daily_avg');
 
-  const evcTotal=k.evc_active_base||0;
+  const evcTotal=k.cm_evc_active||0;
   const t964=k.cm_964_active||0;
   const pct964=evcTotal>0?(t964/evcTotal*100).toFixed(1):0;
   set('k-964-total', fmt(t964));
@@ -960,7 +959,7 @@ function buildCharts(d){
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
         }
       }
     });
@@ -1025,7 +1024,7 @@ function buildCharts(d){
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
           y2:{position:'right',grid:{display:false},ticks:{color:'#AB1DFE',font:{size:9,weight:'700'},callback:v=>v+'%'},border:{display:false}},
         }
       }
@@ -1033,7 +1032,7 @@ function buildCharts(d){
   }
 
     function chartEvcBar(canvasId, d){
-    const src = d.monthly['evc_active_base'];
+    const src = d.monthly['cm_evc_active'];
     if(!src||!src.datasets||!src.datasets.length) return;
     let lastIdx=-1;
     src.datasets.forEach(ds=>ds.data.forEach((v,i)=>{if(v!=null&&v!==0&&i>lastIdx)lastIdx=i;}));
@@ -1079,7 +1078,7 @@ function buildCharts(d){
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
         }
       }
     });
@@ -1133,7 +1132,7 @@ function buildCharts(d){
         scales: {
           r: {
             ticks: {color:tickColor(), backdropColor:'transparent', font:{size:9,weight:'600'}, callback:v=>fmt(v)},
-            grid:  {color:gridColor()},
+            grid:{display:false},
             pointLabels: {color:textColor(), font:{size:10,weight:'700'}},
           }
         }
@@ -1203,7 +1202,7 @@ function buildCharts(d){
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
-          y:{grid:{color:gridColor()},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
         }
       }
     });
@@ -1236,7 +1235,7 @@ function buildCharts(d){
             return ` ${ctx.label}: ${fmt(ctx.raw)} (${pct}%)`;
           }}},
         },
-        scales:{r:{ticks:{color:tickColor(),backdropColor:'transparent',font:{size:9},callback:v=>fmt(v)},grid:{color:gridColor()},pointLabels:{color:textColor(),font:{size:10,weight:'700'}}}}
+        scales:{r:{ticks:{color:tickColor(),backdropColor:'transparent',font:{size:9},callback:v=>fmt(v)},grid:{display:false},pointLabels:{color:textColor(),font:{size:10,weight:'700'}}}}
       },
       plugins:[{id:'polar964Labels',afterDatasetsDraw(chart){
         const ctx=chart.ctx;
@@ -1259,7 +1258,7 @@ function buildCharts(d){
   function chart964Vs(canvasId, d){
     const k=d.kpis||{};
     const evc964=k.cm_964_active||0;
-    const evcTotal=k.evc_active_base||0;
+    const evcTotal=k.cm_evc_active||0;
     const evcOther=Math.max(0,evcTotal-evc964);
     if(evcTotal===0) return;
     const pct964=evcTotal>0?(evc964/evcTotal*100).toFixed(1):0;

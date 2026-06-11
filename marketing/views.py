@@ -794,6 +794,7 @@ def site_performance_table(request):
             'churn_ytd':      churn_ytd,     'churn_ytd_pct': pct(churn_ytd,churn_ytd_p), 'churn_ytd_prev':churn_ytd_p,
             'churn_yoy_curr': churn_cm,      'churn_yoy_pct': pct(churn_cm, churn_yoy_p), 'churn_yoy_prev':churn_yoy_p,
             'churn_mom_curr': churn_cm,      'churn_mom_pct': pct(churn_cm, churn_mp),     'churn_mom_prev':churn_mp,
+            'churn_base_ytd': safe(r.get('base_ytd_c',0)),  'churn_base_cm': base_cm,  'churn_base_mp': base_mp,
             'netadd_ytd':     netadd_ytd,    'netadd_ytd_pct':pct(netadd_ytd,netadd_ytd_p),'netadd_ytd_prev':netadd_ytd_p,
             'netadd_yoy_curr':netadd_cm,     'netadd_yoy_pct':pct(netadd_cm,netadd_yoy_p),'netadd_yoy_prev':netadd_yoy_p,
             'netadd_mom_curr':netadd_cm,     'netadd_mom_pct':pct(netadd_cm,netadd_mp),   'netadd_mom_prev':netadd_mp,
@@ -942,6 +943,7 @@ def dashboard_data(request):
             total_evc=Sum('evc_retailer'),
             total_handset_4g=Sum('handset_4g'),
             total_revenue_lm=Sum('tot_revn_amt'),  # latest-month revenue for ARPU
+            total_avg_daily_active=Sum('avg_dly_act'),
         )
 
         return {**flow_agg, **stock_agg}
@@ -990,6 +992,28 @@ def dashboard_data(request):
     kpis['sites_3g'] = sites_3g
     kpis['sites_2g'] = sites_2g
 
+    # ── Revenue Tier Breakdown (Silver/Gold/Platinum per site) ─
+    # compute_tiers: always uses latest month of the given qs (point-in-time)
+    def compute_tiers(qs):
+        lp = latest_month_of(qs)
+        if not lp:
+            return 0, 0, 0
+        tqs = qs.filter(year=lp['year'], month=lp['month'])
+        rows = (tqs.exclude(key__isnull=True).exclude(key='')
+                .values('key').annotate(site_rev=Sum('tot_revn_amt')))
+        plat = gold = silv = 0
+        for r in rows:
+            rev = float(r['site_rev'] or 0)
+            if rev > 700_000:   plat += 1
+            elif rev > 400_000: gold += 1
+            else:               silv += 1
+        return plat, gold, silv
+
+    _tier_plat, _tier_gold, _tier_silv = compute_tiers(qs_kpi)
+    kpis['tier_platinum'] = _tier_plat
+    kpis['tier_gold']     = _tier_gold
+    kpis['tier_silver']   = _tier_silv
+
     # ── Revenue to Recharge ratio ─────────────────────────────
     _rev   = safe(kpis.get('total_revenue'))
     _rech  = safe(kpis.get('total_recharge'))
@@ -1020,8 +1044,16 @@ def dashboard_data(request):
 
         # Each period queryset — flow fields sum across all months in the range,
         # stock fields will be pulled from the latest month of each period.
-        ytd_curr_qs = growth_base.filter(year=latest_year, month__lte=latest_month)
-        ytd_prev_qs = growth_base.filter(year=prev_year,   month__lte=latest_month)
+        # YTD includes December of previous year as the base month
+        from django.db.models import Q
+        ytd_curr_qs = growth_base.filter(
+            Q(year=latest_year, month__lte=latest_month) |
+            Q(year=prev_year, month=12)
+        )
+        ytd_prev_qs = growth_base.filter(
+            Q(year=prev_year, month__lte=latest_month) |
+            Q(year=prev_year-1, month=12)
+        )
         yoy_curr_qs = growth_base.filter(year=latest_year, month=latest_month)
         yoy_prev_qs = growth_base.filter(year=prev_year,   month=latest_month)
         mom_prev_qs = growth_base.filter(year=mom_year,    month=mom_month)
@@ -1069,7 +1101,7 @@ def dashboard_data(request):
             'total_sites', 'total_arpu', 'penetration_4g',
             'total_act_recharge', 'total_bvs', 'total_evc', 'total_handset_4g',
             'computed_net_adds', 'total_gross_churn', 'total_revival',
-            'rev_rech_ratio',
+            'rev_rech_ratio', 'total_avg_daily_active', 'total_fca',
         ]
 
         for k in growth_metric_keys:
@@ -1101,6 +1133,52 @@ def dashboard_data(request):
                 'yoy_curr': yoy_curr,  'yoy_prev': yoy_prev,
                 'mtd_curr': mom_curr,  'mtd_prev': mom_prev,
             }
+        # ── Tier growth (Platinum / Gold / Silver site counts) ──────
+        # Computed separately because they can't be derived from aggregate_with_stock_fix
+        def _tier_growth(curr_plat, curr_gold, curr_silv, prev_plat, prev_gold, prev_silv):
+            def pct(c, p): return growth_pct(c, p)
+            return {
+                'platinum': {
+                    'ytd_curr': curr_plat, 'ytd_prev': prev_plat, 'ytd_pct': pct(curr_plat, prev_plat),
+                    'yoy_curr': curr_plat, 'yoy_prev': prev_plat, 'yoy_pct': pct(curr_plat, prev_plat),
+                    'mtd_curr': curr_plat, 'mtd_prev': prev_plat, 'mtd_pct': pct(curr_plat, prev_plat),
+                },
+                'gold': {
+                    'ytd_curr': curr_gold, 'ytd_prev': prev_gold, 'ytd_pct': pct(curr_gold, prev_gold),
+                    'yoy_curr': curr_gold, 'yoy_prev': prev_gold, 'yoy_pct': pct(curr_gold, prev_gold),
+                    'mtd_curr': curr_gold, 'mtd_prev': prev_gold, 'mtd_pct': pct(curr_gold, prev_gold),
+                },
+                'silver': {
+                    'ytd_curr': curr_silv, 'ytd_prev': prev_silv, 'ytd_pct': pct(curr_silv, prev_silv),
+                    'yoy_curr': curr_silv, 'yoy_prev': prev_silv, 'yoy_pct': pct(curr_silv, prev_silv),
+                    'mtd_curr': curr_silv, 'mtd_prev': prev_silv, 'mtd_pct': pct(curr_silv, prev_silv),
+                },
+            }
+
+        ytd_curr_plat, ytd_curr_gold, ytd_curr_silv = compute_tiers(ytd_curr_qs)
+        ytd_prev_plat, ytd_prev_gold, ytd_prev_silv = compute_tiers(ytd_prev_qs)
+        yoy_curr_plat, yoy_curr_gold, yoy_curr_silv = compute_tiers(yoy_curr_qs)
+        yoy_prev_plat, yoy_prev_gold, yoy_prev_silv = compute_tiers(yoy_prev_qs)
+        mom_curr_plat, mom_curr_gold, mom_curr_silv = compute_tiers(yoy_curr_qs)
+        mom_prev_plat, mom_prev_gold, mom_prev_silv = compute_tiers(mom_prev_qs)
+
+        growth['tier_platinum'] = {
+            'ytd_pct': growth_pct(ytd_curr_plat, ytd_prev_plat), 'ytd_curr': ytd_curr_plat, 'ytd_prev': ytd_prev_plat,
+            'yoy_pct': growth_pct(yoy_curr_plat, yoy_prev_plat), 'yoy_curr': yoy_curr_plat, 'yoy_prev': yoy_prev_plat,
+            'mtd_pct': growth_pct(mom_curr_plat, mom_prev_plat), 'mtd_curr': mom_curr_plat, 'mtd_prev': mom_prev_plat,
+        }
+        growth['tier_gold'] = {
+            'ytd_pct': growth_pct(ytd_curr_gold, ytd_prev_gold), 'ytd_curr': ytd_curr_gold, 'ytd_prev': ytd_prev_gold,
+            'yoy_pct': growth_pct(yoy_curr_gold, yoy_prev_gold), 'yoy_curr': yoy_curr_gold, 'yoy_prev': yoy_prev_gold,
+            'mtd_pct': growth_pct(mom_curr_gold, mom_prev_gold), 'mtd_curr': mom_curr_gold, 'mtd_prev': mom_prev_gold,
+        }
+        growth['tier_silver'] = {
+            'ytd_pct': growth_pct(ytd_curr_silv, ytd_prev_silv), 'ytd_curr': ytd_curr_silv, 'ytd_prev': ytd_prev_silv,
+            'yoy_pct': growth_pct(yoy_curr_silv, yoy_prev_silv), 'yoy_curr': yoy_curr_silv, 'yoy_prev': yoy_prev_silv,
+            'mtd_pct': growth_pct(mom_curr_silv, mom_prev_silv), 'mtd_curr': mom_curr_silv, 'mtd_prev': mom_prev_silv,
+        }
+
+
 
     # ── Chart data ────────────────────────────────────────────
     def sl(lst, key):
@@ -1253,7 +1331,8 @@ def dashboard_data(request):
             revival=Sum('tot_revival'),
             churn=Sum('gross_churn'),
             net_add=Sum('net_add'),
-        )
+            avg_dly_act=Sum('avg_dly_act'),
+             )
         .order_by('year', 'month')
     )
 
@@ -1281,6 +1360,10 @@ def dashboard_data(request):
     s_revival  = build_series(trend_rows, lambda r: safe(r.get('revival')) if r.get('revival') is not None else None)
     s_pen4g    = build_series(trend_rows, lambda r: round(safe(r.get('b4g')) / safe(r.get('b90')) * 100, 2) if safe(r.get('b90')) else None)
     s_hvc_pct  = build_series(trend_rows, lambda r: round(safe(r.get('hvc')) / safe(r.get('b90')) * 100, 2) if safe(r.get('b90')) else None)
+    s_fca      = build_series(trend_rows, lambda r: safe(r.get('fca'))     if r.get('fca')     is not None else None)
+    s_actrch_pct = build_series(trend_rows, lambda r: round(safe(r.get('act_rch')) / safe(r.get('b90')) * 100, 2) if safe(r.get('b90')) else None)
+    s_hs4g_pct   = build_series(trend_rows, lambda r: round(safe(r.get('hs4g'))    / safe(r.get('b4g')) * 100, 2) if safe(r.get('b4g')) else None)
+    s_ada_pct    = build_series(trend_rows, lambda r: round(safe(r.get('avg_dly_act')) / safe(r.get('b90')) * 100, 2) if safe(r.get('b90')) else None)
 
     avg_qs = (
         trend_base_qs
@@ -1312,7 +1395,11 @@ def dashboard_data(request):
         'revival':      [s_revival[y]  for y in trend_years],
         'pen4g':        [s_pen4g[y]    for y in trend_years],
         'hvc_pct':      [s_hvc_pct[y]  for y in trend_years],
-        'ada':          [s_ada[y]      for y in trend_years],
+                'ada':          [s_ada[y]      for y in trend_years],
+        'fca':          [s_fca[y]        for y in trend_years],
+        'actrch_pct':   [s_actrch_pct[y] for y in trend_years],
+        'hs4g_pct':     [s_hs4g_pct[y]   for y in trend_years],
+        'ada_pct':      [s_ada_pct[y]    for y in trend_years],
     }
 
     # ── Cache the result ────────────────────────────────────────

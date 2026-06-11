@@ -8,7 +8,7 @@ class SiteData(models.Model):
     year               = models.IntegerField(null=True, blank=True)
 
     # ── Site identifiers ──
-    key                = models.CharField(max_length=100, null=True, blank=True)
+    key                = models.CharField(max_length=100, null=True, blank=True, db_index=True)
     id_2g              = models.CharField(max_length=50, null=True, blank=True)
     id_3g              = models.CharField(max_length=100, null=True, blank=True)
     id_4g              = models.CharField(max_length=100, null=True, blank=True)

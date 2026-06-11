@@ -676,32 +676,42 @@ def import_data(request):
                 objects = []
                 total_rows = len(df)
                 for i, row in df.iterrows():
+                    # Parse month/year from row[0]
+                    _mr = row[0]; _mo = None; _yr = None
+                    try:
+                        import pandas as _pd
+                        if hasattr(_mr,'month'): _mo=_mr.month; _yr=_mr.year
+                        elif not (isinstance(_mr,float) and _pd.isna(_mr)):
+                            import datetime as _dt; _s=str(_mr).strip()
+                            for _f in ('%b-%Y','%B-%Y','%Y-%m-%d','%m/%d/%Y','%d/%m/%Y'):
+                                try: _d=_dt.datetime.strptime(_s,_f); _mo=_d.month; _yr=_d.year; break
+                                except: pass
+                    except: pass
                     obj = SiteData(
-                        region_main=to_str(row[0]), bisp_type=to_str(row[1]),
-                        month=to_int(row[2]), year=to_int(row[3]),
-                        key=to_int(row[4]), id_2g=to_str(row[5]),
-                        id_3g=to_str(row[6]), id_4g=to_str(row[7]),
-                        technology=to_str(row[8]), business_unit=to_str(row[9]),
-                        region=to_str(row[10]), commercial_district=to_str(row[11]),
-                        cl_status=to_str(row[12]), usf_status=to_str(row[13]),
-                        latitude=to_float(row[14]), longitude=to_float(row[15]),
-                        pta_district=to_str(row[16]), site_status=to_str(row[17]),
-                        site_type=to_str(row[18]), franchise=to_str(row[19]),
-                        arm=to_str(row[20]), fca=to_dec(row[21]), bvs=to_dec(row[22]),
-                        act_90d=to_int(row[23]), act_30d=to_int(row[24]),
-                        act_90d_4g=to_int(row[25]), hvc_base=to_int(row[26]),
-                        tot_revn_amt=to_dec(row[27]), bvs_retailer=to_int(row[28]),
-                        evc_retailer=to_int(row[29]), minutes_outgoing=to_dec(row[30]),
-                        minutes_incoming=to_dec(row[31]), volume_gbs=to_dec(row[32]),
-                        data_ntwrk_vol_4g=to_dec(row[33]), fca_adjusted=to_dec(row[34]),
-                        tot_revival=to_int(row[35]), gross_churn=to_int(row[36]),
-                        net_add=to_int(row[37]), avg_dly_act=to_dec(row[38]),
-                        act_recharger=to_int(row[39]), m0_revn=to_dec(row[40]),
-                        mnp_fca=to_int(row[41]), handset_4g=to_int(row[42]),
-                        rchrg_face_value_mtd=to_dec(row[43]), pp_rechar_face_val_mtd=to_dec(row[44]),
-                        prepaid_dgtl_amount=to_dec(row[45]), postpaid_dgtl_amount=to_dec(row[46]),
-                        conventional_recharge=to_dec(row[47]), total_recharge=to_dec(row[48]),
-                        digi_recharge=to_dec(row[49]),
+                        month=_mo, year=_yr,
+                        key=to_str(row[1]),
+                        id_2g=to_str(row[2]),             id_3g=to_str(row[3]),           id_4g=to_str(row[4]),
+                        technology=to_str(row[5]),        business_unit=to_str(row[6]),   region=to_str(row[7]),
+                        commercial_district=to_str(row[8]), cl_status=to_str(row[9]),     usf_status=to_str(row[10]),
+                        latitude=to_float(row[11]),       longitude=to_float(row[12]),
+                        pta_district=to_str(row[13]),     site_status=to_str(row[14]),    site_type=to_str(row[15]),
+                        franchise=to_str(row[16]),        arm=to_str(row[17]),
+                        bvs=to_dec(row[18]),              fca=to_dec(row[19]),
+                        act_90d=to_int(row[20]),          act_30d=to_int(row[21]),        act_90d_4g=to_int(row[22]),
+                        hvc_base=to_int(row[23]),         tot_revn_amt=to_dec(row[24]),
+                        bvs_retailer=to_int(row[25]),     evc_retailer=to_int(row[26]),
+                        minutes_outgoing=to_dec(row[27]), minutes_incoming=to_dec(row[28]),
+                        volume_gbs=to_dec(row[29]),       data_ntwrk_vol_4g=to_dec(row[30]),
+                        fca_adjusted=to_dec(row[31]),
+                        tot_revival=to_int(row[32]),      gross_churn=to_int(row[33]),
+                        net_add=to_int(row[34]),          avg_dly_act=to_dec(row[35]),
+                        act_recharger=to_int(row[36]),    m0_revn=to_dec(row[37]),
+                        mnp_fca=to_int(row[38]),          handset_4g=to_int(row[39]),
+                        rchrg_face_value_mtd=to_dec(row[40]),
+                        pp_rechar_face_val_mtd=to_dec(row[41]),
+                        prepaid_dgtl_amount=to_dec(row[42]),
+                        postpaid_dgtl_amount=to_dec(row[43]),
+                        conventional_recharge=to_dec(row[44]),
                     )
                     objects.append(obj)
                     if len(objects) == 500:
