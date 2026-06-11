@@ -202,9 +202,10 @@ def channel_data(request):
     month_param   = request.GET.get('month')
     year_param    = request.GET.get('year')
 
-    ck = _cache_key('ch_data_v10_', {
+    ck = _cache_key('ch_data_v11_', {
         'r': region, 'f': franchise, 'bu': business_unit,
         'a': arm, 'm': month_param, 'y': year_param,
+        'sec': request.GET.get('sections', ''),
         'uid': request.user.id,
     })
     cached = cache.get(ck)
@@ -315,22 +316,27 @@ def channel_data(request):
     kpis['g4_penetration_pct'] = round((g4_ach / fca_ach) * 100, 1) if fca_ach else 0
     kpis['total_franchises']   = qs.exclude(franchise_id='').values('franchise_id').distinct().count()
 
-    growth   = build_growth_dict(qs_base)
+    # ── Sections: only compute what the requesting page needs ──────────────
+    # ?sections=kpis,growth,monthly  (defaults to all for backward-compat)
+    sections_param = request.GET.get('sections', '')
+    want = set(s.strip() for s in sections_param.split(',') if s.strip()) if sections_param else None
+    def need(name):
+        return want is None or name in want
 
-    trend_qs = qs_base
-    if year_param: trend_qs = trend_qs.filter(date__year=int(year_param))
-    monthly  = build_monthly_trend(trend_qs)
+    response = {'kpis': kpis}
 
-    top_franchises   = build_top_franchises(qs)
-    region_breakdown = build_region_breakdown(qs)
-    bu_breakdown     = build_bu_breakdown(qs)
+    if need('growth'):
+        response['growth'] = build_growth_dict(qs_base)
 
-    response = {
-        'kpis': kpis, 'growth': growth, 'monthly': monthly,
-        'top_franchises': top_franchises,
-        'region_breakdown': region_breakdown,
-        'bu_breakdown': bu_breakdown,
-    }
+    if need('monthly'):
+        trend_qs = qs_base
+        if year_param: trend_qs = trend_qs.filter(date__year=int(year_param))
+        response['monthly'] = build_monthly_trend(trend_qs)
+
+    if need('breakdowns'):
+        response['top_franchises']   = build_top_franchises(qs)
+        response['region_breakdown'] = build_region_breakdown(qs)
+        response['bu_breakdown']     = build_bu_breakdown(qs)
     cache.set(ck, response, 900)
     return JsonResponse(response)
 
