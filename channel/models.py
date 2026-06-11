@@ -72,7 +72,7 @@ class ChannelDaily(models.Model):
 
     # ── 5. NPR & Active SO ────────────────────────────────────
     npr                       = models.IntegerField(default=0)
-    active_so_daily_avg       = models.IntegerField(default=0)
+    active_so_daily_avg       = models.FloatField(default=0)
     active_so_npr             = models.IntegerField(default=0)
     lm_active_evc             = models.IntegerField(default=0)
     mtd_served                = models.IntegerField(default=0)

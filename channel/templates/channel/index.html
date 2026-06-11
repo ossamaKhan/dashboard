@@ -272,19 +272,19 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
       <div><div style="font-size:12px;font-weight:800;color:var(--orange)">Ufone 5G</div></div>
     </div>
     <div class="sb-sec">Marketing</div>
-    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Executive Brief</a>
+    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Marketing Brief</a>
     <a href="/base/" class="nv" onclick="closeSidebar()">Base Analytics</a>
     <a href="/revenue/" class="nv" onclick="closeSidebar()">Revenue Analytics</a>
     <div class="sb-sec">Channel</div>
     <a href="/channel/" class="nv active" onclick="closeSidebar()">Channel Brief</a>
     <a href="/channel/performance/" class="nv" onclick="closeSidebar()">Target Performance</a>
-    <a href="/channel/retailers/" class="nv" onclick="closeSidebar()">Retailer Health</a>
     <a href="/channel/enablers/" class="nv" onclick="closeSidebar()">Enablers</a>
     <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
     <a href="/channel/kpi-summary/" class="nv" onclick="closeSidebar()">KPI Summary</a>
+    <div class="sb-sec">Other</div>
+    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div class="sb-sec">Account</div>
     <a href="/profile/" class="nv" onclick="closeSidebar()">Profile Settings</a>
-    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div style="flex:1"></div>
   </div>
   <div class="sb-footer">
@@ -559,7 +559,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   <!-- ══ ARPU Cards ══ -->
   <div class="kpi span-full" style="border-top:3px solid var(--purple2);padding-bottom:4px">
     <div style="font-size:10px;font-weight:900;color:var(--purple2);text-transform:uppercase;letter-spacing:2px;margin-bottom:14px">M0 ARPU — Revenue per Activation</div>
-    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px">
 
       <div style="background:var(--input);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px">
         <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">GA ARPU</div>
@@ -629,7 +629,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <div class="kpi-divider"></div>
 
     <!-- Sub-metrics grid: 6 items each showing absolute + % of FCA -->
-    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-top:14px" id="grand-sub-grid">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-top:14px" id="grand-sub-grid">
 
       <div style="background:var(--input-bg);border-radius:12px;padding:12px 14px;border:1px solid var(--border)">
         <div class="kpi-label" style="font-size:9px;margin-bottom:6px">SD Bundle</div>

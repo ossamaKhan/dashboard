@@ -353,25 +353,17 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 @media(max-width:1200px){main.base-layout{grid-template-columns:repeat(2,1fr)}}
 
 
-.period-btn{padding:7px 16px;border:none;background:transparent;font-family:inherit;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .2s}
-.period-btn.active{background:var(--orange);color:#fff}
-.period-btn:hover:not(.active){background:var(--input-bg);color:var(--text)}
-#kpi-table{border-spacing:0}
-#kpi-thead th{background:var(--input-bg);color:var(--muted);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;padding:10px 12px;text-align:center;border-bottom:2px solid var(--border2);white-space:nowrap;position:sticky;top:0;z-index:10}
-#kpi-tbody td{border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:middle}
-#kpi-tbody tr:last-child td{border-bottom:none}
-.tva-pill{display:inline-flex;align-items:center;justify-content:center;padding:3px 9px;border-radius:12px;font-size:10px;font-weight:800;min-width:52px}
-.tva-green{background:rgba(0,200,83,0.12);color:#00C853;border:1px solid rgba(0,200,83,0.3)}
-.tva-yellow{background:rgba(255,160,0,0.12);color:#FFA000;border:1px solid rgba(255,160,0,0.3)}
-.tva-red{background:rgba(255,61,0,0.10);color:#FF3D00;border:1px solid rgba(255,61,0,0.25)}
-
-.ks-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-@media(max-width:600px){
-  .ks-controls{flex-direction:column;align-items:stretch}
-  .period-btn{padding:10px 12px;font-size:12px}
-  #kpi-table{font-size:10px}
-  #kpi-thead th,#kpi-tbody td{padding:6px 8px}
-}
+.pbtn{padding:7px 16px;border:none;background:transparent;font-family:var(--font);font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .2s}
+.pbtn.on{background:var(--orange);color:#fff}
+.pbtn:hover:not(.on){background:var(--input-bg);color:var(--text)}
+#thead th{background:var(--input-bg);color:var(--text);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;padding:10px 12px;text-align:center;border-bottom:2px solid var(--border2);white-space:nowrap}
+#thead th:first-child{text-align:left;position:sticky;left:0;z-index:6;background:var(--input-bg)}
+#tbody td{border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap}
+#tbody tr:last-child td{border-bottom:none}
+#tbody tr:hover td{background:rgba(245,130,32,0.04)!important}
+.tva-g{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;min-width:48px;background:rgba(0,200,83,0.12);color:#00C853;border:1px solid rgba(0,200,83,0.3)}
+.tva-y{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;min-width:48px;background:rgba(255,160,0,0.12);color:#FFA000;border:1px solid rgba(255,160,0,0.3)}
+.tva-r{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;min-width:48px;background:rgba(255,61,0,0.10);color:#FF3D00;border:1px solid rgba(255,61,0,0.25)}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
@@ -387,7 +379,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
       <div><div style="font-size:12px;font-weight:800;color:var(--orange)">Ufone 5G</div></div>
     </div>
     <div class="sb-sec">Marketing</div>
-    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Executive Brief</a>
+    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Marketing Brief</a>
     <a href="/base/" class="nv" onclick="closeSidebar()">Base Analytics</a>
     <a href="/revenue/" class="nv" onclick="closeSidebar()">Revenue Analytics</a>
     <div class="sb-sec">Channel</div>
@@ -396,9 +388,10 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <a href="/channel/enablers/" class="nv" onclick="closeSidebar()">Enablers</a>
     <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
     <a href="/channel/kpi-summary/" class="nv active" onclick="closeSidebar()">KPI Summary</a>
+    <div class="sb-sec">Other</div>
+    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div class="sb-sec">Account</div>
     <a href="/profile/" class="nv" onclick="closeSidebar()">Profile Settings</a>
-    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div style="flex:1"></div>
   </div>
   <div class="sb-footer">
@@ -444,23 +437,32 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <div class="fw {% if locked.region.locked %}role-locked{% endif %}" id="fw-region">
       <div class="fw-label"><span class="ldot ld-o"></span>Region{% if locked.region.locked %} <span style="font-size:9px;opacity:.7">Locked</span>{% endif %}</div>
       <span class="fi-ico" style="font-size:11px;opacity:.5">◉</span>
-      <input class="fi" id="in-region" placeholder="{% if locked.region.locked %}Locked{% else %}All Regions{% endif %}" readonly/>
+      <input class="fi" id="in-region"
+        value="{% if locked.region.locked %}{{ locked.region.value|default:'' }}{% endif %}"
+        placeholder="{% if not locked.region.locked %}All Regions{% endif %}"
+        {% if locked.region.locked %}readonly disabled style="pointer-events:none;cursor:not-allowed;opacity:1;color:var(--purple);font-weight:700"{% else %}readonly{% endif %}/>
       {% if not locked.region.locked %}<div class="fdd" id="dd-region"></div>{% endif %}
     </div>
     <span class="f-arrow">›</span>
     <div class="fw {% if locked.bu.locked %}role-locked{% else %}disabled{% endif %}" id="fw-bu">
       <div class="fw-label"><span class="ldot ld-o"></span>BU{% if locked.bu.locked %} <span style="font-size:9px;opacity:.7">Locked</span>{% endif %}</div>
       <span class="fi-ico" style="font-size:11px;opacity:.5">◉</span>
-      <input class="fi" id="in-bu" placeholder="{% if locked.bu.locked %}{{ locked.bu.value|default:'Locked' }}{% else %}All BUs{% endif %}" readonly/>
+      <input class="fi" id="in-bu"
+        value="{% if locked.bu.locked %}{{ locked.bu.value|default:'' }}{% endif %}"
+        placeholder="{% if not locked.bu.locked %}All BUs{% endif %}"
+        {% if locked.bu.locked %}readonly disabled style="pointer-events:none;cursor:not-allowed;opacity:1;color:var(--purple);font-weight:700"{% else %}readonly{% endif %}/>
       {% if not locked.bu.locked %}<div class="fdd" id="dd-bu"></div>{% endif %}
     </div>
 
     <span class="f-arrow">›</span>
-    <div class="fw disabled" id="fw-arm">
-      <div class="fw-label"><span class="ldot ld-o"></span>ARM</div>
+    <div class="fw {% if locked.arm.locked %}role-locked{% else %}disabled{% endif %}" id="fw-arm">
+      <div class="fw-label"><span class="ldot ld-o"></span>ARM{% if locked.arm.locked %} <span style="font-size:9px;opacity:.7">Locked</span>{% endif %}</div>
       <span class="fi-ico" style="font-size:11px;opacity:.5">◉</span>
-      <input class="fi" id="in-arm" placeholder="All ARMs" readonly/>
-      <div class="fdd" id="dd-arm"></div>
+      <input class="fi" id="in-arm"
+        value="{% if locked.arm.locked %}{{ locked.arm.value|default:'' }}{% endif %}"
+        placeholder="{% if not locked.arm.locked %}All ARMs{% endif %}"
+        {% if locked.arm.locked %}readonly disabled style="pointer-events:none;cursor:not-allowed;opacity:1;color:var(--purple);font-weight:700"{% else %}readonly{% endif %}/>
+      {% if not locked.arm.locked %}<div class="fdd" id="dd-arm"></div>{% endif %}
     </div>
     <span class="f-arrow">›</span>
     <div class="fw disabled" id="fw-franchise">
@@ -498,38 +500,30 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   <div class="mab-sep"></div>
   <button class="mab-btn" onclick="toggleTheme()"><span class="mab-ico" id="mab-theme-ico">☀️</span>Theme</button>
 </div>
-<main style="padding:16px 20px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px">
-
-  <!-- Controls bar -->
-  <div class="ks-controls">
+<main class="base-layout" style="display:flex;flex-direction:column;gap:14px">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
     <div style="display:flex;gap:0;border:1.5px solid var(--border);border-radius:10px;overflow:hidden;flex-shrink:0">
-      <button class="period-btn active" data-p="ytd"  onclick="setPeriod('ytd')">YTD</button>
-      <button class="period-btn"        data-p="golm" onclick="setPeriod('golm')">GOLM</button>
-      <button class="period-btn"        data-p="yoy"  onclick="setPeriod('yoy')">YOY</button>
+      <button class="pbtn on" data-p="ytd"  onclick="setPeriod('ytd')">YTD</button>
+      <button class="pbtn"    data-p="golm" onclick="setPeriod('golm')">GOLM</button>
+      <button class="pbtn"    data-p="yoy"  onclick="setPeriod('yoy')">YOY</button>
     </div>
-    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1">
+    <div style="display:flex;align-items:center;gap:6px;flex:1;flex-wrap:wrap">
       <span style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Viewing:</span>
       <span id="drill-badge" style="font-size:11px;font-weight:800;color:var(--text)">All Regions</span>
-      <button id="drill-up-btn" onclick="drillUp()" style="display:none;font-size:11px;font-weight:800;color:var(--orange);background:rgba(245,130,32,0.08);border:1.5px solid rgba(245,130,32,0.3);border-radius:8px;padding:4px 12px;cursor:pointer">← Back</button>
+      <button id="back-btn" onclick="drillUp()" style="display:none;font-size:11px;font-weight:800;color:var(--orange);background:rgba(245,130,32,0.08);border:1.5px solid rgba(245,130,32,0.3);border-radius:8px;padding:4px 12px;cursor:pointer">&larr; Back</button>
     </div>
-    <div style="font-size:10px;color:var(--muted);font-weight:600;flex-shrink:0" id="ref-period-label"></div>
+    <div id="ref-label" style="font-size:10px;color:var(--muted);font-weight:600;flex-shrink:0"></div>
   </div>
-
-  <!-- KPI Table -->
-  <div style="background:var(--panel-bg);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06)">
+  <div style="background:var(--panel-bg);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)">
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-      <table id="kpi-table" style="width:100%;border-collapse:collapse;font-size:11px;min-width:700px">
-        <thead id="kpi-thead" style="position:sticky;top:0;z-index:10"></thead>
-        <tbody id="kpi-tbody"></tbody>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:600px">
+        <thead id="thead"></thead>
+        <tbody id="tbody"></tbody>
       </table>
     </div>
   </div>
-
-  <!-- Suggestions panel -->
-  <div id="suggestions-panel" style="transition:all .3s"></div>
-
+  <div id="sugg" style="word-break:break-word"></div>
 </main>
-
 <footer>
   <img src="{% static 'images/logo1.jpg' %}" style="height:40px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
   <div class="footer-right"><div class="footer-region">Central B · Multan</div><div class="footer-copy">© 2026 All Rights Reserved</div></div>
@@ -539,7 +533,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 <script>
 Chart.register({id:'globalLabels',afterDatasetsDraw(c){const ctx=c.ctx;if(!ctx)return;if(['doughnut','polarArea','pie'].includes(c.config.type))return;if(c.config.options&&c.config.options.skipGlobalLabels)return;if(c.config.options&&c.config.options.indexAxis==='y')return;ctx.save();c.data.datasets.forEach((ds,i)=>{const m=c.getDatasetMeta(i);if(m.hidden)return;m.data.forEach((p,idx)=>{const v=ds.data[idx];if(v==null||v===0)return;const isMob=c.width<500;if(isMob&&idx%2!==0&&m.type==='line')return;const txt=fmt(v);ctx.font=`bold ${isMob?9:11}px Poppins`;ctx.textAlign='center';ctx.fillStyle=textColor();const ySafe=p.y<30?p.y+20:p.y-10;ctx.fillText(txt,p.x,ySafe);});});ctx.restore();}});
 
-const ROLE_CONFIG={category:'{{ locked.category }}',regionLocked:{{ locked.region.locked|yesno:"true,false" }},buLocked:{{ locked.bu.locked|yesno:"true,false" }},buValue:'{{ locked.bu.value|default:"" }}'};
+const ROLE_CONFIG={category:'{{ locked.category }}',regionLocked:{{ locked.region.locked|yesno:"true,false" }},buLocked:{{ locked.bu.locked|yesno:"true,false" }},buValue:'{{ locked.bu.value|default:"" }}',armLocked:{{ locked.arm.locked|yesno:"true,false" }},armValue:'{{ locked.arm.value|default:"" }}'};
 function toggleSidebar(){const s=document.getElementById('sidebar'),o=document.getElementById('sidebar-overlay'),b=document.getElementById('mob-nav-btn'),mab=document.getElementById('mob-action-bar');s.classList.toggle('open');o.classList.toggle('open');const isOpen=s.classList.contains('open');if(b)b.style.display=isOpen?'none':'flex';if(mab)mab.style.display=isOpen?'none':'flex';}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').classList.remove('open');const b=document.getElementById('mob-nav-btn');if(b)b.style.display='flex';const mab=document.getElementById('mob-action-bar');if(mab)mab.style.display='flex';}
 function toggleTheme(){const html=document.documentElement;const isDark=html.getAttribute('data-theme')==='dark';html.setAttribute('data-theme',isDark?'light':'dark');document.getElementById('toggle-icon').textContent=isDark?'☀️':'🌙';localStorage.setItem('theme',isDark?'light':'dark');if(lastData)buildCharts(lastData);syncMabThemeIco();}
@@ -604,6 +598,7 @@ function resetAll(){
 }
 function applyRoleLocks(){
   if(ROLE_CONFIG.armLocked&&ROLE_CONFIG.armValue){
+    // ARM user: lock region, BU and ARM
     if(ROLE_CONFIG.buValue){setVal('in-bu',ROLE_CONFIG.buValue,'ac-p');S.business_unit=ROLE_CONFIG.buValue;}
     setVal('in-arm',ROLE_CONFIG.armValue,'ac-p');
     S.arm=ROLE_CONFIG.armValue;
@@ -612,6 +607,7 @@ function applyRoleLocks(){
     document.getElementById('fw-bu')?.classList.add('role-locked');
     document.getElementById('fw-arm')?.classList.add('role-locked');
   } else if(ROLE_CONFIG.buLocked&&ROLE_CONFIG.buValue){
+    // BU user: lock region and BU, ARM stays open
     setVal('in-bu',ROLE_CONFIG.buValue,'ac-p');
     S.business_unit=ROLE_CONFIG.buValue;
     enable('fw-arm');
@@ -627,15 +623,15 @@ function loadOptions(isFirstLoad=false){
   if(S.arm)p.set('arm',S.arm);
   fetch('/channel/api/filters/?'+p).then(r=>r.json()).then(data=>{
     if(isFirstLoad){
-      if(!localStorage.getItem('ufone_channel_initialized')){if(data.latest_year&&(S.year==null||S.year==="")){S.year=String(data.latest_year);setVal('in-year',String(data.latest_year),'ac-p');}localStorage.setItem('ufone_channel_initialized','1');saveFiltersToStorage();}
+      if(data.latest_year&&(S.year==null||S.year==="")){S.year=String(data.latest_year);setVal('in-year',String(data.latest_year),'ac-p');}if(data.latest_month&&(S.month==null||S.month==="")){S.month=String(data.latest_month);setVal('in-month','Month '+data.latest_month,'ac-p');}
       defaultYearSet=true;restoreFilterUI();renderTags();updateLogoSub();fetchData();fetchMapData();
     }
     if(!ROLE_CONFIG.regionLocked){
       buildDD('dd-region',data.regions,v=>{
         S.region=v;S.franchise=null;S.arm=null;S.business_unit=null;
         setVal('in-region',v,'ac-o');setVal('in-franchise',null);setVal('in-arm',null);setVal('in-bu',null);
-        if(v){if(!ROLE_CONFIG.buLocked)document.getElementById('fw-bu')?.classList.remove('disabled');}else{if(!ROLE_CONFIG.buLocked)document.getElementById('fw-bu')?.classList.add('disabled');document.getElementById('fw-franchise')?.classList.add('disabled');}
-        applyRoleLocks();renderTags();loadOptions();fetchData();fetchMapData();
+        if(v){if(!ROLE_CONFIG.buLocked)document.getElementById('fw-bu')?.classList.remove('disabled');}else{if(!ROLE_CONFIG.buLocked)document.getElementById('fw-bu')?.classList.add('disabled');document.getElementById('fw-arm')?.classList.add('disabled');document.getElementById('fw-franchise')?.classList.add('disabled');}
+        renderTags();loadOptions();fetchData();fetchMapData();
       },'All Regions');
     }
     buildDD('dd-arm',data.arms||[],v=>{
@@ -657,19 +653,19 @@ function loadOptions(isFirstLoad=false){
 }
 if(!ROLE_CONFIG.regionLocked){setupInput('in-region','dd-region');}
 setupInput('in-franchise','dd-franchise',true);
-setupInput('in-arm','dd-arm');
+if(!ROLE_CONFIG.armLocked){setupInput('in-arm','dd-arm');}
 if(!ROLE_CONFIG.buLocked){setupInput('in-bu','dd-bu');}
 setupInput('in-month','dd-month');setupInput('in-year','dd-year');
-function updateKPIs(d){updateLogoSub();}
+function updateKPIs(d){ try{updateLogoSub();}catch(e){} }
 
 
-function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/channel/api/data/?'+p).then(r=>r.json()).then(data=>{lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});}
+function fetchData(){fetchTable();}
 
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
 function tip(extra={}){return{backgroundColor:panelColor(),borderColor:'#f58220',borderWidth:1.5,titleColor:'#f58220',bodyColor:textColor(),padding:12,titleFont:{weight:'700',size:12},bodyFont:{weight:'600',size:11},...extra};}
 
-function buildCharts(d){}
+function buildCharts(){}
 
 
 
@@ -708,176 +704,70 @@ function restoreFilterUI(){
 function saveFiltersToStorage(){try{localStorage.setItem('ufone_filters_v2',JSON.stringify(S));}catch(e){}}
 function loadFiltersFromStorage(){try{const saved=localStorage.getItem('ufone_filters_v2');if(!saved)return;const parsed=JSON.parse(saved);Object.keys(S).forEach(k=>{if(parsed[k]!==undefined)S[k]=parsed[k]!==null?String(parsed[k]):null;});}catch(e){}}
 
-function fmt2(v){ return v==null?'—':v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(1)+'K':Math.round(v).toLocaleString(); }
-function tvaPill(t){
-  if(t==null) return '<span style="color:var(--muted)">—</span>';
-  const c=t>=90?'tva-green':t>=75?'tva-yellow':'tva-red';
-  return `<span class="tva-pill ${c}">${t}%</span>`;
+// KPI Table
+let kPeriod='ytd', drillStack=[];
+function setPeriod(p){kPeriod=p;document.querySelectorAll('.pbtn').forEach(b=>b.classList.toggle('on',b.dataset.p===p));fetchTable();}
+function drillDown(gf,gv,label){drillStack.push({gf,gv,label});updateDrillUI();fetchTable();}
+function drillUp(){drillStack.pop();updateDrillUI();fetchTable();}
+function updateDrillUI(){var b=document.getElementById('drill-badge');var bt=document.getElementById('back-btn');if(b)b.textContent=drillStack.length?drillStack[drillStack.length-1].label:'All Regions';if(bt)bt.style.display=drillStack.length?'':'none';}
+function buildKPIParams(){var p=new URLSearchParams();Object.entries(S).forEach(function(e){if(e[1])p.set(e[0],e[1]);});p.set('period',kPeriod);var fm={region:'region',business_unit:'business_unit',arm:'arm',franchise_id:'franchise',key:'franchise'};drillStack.forEach(function(d){p.set(fm[d.gf]||d.gf,d.gv);});return p;}
+function fetchTable(){
+  var loader=document.getElementById('loading');
+  if(loader)loader.classList.remove('hidden');
+  fetch('/channel/api/kpi-table/?'+buildKPIParams())
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(data){try{renderTable(data);}catch(e){console.error('renderTable:',e);}if(loader)loader.classList.add('hidden');})
+    .catch(function(e){console.error('fetchTable:',e);if(loader)loader.classList.add('hidden');var tb=document.getElementById('tbody');if(tb)tb.innerHTML='<tr><td colspan="60" style="text-align:center;padding:40px;color:var(--red)">Error: '+e.message+'</td></tr>';});
 }
-
-let currentPeriod='ytd';
-let drillStack=[];
-let lastRows=[];
-
-function setPeriod(p){
-  currentPeriod=p;
-  document.querySelectorAll('.period-btn').forEach(b=>b.classList.toggle('active',b.dataset.p===p));
-  fetchTable();
-}
-function drillDown(gf,gv,dl){
-  drillStack.push({groupField:gf,groupValue:gv,displayLabel:dl});
-  updateDrillUI(); fetchTable();
-}
-function drillUp(){ drillStack.pop(); updateDrillUI(); fetchTable(); }
-function updateDrillUI(){
-  const b=document.getElementById('drill-badge'),u=document.getElementById('drill-up-btn');
-  if(!drillStack.length){b.textContent='All Regions';u.style.display='none';}
-  else{b.textContent=drillStack[drillStack.length-1].displayLabel;u.style.display='';}
-}
-function buildParams(){
-  const p=new URLSearchParams();
-  Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});
-  p.set('period',currentPeriod);
-  const fm={'region':'region','business_unit':'business_unit','arm':'arm','franchise_id':'franchise','key':'franchise'};
-  drillStack.forEach(d=>{p.set(fm[d.groupField]||d.groupField,d.groupValue);});
-  return p;
-}
-
-function renderSuggestions(rows){
-  const el=document.getElementById('suggestions-panel');
-  if(!el) return;
-  const issues=[];
-  rows.forEach(row=>{
-    if(row.issues&&row.issues.length){
-      row.issues.forEach(issue=>{
-        issues.push({group:row.group, issue});
-      });
-    }
-  });
-  if(!issues.length){
-    el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(0,200,83,0.06);border:1.5px solid rgba(0,200,83,0.2);border-radius:10px">
-      <span style="font-size:18px">✅</span>
-      <span style="font-size:12px;font-weight:700;color:#00C853">All groups are on track for the selected period.</span>
-    </div>`;
-    return;
-  }
-  let html=`<div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">⚠ Suggestions (${issues.length})</div>`;
-  html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px">`;
-  issues.forEach(({group,issue})=>{
-    const icon=issue.includes('critical')?'🔴':issue.includes('declin')?'📉':'⚠️';
-    html+=`<div style="background:rgba(255,61,0,0.04);border:1.5px solid rgba(255,61,0,0.15);border-radius:10px;padding:10px 12px">
-      <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${group}</div>
-      <div style="font-size:10px;font-weight:600;color:var(--text2);display:flex;gap:6px;align-items:flex-start">
-        <span style="flex-shrink:0">${icon}</span><span>${issue}</span>
-      </div>
-    </div>`;
-  });
-  html+=`</div>`;
-  el.innerHTML=html;
-}
-
+function fmt2(v){return v==null?'\u2014':v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(1)+'K':Math.round(v).toLocaleString();}
+function pill(t){if(t==null)return'<span style="color:var(--muted)">\u2014</span>';var c=t>=90?'tva-g':t>=75?'tva-y':'tva-r';return'<span class="'+c+'">'+t+'%</span>';}
 function renderTable(data){
-  const defs=data.kpi_defs||[],rows=data.rows||[],gl=data.group_label||'Group';
-  const isDrillable=gl!=='Site';
-  lastRows=rows;
-  renderSuggestions(rows);
-
-  const thead=document.getElementById('kpi-thead');
-  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
-  const hColor=isDark?'#ffffff':'#111111';
-
-  // Two-row header
-  let h1=`<tr><th rowspan="2" style="text-align:left;min-width:130px;color:${hColor};font-size:10px;letter-spacing:2px">${gl.toUpperCase()}</th>`;
-  defs.forEach(d=>{
-    h1+=`<th colspan="${d.has_tva?3:2}" style="border-left:1px solid var(--border2);color:${hColor};font-weight:900;font-size:10px;letter-spacing:1px">${d.label}</th>`;
-  });
-  h1+=`</tr>`;
-  let h2='<tr>';
-  defs.forEach(d=>{
-    h2+=`<th style="border-left:1px solid var(--border2);font-size:8px;font-weight:700;color:${hColor}">ACH</th>`;
-    if(d.has_tva) h2+=`<th style="font-size:8px;font-weight:700;color:${hColor}">TVA</th>`;
-    h2+=`<th style="font-size:8px;font-weight:700;color:${hColor}">CHG</th>`;
-  });
-  h2+='</tr>';
-  thead.innerHTML=h1+h2;
-
-  const tbody=document.getElementById('kpi-tbody');
-  if(!rows.length){
-    tbody.innerHTML=`<tr><td colspan="60" style="text-align:center;padding:40px;color:var(--muted)">
-      <div style="font-size:32px">📭</div>
-      <div style="font-weight:700;margin-top:8px">No data for selected filters</div>
-    </td></tr>`;
-    return;
-  }
-
-  const drillMap={'Region':'region','BU':'business_unit','ARM':'arm','Franchise':'franchise_id','Site':'key'};
-  const maxAch=defs.map((_,di)=>Math.max(...rows.map(r=>r.kpis[di]?.ach||0),1));
-
-  let html='';
-  rows.forEach((row,ri)=>{
-    const warning=row.kpis.some(k=>k.tva!=null&&k.tva<90);
-    const lb=warning?'#FFA000':'#00C853';
-    const bg=ri%2?'rgba(0,0,0,0.018)':'';
-    const da=isDrillable?`onclick="drillDown('${drillMap[gl]||gl}','${row.group.replace(/'/g,"\'")}','${gl}: ${row.group.replace(/'/g,"\'")}')"`:'';
-
-    html+=`<tr style="border-left:3px solid ${lb};background:${bg};cursor:${isDrillable?'pointer':'default'}"
-      ${da}
-      onmouseenter="this.style.background='rgba(245,130,32,0.04)'"
-      onmouseleave="this.style.background='${bg}'">`;
-
-    // Group cell
-    html+=`<td style="padding:10px 14px">
-      <div style="display:flex;align-items:center;gap:8px">
-        ${isDrillable?`<span style="color:var(--orange);font-size:10px">▶</span>`:''}
-        <div>
-          <div style="font-size:12px;font-weight:800;color:${isDark?'#ffffff':'#111111'}">${row.group}</div>
-          <div style="font-size:9px;font-weight:700;color:${lb};margin-top:1px">${warning?'⚡ Review':'✓ On Track'}</div>
-        </div>
-      </div>
-    </td>`;
-
-    // KPI cells
-    row.kpis.forEach((k,ki)=>{
-      const barW=maxAch[ki]>0?Math.round(k.ach/maxAch[ki]*100):0;
-      const ac=k.has_tva&&k.tva!=null?(k.tva>=90?'#00C853':k.tva>=75?'#FFA000':'#FF3D00'):(isDark?'#ffffff':'#111111');
-      html+=`<td style="padding:8px 10px;border-left:1px solid var(--border);text-align:center">
-        <div style="font-size:11px;font-weight:900;color:${ac}">${fmt2(k.ach)}</div>
-        <div style="height:3px;background:var(--input-bg);border-radius:3px;margin-top:4px;overflow:hidden">
-          <div style="height:100%;width:${barW}%;background:${ac};border-radius:3px"></div>
-        </div>
-      </td>`;
-      if(k.has_tva) html+=`<td style="padding:6px 8px;text-align:center;border-left:none">${tvaPill(k.tva)}</td>`;
-      const cc=k.chg==null?'var(--muted)':k.chg>=0?'#00C853':'#FF3D00';
-      html+=`<td style="padding:6px 8px;text-align:center;color:${cc};font-size:10px;font-weight:800">${k.chg!=null?(k.chg>=0?'↑+':'↓')+Math.abs(k.chg)+'%':'—'}</td>`;
+  var defs=data.kpi_defs||[],rows=data.rows||[],gl=data.group_label||'Group';
+  var isDrill=gl!=='Site';
+  var drillMap={Region:'region',BU:'business_unit',ARM:'arm',Franchise:'franchise_id',Site:'key'};
+  var rl=document.getElementById('ref-label');
+  if(rl&&data.ref_year)rl.textContent=kPeriod.toUpperCase()+' \u00b7 '+data.ref_year+'/'+String(data.ref_month).padStart(2,'0');
+  var h1='<tr><th rowspan="2" style="text-align:left;min-width:130px;position:sticky;left:0;z-index:6;background:var(--input-bg)">'+gl+'</th>';
+  defs.forEach(function(d){h1+='<th colspan="'+(d.has_tva?3:2)+'" style="border-left:1px solid var(--border2)">'+d.label+'</th>';});
+  h1+='</tr><tr>';
+  defs.forEach(function(d){h1+='<th style="border-left:1px solid var(--border2);font-size:8px">Ach</th>'+(d.has_tva?'<th style="font-size:8px">TVA</th>':'')+'<th style="font-size:8px">Chg</th>';});
+  h1+='</tr>';
+  document.getElementById('thead').innerHTML=h1;
+  var tbody=document.getElementById('tbody');
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="60" style="text-align:center;padding:40px;color:var(--muted)">No data</td></tr>';renderSugg([]);return;}
+  var maxAch=defs.map(function(_,di){return Math.max.apply(null,rows.map(function(r){return (r.kpis[di]&&r.kpis[di].ach)||0;}).concat([1]));});
+  var html='';
+  rows.forEach(function(row,ri){
+    var warn=row.kpis.some(function(k){return k.tva!=null&&k.tva<90;});
+    var lb=warn?'#FFA000':'#00C853';
+    var bg=ri%2?'rgba(0,0,0,0.018)':'transparent';
+    var gf=drillMap[gl]||gl;
+    var gvE=String(row.group).replace(/'/g,"\\'");
+    var da=isDrill?'onclick="drillDown(\''+gf+'\',\''+gvE+'\',\''+gl+': '+gvE+'\')"':'';
+    html+='<tr style="border-left:3px solid '+lb+';background:'+bg+';cursor:'+(isDrill?'pointer':'default')+'" '+da+'>';
+    html+='<td style="padding:10px 14px;position:sticky;left:0;z-index:5;background:var(--panel-bg);border-right:1px solid var(--border2)"><div style="display:flex;align-items:center;gap:7px">'+(isDrill?'<span style="color:var(--orange);font-size:10px">\u25b6</span>':'')+'<div><div style="font-size:12px;font-weight:800;color:var(--text)">'+row.group+'</div><div style="font-size:9px;font-weight:700;color:'+lb+'">'+(warn?'Review':'On Track')+'</div></div></div></td>';
+    row.kpis.forEach(function(k,ki){
+      var bw=maxAch[ki]>0?Math.round(k.ach/maxAch[ki]*100):0;
+      var ac=k.has_tva&&k.tva!=null?(k.tva>=90?'#00C853':k.tva>=75?'#FFA000':'#FF3D00'):'var(--text)';
+      html+='<td style="padding:8px 10px;border-left:1px solid var(--border);text-align:center"><div style="font-weight:900;color:'+ac+'">'+fmt2(k.ach)+'</div><div style="height:3px;background:var(--input-bg);border-radius:3px;margin-top:3px;overflow:hidden"><div style="height:100%;width:'+bw+'%;background:'+ac+';border-radius:3px"></div></div></td>';
+      if(k.has_tva)html+='<td style="padding:6px 8px;text-align:center">'+pill(k.tva)+'</td>';
+      var cc=k.chg==null?'var(--muted)':k.chg>=0?'#00C853':'#FF3D00';
+      html+='<td style="padding:6px 8px;text-align:center;color:'+cc+';font-size:10px;font-weight:800">'+(k.chg!=null?(k.chg>=0?'+':'')+k.chg+'%':'\u2014')+'</td>';
     });
-
     html+='</tr>';
   });
   tbody.innerHTML=html;
+  renderSugg(rows);
 }
-
-function fetchTable(){
-  document.getElementById('loading').classList.remove('hidden');
-  fetch('/channel/api/kpi-table/?'+buildParams()).then(r=>r.json()).then(data=>{
-    renderTable(data);
-    document.getElementById('loading').classList.add('hidden');
-    const pl={ytd:'YTD',golm:'GOLM',yoy:'YOY'};
-    document.getElementById('ref-period-label').textContent=`${pl[data.period]||''} · Ref: ${data.ref_year}/${String(data.ref_month).padStart(2,'0')}`;
-  }).catch(()=>document.getElementById('loading').classList.add('hidden'));
+function renderSugg(rows){
+  var el=document.getElementById('sugg');if(!el)return;
+  var issues=[];
+  rows.forEach(function(r){(r.issues||[]).forEach(function(i){issues.push({g:r.group,i:i});});});
+  if(!issues.length){el.innerHTML='<div style="padding:12px 16px;background:rgba(0,200,83,0.06);border:1.5px solid rgba(0,200,83,0.2);border-radius:10px;font-size:12px;font-weight:700;color:#00C853">All groups on track</div>';return;}
+  var h='<div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Suggestions ('+issues.length+')</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;word-break:break-word">';
+  issues.forEach(function(o){h+='<div style="background:rgba(255,61,0,0.04);border:1.5px solid rgba(255,61,0,0.15);border-radius:10px;padding:10px 12px"><div style="font-size:9px;font-weight:800;color:var(--muted);margin-bottom:3px">'+o.g+'</div><div style="font-size:10px;color:var(--text2);font-weight:600">'+o.i+'</div></div>';});
+  h+='</div>';el.innerHTML=h;
 }
-
-function fetchData(){
-  document.getElementById('loading').classList.remove('hidden');
-  const p=new URLSearchParams();
-  Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});
-  fetch('/channel/api/data/?'+p).then(r=>r.json()).then(()=>{
-    try{updateLogoSub();}catch(e){}
-    document.getElementById('loading').classList.add('hidden');
-  }).catch(()=>document.getElementById('loading').classList.add('hidden'));
-  fetchTable();
-}
-function updateKPIs(d){ updateLogoSub(); }
-function buildCharts(d){}
 
 loadFiltersFromStorage();
 applyRoleLocks();loadOptions(true);renderTags();updateFilterBadge();

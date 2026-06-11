@@ -202,7 +202,7 @@ def channel_data(request):
     month_param   = request.GET.get('month')
     year_param    = request.GET.get('year')
 
-    ck = _cache_key('ch_data_v9_', {
+    ck = _cache_key('ch_data_v10_', {
         'r': region, 'f': franchise, 'bu': business_unit,
         'a': arm, 'm': month_param, 'y': year_param,
         'uid': request.user.id,
@@ -284,6 +284,7 @@ def channel_data(request):
         'cm_evc_active', 'cm_evc_active_platinum', 'cm_evc_active_gold', 'cm_evc_active_silver',
         'cm_964_active', 'cm_964_active_platinum', 'cm_964_active_gold', 'cm_964_active_silver',
         'evc_active_base', 'evc_retailer', 'npr', 'active_so_daily_avg',
+        'daily_active_served', 'daily_active_evc',
     ]
     if not month_param:
         # Find latest month within the filtered scope (respects year + dimension filters)
@@ -615,6 +616,12 @@ def channel_throughput(request):
     if year_param:    qs = qs.filter(date__year=int(year_param))
     if month_param:   qs = qs.filter(date__month=int(month_param))
 
+    # Stock fields — show latest month when no month selected
+    if not month_param:
+        _latest = qs.aggregate(d=Max('date'))['d']
+        if _latest:
+            qs = qs.filter(date__year=_latest.year, date__month=_latest.month)
+
     if franchise:
         group_field = 'key'
         group_label = 'Site'
@@ -730,7 +737,7 @@ def channel_kpi_table(request):
     if month_param:   qs = qs.filter(date__month=int(month_param))
 
     if franchise:
-        group_field, group_label = 'key',          'Site'
+        group_field, group_label = 'franchise_id', 'Franchise'
     elif arm:
         group_field, group_label = 'franchise_id', 'Franchise'
     elif business_unit:
@@ -741,101 +748,107 @@ def channel_kpi_table(request):
         group_field, group_label = 'region',       'Region'
 
     KPI_DEFS = [
-        ('fca_ach',      'fca_target',       'FCA',         True),
-        ('mnp_ach',      'mnp_target',        'MNP',         True),
-        ('g4_ach',       'g4_target',         '4G',          True),
-        ('loading_ach',  'loading_target',    'Recharge',    True),
-        ('hvc_ach',      'hvc_target',        'HVC',         True),
-        ('bundle_ach',   'bundle_target',     'Bundle',      True),
-        ('m0_revenue_ach','m0_revenue_target','M0 Revenue',  True),
-        ('cm_ga',        None,                'CM GA',       False),
-        ('evc_active_base', None,             'EVC Active',  False),
-        ('cm_evc_active',   None,             'CM EVC',      False),
-        ('zr',           'zr_fca',            'ZR',          True),
-        ('qos_ach',      None,                'QOS',         False),
+        ('fca_ach',       'fca_target',       'FCA',        True),
+        ('mnp_ach',       'mnp_target',        'MNP',        True),
+        ('g4_ach',        'g4_target',         '4G',         True),
+        ('loading_ach',   'loading_target',    'Recharge',   True),
+        ('hvc_ach',       'hvc_target',        'HVC',        True),
+        ('bundle_ach',    'bundle_target',     'Bundle',     True),
+        ('m0_revenue_ach','m0_revenue_target', 'M0 Revenue', True),
+        ('cm_ga',         None,                'CM GA',      False),
+        ('evc_active_base', None,              'EVC Active', False),
+        ('cm_evc_active',   None,              'CM EVC',     False),
+        ('zr',            'zr_fca',            'ZR',         True),
+        ('qos_ach',       None,                'QOS',        False),
     ]
+    ach_fields = [d[0] for d in KPI_DEFS]
+    tgt_fields = [d[1] for d in KPI_DEFS if d[1]]
+    all_fields = list(set(ach_fields + tgt_fields))
 
-    ach_fields  = [d[0] for d in KPI_DEFS]
-    tgt_fields  = [d[1] for d in KPI_DEFS if d[1]]
-    all_fields  = list(set(ach_fields + tgt_fields))
-    annot = {f: Sum(f) for f in all_fields}
+    # ── Latest date for growth reference ────────────────────────────
+    base_qs = get_scoped_qs(request.user)
+    if region:        base_qs = base_qs.filter(region=region)
+    if business_unit: base_qs = base_qs.filter(business_unit=business_unit)
+    if arm:           base_qs = base_qs.filter(arm=arm)
+    if franchise:     base_qs = base_qs.filter(franchise_id=franchise)
 
-    rows_qs = (qs.exclude(**{f'{group_field}__isnull': True})
-                 .exclude(**{f'{group_field}': ''})
-                 .values(group_field)
-                 .annotate(**annot)
-                 .order_by(group_field))
-
-    def s(v): return float(v) if v else 0.0
-    def tva(a, t): return round(a/t*100, 1) if t and t > 0 else None
-    def pct_change(curr, prev):
-        if not prev: return None
-        return round((curr - prev) / abs(prev) * 100, 1)
-
-    growth_qs = get_scoped_qs(request.user)
-    if region:        growth_qs = growth_qs.filter(region=region)
-    if business_unit: growth_qs = growth_qs.filter(business_unit=business_unit)
-    if arm:           growth_qs = growth_qs.filter(arm=arm)
-    if franchise:     growth_qs = growth_qs.filter(franchise_id=franchise)
-
-    latest = growth_qs.order_by('-date').values('date').first()
+    latest = base_qs.order_by('-date').values('date').first()
     if not latest:
         return JsonResponse({'rows': [], 'group_label': group_label, 'kpi_defs': []})
 
-    ly = latest['date'].year
-    lm = latest['date'].month
-    prev_y = ly - 1
-    prev_m = lm - 1 if lm > 1 else 12
+    ly       = latest['date'].year
+    lm       = latest['date'].month
+    prev_y   = ly - 1
+    prev_m   = lm - 1 if lm > 1 else 12
     prev_m_y = ly if lm > 1 else prev_y
 
-    def period_qs(y, m_lte=None, m_exact=None):
-        q = growth_qs.filter(date__year=y)
-        if m_lte:   q = q.filter(date__month__lte=m_lte)
-        if m_exact: q = q.filter(date__month=m_exact)
-        return q
+    # ── Current period values (filtered qs) — 1 query ───────────────
+    curr_qs = (qs
+               .exclude(**{f'{group_field}__isnull': True})
+               .exclude(**{f'{group_field}': ''})
+               .values(group_field)
+               .annotate(**{f: Sum(f) for f in all_fields}))
+    curr_map = {r[group_field]: r for r in curr_qs}
 
-    def group_growth(grp_val):
-        def agg(q):
-            return q.filter(**{group_field: grp_val}).aggregate(**{f: Sum(f) for f in ach_fields})
-        if period == 'ytd':
-            curr = agg(period_qs(ly,   m_lte=lm))
-            prev = agg(period_qs(prev_y, m_lte=lm))
-        elif period == 'golm':
-            curr = agg(period_qs(ly,   m_exact=lm))
-            prev = agg(period_qs(prev_m_y, m_exact=prev_m))
-        else:
-            curr = agg(period_qs(ly,   m_exact=lm))
-            prev = agg(period_qs(prev_y, m_exact=lm))
-        return curr, prev
+    # ── Previous period values — 1 query using Case/When ────────────
+    if period == 'ytd':
+        prev_annot = {
+            f: Sum(Case(When(date__year=prev_y, date__month__lte=lm, then=f),
+                        default=0, output_field=FloatField()))
+            for f in ach_fields
+        }
+    elif period == 'golm':
+        prev_annot = {
+            f: Sum(Case(When(date__year=prev_m_y, date__month=prev_m, then=f),
+                        default=0, output_field=FloatField()))
+            for f in ach_fields
+        }
+    else:  # yoy
+        prev_annot = {
+            f: Sum(Case(When(date__year=prev_y, date__month=lm, then=f),
+                        default=0, output_field=FloatField()))
+            for f in ach_fields
+        }
 
-    def suggest(kpi_label, tva_val, chg):
-        issues = []
-        if tva_val is not None and tva_val < 80:
-            issues.append(f'{kpi_label} TVA critically low ({tva_val}%) — immediate focus needed')
-        elif tva_val is not None and tva_val < 90:
-            issues.append(f'{kpi_label} TVA below target ({tva_val}%) — review strategy')
+    prev_qs = (base_qs
+               .exclude(**{f'{group_field}__isnull': True})
+               .exclude(**{f'{group_field}': ''})
+               .values(group_field)
+               .annotate(**prev_annot))
+    prev_map = {r[group_field]: r for r in prev_qs}
+
+    # ── Build rows ───────────────────────────────────────────────────
+    def s(v): return float(v) if v else 0.0
+    def tva(a, t): return round(a/t*100, 1) if t and t > 0 else None
+    def pct_chg(curr, prev):
+        if not prev: return None
+        return round((curr - prev) / abs(prev) * 100, 1)
+    def suggest(label, tva_v, chg):
+        out = []
+        if tva_v is not None and tva_v < 80:
+            out.append(f'{label} TVA critically low ({tva_v}%) — immediate focus needed')
+        elif tva_v is not None and tva_v < 90:
+            out.append(f'{label} TVA below target ({tva_v}%) — review strategy')
         if chg is not None and chg < -10:
-            issues.append(f'{kpi_label} declining {abs(chg)}% vs prior period')
-        return issues
+            out.append(f'{label} declining {abs(chg)}% vs prior period')
+        return out
 
     rows = []
-    for r in rows_qs:
-        grp = r[group_field] or '—'
+    for grp, cr in sorted(curr_map.items()):
+        pr = prev_map.get(grp, {})
+        if all(s(cr.get(f, 0)) == 0 for f in ach_fields):
+            continue
         kpis_row = []
         all_issues = []
-        curr_g, prev_g = group_growth(grp)
-
         for ach_f, tgt_f, label, has_tva in KPI_DEFS:
-            ach   = s(r.get(ach_f))
-            tgt   = s(r.get(tgt_f)) if tgt_f else None
+            ach   = s(cr.get(ach_f))
+            tgt   = s(cr.get(tgt_f)) if tgt_f else None
             tva_v = tva(ach, tgt) if tgt else None
-            curr_v = s(curr_g.get(ach_f)) if curr_g else ach
-            prev_v = s(prev_g.get(ach_f)) if prev_g else 0
-            chg    = pct_change(curr_v, prev_v)
+            prev_v = s(pr.get(ach_f, 0))
+            chg    = pct_chg(ach, prev_v)
             all_issues += suggest(label, tva_v, chg)
             kpis_row.append({'label': label, 'ach': ach, 'tgt': tgt,
                              'tva': tva_v, 'chg': chg, 'has_tva': has_tva})
-
         rows.append({'group': grp, 'kpis': kpis_row, 'issues': all_issues[:3]})
 
     kpi_defs = [{'label': d[2], 'has_tva': d[3]} for d in KPI_DEFS]

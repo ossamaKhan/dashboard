@@ -377,18 +377,20 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
       <img src="{% static 'images/logo1.jpg' %}" style="height:34px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
       <div><div style="font-size:12px;font-weight:800;color:var(--orange)">Ufone 5G</div></div>
     </div>
-    <div class="sb-sec">Marketing</div>
-    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Executive Brief</a>
+   <div class="sb-sec">Marketing</div>
+    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Marketing Brief</a>
     <a href="/base/" class="nv" onclick="closeSidebar()">Base Analytics</a>
     <a href="/revenue/" class="nv" onclick="closeSidebar()">Revenue Analytics</a>
     <div class="sb-sec">Channel</div>
     <a href="/channel/" class="nv" onclick="closeSidebar()">Channel Brief</a>
     <a href="/channel/performance/" class="nv" onclick="closeSidebar()">Target Performance</a>
-    <a href="/channel/retailers/" class="nv" onclick="closeSidebar()">Retailer Health</a>
     <a href="/channel/enablers/" class="nv active" onclick="closeSidebar()">Enablers</a>
+    <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
+    <a href="/channel/kpi-summary/" class="nv" onclick="closeSidebar()">KPI Summary</a>
+    <div class="sb-sec">Other</div>
+    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div class="sb-sec">Account</div>
     <a href="/profile/" class="nv" onclick="closeSidebar()">Profile Settings</a>
-    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div style="flex:1"></div>
   </div>
   <div class="sb-footer">
@@ -660,7 +662,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
       <div class="kpi-label" style="font-size:13px;font-weight:900;color:var(--text)">Low Throughput Retailers</div>
       <div style="font-size:11px;font-weight:600;color:var(--muted)" id="tput-scope">All Retailers</div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:14px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-top:14px">
       <div style="background:rgba(255,61,0,0.07);border:1.5px solid rgba(255,61,0,0.2);border-radius:12px;padding:14px 16px">
         <div style="font-size:9px;font-weight:800;color:#FF3D00;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px">1 Transaction</div>
         <div style="font-size:24px;font-weight:900;color:#FF3D00" id="tput-cnt1">—</div>
@@ -684,11 +686,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     </div>
   </div>
 
-  <!-- Throughput charts -->
-  <div class="chart-panel span-2">
-    <div class="ph"><div><div class="pt">Retailer Transaction Distribution</div></div></div>
-    <div class="h260" style="position:relative"><canvas id="chart-tput-pie"></canvas></div>
-  </div>
+
 
 
 
@@ -926,8 +924,43 @@ function buildCharts(d){
         borderColor:'#00C853',
         borderWidth: i===latestYearIdx ? 2 : 1,
         borderRadius:3, borderSkipped:false,
-        type:'bar', order:1, _showCallout: i===latestYearIdx, yAxisID:'y',
+        type:'bar', order:2, _showCallout: i===latestYearIdx, yAxisID:'y',
       });
+    });
+
+    // Active SO (Daily Ave.) bars — latest year only
+    const nprLatest = nprSrc.datasets[latestYearIdx].data.slice(0,lastIdx+1);
+    let asoLatest = new Array(lastIdx+1).fill(null);
+    if(asoSrc&&asoSrc.datasets&&asoSrc.datasets.length){
+      const asoDs = asoSrc.datasets[asoSrc.datasets.length-1];
+      asoLatest = asoDs.data.slice(0,lastIdx+1);
+      datasets.push({
+        label:'Active SO (Daily Ave.) '+asoDs.label,
+        data: asoLatest,
+        backgroundColor:'rgba(171,29,254,0.7)',
+        borderColor:'#AB1DFE',
+        borderWidth:2,
+        borderRadius:3, borderSkipped:false,
+        type:'bar', order:2, _showCallout:false, yAxisID:'y',
+      });
+    }
+
+    // Trendline: Active SO / NPR * 100 — always rendered alongside NPR bars
+    const pctData = nprLatest.map((npr,i)=>{
+      const aso = asoLatest[i];
+      return (npr!=null&&npr>0&&aso!=null&&aso>0) ? parseFloat((aso/npr*100).toFixed(1)) : null;
+    });
+    datasets.push({
+      label:'Active SO %',
+      data: pctData,
+      type:'line', order:1,
+      borderColor:'#FF3D00',
+      backgroundColor:'rgba(255,61,0,0.1)',
+      borderWidth:2.5,
+      borderDash:[5,3],
+      pointRadius:3, pointHoverRadius:5,
+      tension:0.3, fill:false,
+      yAxisID:'y2',
     });
 
     dc(canvasId);
@@ -955,11 +988,15 @@ function buildCharts(d){
         skipGlobalLabels:true,
         plugins:{
           legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
-          tooltip:{...tip(),callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmt(ctx.raw)}`}},
+          tooltip:{...tip(),callbacks:{label:ctx=>{
+            if(ctx.dataset.yAxisID==='y2') return ` ${ctx.dataset.label}: ${ctx.raw}%`;
+            return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+          }}},
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
           y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+          y2:{position:'right',grid:{display:false},ticks:{color:'#FF3D00',font:{size:10,weight:'700'},callback:v=>v+'%',maxTicksLimit:5},border:{display:false}},
         }
       }
     });
@@ -982,14 +1019,18 @@ function buildCharts(d){
       borderRadius:3, borderSkipped:false,
       type:'bar', order:1, _showCallout: i===latestYearIdx,
     }));
-    const latestData = src.datasets[latestYearIdx].data.slice(0,lastIdx+1);
-    const momPct = latestData.map((v,i)=>{
-      if(i===0||!latestData[i-1]) return null;
-      const prev=latestData[i-1];
-      return prev>0 ? parseFloat(((v-prev)/prev*100).toFixed(1)) : null;
+    // Trendline: metric / CM EVC Active * 100 per month (latest year)
+    const latestData  = src.datasets[latestYearIdx].data.slice(0,lastIdx+1);
+    const evcSrc      = d.monthly['cm_evc_active'];
+    const evcLatest   = (evcSrc&&evcSrc.datasets&&evcSrc.datasets.length)
+                        ? evcSrc.datasets[evcSrc.datasets.length-1].data.slice(0,lastIdx+1)
+                        : new Array(lastIdx+1).fill(null);
+    const pctData = latestData.map((v,i)=>{
+      const evc = evcLatest[i];
+      return (v!=null&&evc!=null&&evc>0) ? parseFloat((v/evc*100).toFixed(1)) : null;
     });
     datasets.push({
-      label:'MoM%', data:momPct,
+      label:'% of EVC Active', data:pctData,
       type:'line', borderColor:'#AB1DFE', backgroundColor:'transparent',
       borderWidth:2, borderDash:[4,4], pointRadius:3, pointBackgroundColor:'#AB1DFE',
       tension:0.3, order:0, spanGaps:true, yAxisID:'y2',
