@@ -86,29 +86,12 @@ LOGOUT_REDIRECT_URL = '/'
 import os
 from urllib.parse import urlparse, parse_qsl
 
-DATABASE_URL = os.environ.get('DATABASE_URL', '')
-
-if DATABASE_URL:
-    tmpPostgres = urlparse(DATABASE_URL)
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': tmpPostgres.path.replace('/', ''),
-            'USER': tmpPostgres.username,
-            'PASSWORD': tmpPostgres.password,
-            'HOST': tmpPostgres.hostname,
-            'PORT': 5432,
-            'OPTIONS': dict(parse_qsl(tmpPostgres.query)),
-        }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-
+}
 import os
 
 REDIS_URL = os.environ.get('REDIS_URL', '')
