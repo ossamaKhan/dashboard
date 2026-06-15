@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-i^pmp1x(gpyl*-l7j3wgv+9l8=w&g+ki2xfy(#)uee319p_-@c'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = [
     'dashboard-fcy3.onrender.com',
