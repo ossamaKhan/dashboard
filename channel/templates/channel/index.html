@@ -257,6 +257,15 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 .chart-panel{background:var(--panel-bg);border:1.5px solid var(--border);border-radius:16px;padding:20px;position:relative;overflow:hidden;transition:box-shadow .3s,background .35s;box-shadow:var(--shadow)}
 .h260{height:260px}
 .ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}.pt{font-size:13px;font-weight:800;color:var(--text)}.ps{font-size:11px;font-weight:500;color:var(--muted);margin-top:2px}.ptag{font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:20px;background:var(--orange);color:#fff;flex-shrink:0}
+
+.kpi-clickable{cursor:pointer;transition:opacity .15s}
+.kpi-clickable:hover{opacity:.75}
+
+
+@keyframes chModalIn{from{opacity:0;transform:scale(.93) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.ch-kpi-clickable{cursor:pointer;transition:opacity .15s}
+.ch-kpi-clickable:hover{opacity:.72}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
@@ -401,7 +410,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   <div class="kpi">
     <div class="kpi-label">FCA</div>
     <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px">
-      <div class="kpi-value" id="kpi-fca-ach" style="font-size:24px;color:var(--orange)">—</div>
+      <div class="kpi-value ch-kpi-clickable" id="kpi-fca-ach" onclick="chOpenTrend('fca_ach','FCA Achievement','#f58220','fca_target')" style="font-size:24px;color:var(--orange)">—</div>
       <div style="font-size:11px;color:var(--muted);font-weight:700">of <span id="kpi-fca-tgt" style="color:var(--muted);font-weight:800">—</span></div>
     </div>
     <div class="kpi-divider" style="margin-top:10px"></div>
@@ -421,7 +430,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   <div class="kpi">
     <div class="kpi-label">4G</div>
     <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px">
-      <div class="kpi-value" id="kpi-4g-ach" style="font-size:24px;color:var(--purple2)">—</div>
+      <div class="kpi-value ch-kpi-clickable" id="kpi-4g-ach" onclick="chOpenTrend('g4_ach','4G Achievement','#5E35B1','g4_target')" style="font-size:24px;color:var(--purple2)">—</div>
       <div style="font-size:11px;color:var(--muted);font-weight:700">of <span id="kpi-4g-tgt" style="color:var(--muted);font-weight:800">—</span></div>
     </div>
     <div class="kpi-divider" style="margin-top:10px"></div>
@@ -446,7 +455,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   <div class="kpi">
     <div class="kpi-label">MNP</div>
     <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px">
-      <div class="kpi-value" id="kpi-mnp-ach" style="font-size:24px;color:var(--purple)">—</div>
+      <div class="kpi-value ch-kpi-clickable" id="kpi-mnp-ach" onclick="chOpenTrend('mnp_ach','MNP Achievement','#AB1DFE','mnp_target')" style="font-size:24px;color:var(--purple)">—</div>
       <div style="font-size:11px;color:var(--muted);font-weight:700">of <span id="kpi-mnp-tgt" style="color:var(--muted);font-weight:800">—</span></div>
     </div>
     <div class="kpi-divider" style="margin-top:10px"></div>
@@ -466,7 +475,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   <div class="kpi">
     <div class="kpi-label">Loading (PKR)</div>
     <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px">
-      <div class="kpi-value" id="kpi-loading-ach" style="font-size:24px;color:var(--teal)">—</div>
+      <div class="kpi-value ch-kpi-clickable" id="kpi-loading-ach" onclick="chOpenTrend('loading_ach','Recharge Achievement','#00BCD4','loading_target')" style="font-size:24px;color:var(--teal)">—</div>
       <div style="font-size:11px;color:var(--muted);font-weight:700">of <span id="kpi-loading-tgt" style="color:var(--muted);font-weight:800">—</span></div>
     </div>
     <div class="kpi-divider" style="margin-top:10px"></div>
@@ -486,7 +495,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   <div class="kpi">
     <div class="kpi-label">M0 Revenue (PKR)</div>
     <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px">
-      <div class="kpi-value" id="kpi-m0rev-ach" style="font-size:24px;color:var(--orange)">—</div>
+      <div class="kpi-value ch-kpi-clickable" id="kpi-m0rev-ach" onclick="chOpenTrend('m0_revenue_ach','M0 Revenue','#f58220','m0_revenue_target')" style="font-size:24px;color:var(--orange)">—</div>
       <div style="font-size:11px;color:var(--muted);font-weight:700">of <span id="kpi-m0rev-tgt" style="color:var(--muted);font-weight:800">—</span></div>
     </div>
     <div class="kpi-divider" style="margin-top:10px"></div>
@@ -506,7 +515,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   <div class="kpi">
     <div class="kpi-label">HVC</div>
     <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px">
-      <div class="kpi-value" id="kpi-hvc-ach" style="font-size:24px;color:var(--orange)">—</div>
+      <div class="kpi-value ch-kpi-clickable" id="kpi-hvc-ach" onclick="chOpenTrend('hvc_ach','HVC Achievement','#f58220','hvc_target')" style="font-size:24px;color:var(--orange)">—</div>
       <div style="font-size:11px;color:var(--muted);font-weight:700">of <span id="kpi-hvc-tgt" style="color:var(--muted);font-weight:800">—</span></div>
     </div>
     <div class="kpi-divider" style="margin-top:10px"></div>
@@ -526,7 +535,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   <div class="kpi">
     <div class="kpi-label">Bundle</div>
     <div style="display:flex;align-items:baseline;gap:8px;margin-top:4px">
-      <div class="kpi-value" id="kpi-bundle-ach" style="font-size:24px;color:var(--purple)">—</div>
+      <div class="kpi-value ch-kpi-clickable" id="kpi-bundle-ach" onclick="chOpenTrend('bundle_ach','Bundle Achievement','#AB1DFE','bundle_target')" style="font-size:24px;color:var(--purple)">—</div>
       <div style="font-size:11px;color:var(--muted);font-weight:700">of <span id="kpi-bundle-tgt" style="color:var(--muted);font-weight:800">—</span></div>
     </div>
     <div class="kpi-divider" style="margin-top:10px"></div>
@@ -546,7 +555,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 
   <div class="kpi">
     <div class="kpi-label">CM EVC Active</div>
-    <div class="kpi-value" id="kpi-evc-active-base" style="color:var(--teal)">—</div>
+    <div class="kpi-value ch-kpi-clickable" id="kpi-evc-active-base" onclick="chOpenTrend('cm_evc_active','CM EVC Active','#00BCD4',null)" style="color:var(--teal)">—</div>
     <div class="kpi-divider" style="margin-top:10px"></div>
     <div class="kpi-growth" data-metric="cm_evc_active" style="margin-top:10px">
       <div class="growth-row"><div class="growth-header"><span class="growth-label">YTD</span><span class="growth-badge" id="g-evc-ytd-badge">—</span></div><div class="growth-compare"><span class="growth-prev" id="g-evc-ytd-prev">—</span><span class="growth-arrow">→</span><span class="growth-curr" id="g-evc-ytd-curr">—</span></div></div>
@@ -676,7 +685,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 </div>
 </div>
 <script>
-Chart.register({id:'globalLabels',afterDatasetsDraw(c){const ctx=c.ctx;if(!ctx||['doughnut','polarArea','pie'].includes(c.config.type))return;ctx.save();c.data.datasets.forEach((ds,i)=>{const m=c.getDatasetMeta(i);if(m.hidden)return;m.data.forEach((p,idx)=>{const v=ds.data[idx];if(v==null||v===0)return;const isMob=c.width<500;if(isMob&&idx%2!==0&&m.type==='line')return;const txt=fmt(v);ctx.font=`bold ${isMob?9:11}px Poppins`;ctx.textAlign='center';ctx.fillStyle=textColor();const isHoriz=c.config.options.indexAxis==='y';const ySafe=isHoriz?p.y+4:(p.y<30?p.y+20:p.y-10);const xSafe=isHoriz?p.x+25:p.x;ctx.fillText(txt,xSafe,ySafe);});});ctx.restore();}});
+Chart.register({id:'globalLabels',afterDatasetsDraw(c){const ctx=c.ctx;if(!ctx||['doughnut','polarArea','pie'].includes(c.config.type))return;ctx.save();c.data.datasets.forEach((ds,i)=>{const m=c.getDatasetMeta(i);if(m.hidden||ds.skipGlobal)return;m.data.forEach((p,idx)=>{const v=ds.data[idx];if(v==null||v===0)return;const isMob=c.width<500;if(isMob&&idx%2!==0&&m.type==='line')return;const txt=fmt(v);ctx.font=`bold ${isMob?9:11}px Poppins`;ctx.textAlign='center';ctx.fillStyle=textColor();const isHoriz=c.config.options.indexAxis==='y';const ySafe=isHoriz?p.y+4:(p.y<30?p.y+20:p.y-10);const xSafe=isHoriz?p.x+25:p.x;ctx.fillText(txt,xSafe,ySafe);});});ctx.restore();}});
 
 const ROLE_CONFIG={category:'{{ locked.category }}',regionLocked:{{ locked.region.locked|yesno:"true,false" }},buLocked:{{ locked.bu.locked|yesno:"true,false" }},buValue:'{{ locked.bu.value|default:"" }}',armLocked:{{ locked.arm.locked|yesno:"true,false" }},armValue:'{{ locked.arm.value|default:"" }}'};
 function toggleSidebar(){const s=document.getElementById('sidebar'),o=document.getElementById('sidebar-overlay'),b=document.getElementById('mob-nav-btn'),mab=document.getElementById('mob-action-bar');s.classList.toggle('open');o.classList.toggle('open');const isOpen=s.classList.contains('open');if(b)b.style.display=isOpen?'none':'flex';if(mab)mab.style.display=isOpen?'none':'flex';}
@@ -925,7 +934,7 @@ function updateKPIs(data){
     set(`kpi-arpu-vol-${uid}`, vol  > 0 ? fmt(vol)  : '—');
   });
 }
-function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/channel/api/data/?'+p+'&sections=kpis,growth').then(r=>r.json()).then(data=>{lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});}
+function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/channel/api/data/?'+p+'&sections=kpis,growth,monthly').then(r=>r.json()).then(data=>{lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});}
 
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
@@ -1067,6 +1076,155 @@ function saveFiltersToStorage(){try{localStorage.setItem('ufone_filters_v2',JSON
 function loadFiltersFromStorage(){try{const saved=localStorage.getItem('ufone_filters_v2');if(!saved)return;const parsed=JSON.parse(saved);Object.keys(S).forEach(k=>{if(parsed[k]!==undefined)S[k]=parsed[k]!==null?String(parsed[k]):null;});}catch(e){}}
 loadFiltersFromStorage();
 applyRoleLocks();loadOptions(true);renderTags();updateFilterBadge();
+
+
+// ── Channel Brief KPI Trend Modal ────────────────────────────────
+let _chTrendChart = null;
+
+function _chFmt(n){
+  if(n==null||n===undefined) return '—';
+  const abs=Math.abs(n);
+  if(abs>=1e9) return (n/1e9).toFixed(2)+'B';
+  if(abs>=1e6) return (n/1e6).toFixed(2)+'M';
+  if(abs>=1e3) return (n/1e3).toFixed(1)+'K';
+  return Math.round(n).toLocaleString();
+}
+
+function chOpenTrend(metricKey, label, color, targetKey){
+  if(!lastData||!lastData.monthly){
+    console.warn('chOpenTrend: no monthly data yet'); return;
+  }
+  const src = lastData.monthly[metricKey];
+  if(!src||!src.datasets||!src.datasets.length){
+    console.warn('chOpenTrend: no data for', metricKey); return;
+  }
+
+  // Show modal
+  const modal = document.getElementById('ch-trend-modal');
+  modal.style.display = 'flex';
+  document.getElementById('ch-trend-title').textContent = label;
+
+  // Trim to last index with data in latest year
+  const latestDs = src.datasets[src.datasets.length - 1];
+  let lastIdx = -1;
+  latestDs.data.forEach((v,i) => { if(v!=null && v>0) lastIdx = i; });
+  if(lastIdx < 0) latestDs.data.forEach((v,i) => { if(v!=null) lastIdx = i; });
+  if(lastIdx < 0) lastIdx = 11;
+
+  const MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const labels = src.labels.slice(0, lastIdx+1).map(m => MN[(m||1)-1]);
+
+  const ytd = latestDs.data.slice(0, lastIdx+1).reduce((a,v)=>a+(v||0),0);
+  document.getElementById('ch-trend-sub').textContent =
+    'YTD ' + (latestDs.label||'') + ': ' + _chFmt(ytd) + '  ·  click outside or press Esc to close';
+
+  // Destroy old
+  if(_chTrendChart){ _chTrendChart.destroy(); _chTrendChart = null; }
+
+  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  const textClr = isDark ? '#b8b0e8' : '#4a4570';
+  const gridClr = isDark ? 'rgba(171,29,254,0.08)' : 'rgba(0,0,0,0.05)';
+  const nYears  = src.datasets.length;
+
+  // Build bar datasets — one per year
+  const datasets = src.datasets.map((ds, i) => {
+    const isLatest = (i === nYears - 1);
+    return {
+      label: String(ds.label || ''),
+      data: ds.data.slice(0, lastIdx+1),
+      type: 'bar',
+      backgroundColor: color + (isLatest ? 'cc' : '33'),
+      borderColor:     color + (isLatest ? 'ff' : '88'),
+      borderWidth: isLatest ? 2 : 1,
+      borderRadius: 5,
+      borderSkipped: false,
+      order: 2,
+      skipGlobal: !isLatest,
+    };
+  });
+
+  // Target line (latest year only, red dashed)
+  if(targetKey && lastData.monthly[targetKey]){
+    const tSrc = lastData.monthly[targetKey];
+    if(tSrc && tSrc.datasets && tSrc.datasets.length){
+      const tDs = tSrc.datasets[tSrc.datasets.length - 1];
+      datasets.push({
+        label: 'Target',
+        data: tDs.data.slice(0, lastIdx+1),
+        type: 'line',
+        borderColor: '#FF3D00',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderDash: [5, 4],
+        pointRadius: 3,
+        pointBackgroundColor: '#FF3D00',
+        tension: 0,
+        order: 1,
+        skipGlobal: true,
+      });
+    }
+  }
+
+  const canvas = document.getElementById('ch-trend-canvas');
+  _chTrendChart = new Chart(canvas, {
+    type: 'bar',
+    plugins: [],
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400 },
+      plugins: {
+        legend: {
+          display: nYears > 1,
+          position: 'top',
+          labels: { color: textClr, font: { weight:'700', size:11, family:'Poppins' }, boxWidth:12, padding:10 }
+        },
+        tooltip: {
+          callbacks: { label: ctx => ' ' + ctx.dataset.label + ': ' + _chFmt(ctx.raw) }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: textClr, font:{ size:10, weight:'600' }, maxRotation:0 }
+        },
+        y: {
+          grid: { color: gridClr },
+          border: { display: false },
+          ticks: { color: textClr, font:{ size:10, weight:'600' },
+                   callback: v => _chFmt(v), maxTicksLimit: 5 }
+        }
+      }
+    }
+  });
+}
+
+function chCloseTrend(){
+  const modal = document.getElementById('ch-trend-modal');
+  if(modal) modal.style.display = 'none';
+  if(_chTrendChart){ _chTrendChart.destroy(); _chTrendChart = null; }
+}
+document.addEventListener('keydown', e => { if(e.key==='Escape') chCloseTrend(); });
 </script>
+
+
+<!-- Channel KPI Trend Modal -->
+<div id="ch-trend-modal" style="display:none;position:fixed;inset:0;z-index:9000;align-items:center;justify-content:center;padding:20px">
+  <div id="ch-trend-backdrop" onclick="chCloseTrend()" style="position:absolute;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px)"></div>
+  <div style="position:relative;background:var(--panel-bg);border:1.5px solid var(--border);border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,0.28);width:min(720px,94vw);max-height:86vh;overflow:hidden;display:flex;flex-direction:column;animation:chModalIn .22s ease">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px 14px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <div>
+        <div id="ch-trend-title" style="font-size:15px;font-weight:900;color:var(--text)">Trend</div>
+        <div id="ch-trend-sub" style="font-size:11px;color:var(--muted);margin-top:3px"></div>
+      </div>
+      <button onclick="chCloseTrend()" style="background:rgba(255,61,0,0.08);border:1.5px solid rgba(255,61,0,0.2);color:#FF3D00;border-radius:10px;padding:7px 16px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">✕ Close</button>
+    </div>
+    <div style="padding:20px 22px;flex:1;overflow:auto">
+      <div style="position:relative;height:280px"><canvas id="ch-trend-canvas"></canvas></div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

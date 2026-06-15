@@ -202,7 +202,7 @@ def channel_data(request):
     month_param   = request.GET.get('month')
     year_param    = request.GET.get('year')
 
-    ck = _cache_key('ch_data_v11_', {
+    ck = _cache_key('ch_data_v12_', {
         'r': region, 'f': franchise, 'bu': business_unit,
         'a': arm, 'm': month_param, 'y': year_param,
         'sec': request.GET.get('sections', ''),
@@ -274,13 +274,11 @@ def channel_data(request):
         'm0_rev_ga':                Sum('m0_rev_ga'),
         'm0_hvc_rev':               Sum('m0_hvc_rev'),
     }
+    agg_fields['_latest_date'] = Max('date')
     kpis_raw = qs.aggregate(**agg_fields)
-    kpis = {k: safe(v) for k, v in kpis_raw.items()}
+    kpis = {k: safe(v) for k, v in kpis_raw.items() if k != '_latest_date'}
 
     # ── Stock/closing fields: override with latest-month values ─────────────
-    # When no month is selected, qs covers the full year and Sum() inflates
-    # stock fields (EVC tiers, NPR, Active SO, retailer base).
-    # Fix: always use the latest available month for these fields.
     _stock_fields = [
         'cm_evc_active', 'cm_evc_active_platinum', 'cm_evc_active_gold', 'cm_evc_active_silver',
         'cm_964_active', 'cm_964_active_platinum', 'cm_964_active_gold', 'cm_964_active_silver',
@@ -288,13 +286,12 @@ def channel_data(request):
         'daily_active_served', 'daily_active_evc',
     ]
     if not month_param:
-        # Find latest month within the filtered scope (respects year + dimension filters)
-        _latest = qs.aggregate(d=Max('date'))['d']
+        _latest = kpis_raw.get('_latest_date')  # free — came from main aggregate
         _stock_qs = qs_base.filter(
             date__year=_latest.year, date__month=_latest.month
         ) if _latest else qs
     else:
-        _stock_qs = qs  # month already selected — qs is already the right month
+        _stock_qs = qs
     _stock_agg = _stock_qs.aggregate(**{f: Sum(f) for f in _stock_fields})
     for _f in _stock_fields:
         kpis[_f] = safe(_stock_agg.get(_f, 0))
@@ -314,7 +311,7 @@ def channel_data(request):
     fca_ach = kpis.get('fca_ach', 0) or 0
     g4_ach  = kpis.get('g4_ach',  0) or 0
     kpis['g4_penetration_pct'] = round((g4_ach / fca_ach) * 100, 1) if fca_ach else 0
-    kpis['total_franchises']   = qs.exclude(franchise_id='').values('franchise_id').distinct().count()
+    # total_franchises removed — expensive distinct count not used on channel brief
 
     # ── Sections: only compute what the requesting page needs ──────────────
     # ?sections=kpis,growth,monthly  (defaults to all for backward-compat)
@@ -325,13 +322,28 @@ def channel_data(request):
 
     response = {'kpis': kpis}
 
+    # Metric subsetting: channel brief only needs 8 KPI metrics for growth+monthly.
+    # Other pages need the full set. Detect via sections param.
+    _brief_metrics = [
+        'fca_ach', 'fca_target', 'g4_ach', 'g4_target',
+        'mnp_ach', 'mnp_target', 'loading_ach', 'loading_target',
+        'm0_revenue_ach', 'm0_revenue_target',
+        'hvc_ach', 'hvc_target', 'bundle_ach', 'bundle_target',
+        'cm_evc_active',
+    ]
+    _sections_set = set(s.strip() for s in sections_param.split(',') if s.strip())
+    # Brief-only: has kpis+growth+monthly but NOT quality/enablers-only fields
+    _is_brief = _sections_set == {'kpis', 'growth', 'monthly'} and not need('breakdowns')
+
     if need('growth'):
-        response['growth'] = build_growth_dict(qs_base)
+        _gmets = _brief_metrics if _is_brief else None
+        response['growth'] = build_growth_dict(qs_base, metrics=_gmets)
 
     if need('monthly'):
         trend_qs = qs_base
         if year_param: trend_qs = trend_qs.filter(date__year=int(year_param))
-        response['monthly'] = build_monthly_trend(trend_qs)
+        _mmets = _brief_metrics if _is_brief else None
+        response['monthly'] = build_monthly_trend(trend_qs, metrics=_mmets)
 
     if need('breakdowns'):
         response['top_franchises']   = build_top_franchises(qs)
@@ -341,9 +353,9 @@ def channel_data(request):
     return JsonResponse(response)
 
 
-def build_growth_dict(qs_base):
+def build_growth_dict(qs_base, metrics=None):
     """Single conditional aggregation query for all growth periods."""
-    metrics = list(dict.fromkeys([
+    _all_metrics = [
         'fca_ach', 'fca_target', 'g4_ach', 'g4_target',
         'mnp_ach', 'mnp_target', 'loading_ach', 'loading_target',
         'm0_revenue_ach', 'm0_revenue_target', 'bundle_ach', 'bundle_target',
@@ -355,7 +367,8 @@ def build_growth_dict(qs_base):
         'qos_ach', 'sd_bundle', 'dormancy_count', 'cm_disown',
         'new_sim_sale_disowned_cnics', 'fca_within_90d_disowned',
         'active_90d_base_disown', 'fca_m0',
-    ]))
+    ]
+    metrics = list(dict.fromkeys(metrics if metrics else _all_metrics))
 
     latest = qs_base.order_by('-date').values('date').first()
     if not latest:
@@ -431,8 +444,8 @@ def build_growth_dict(qs_base):
     return out
 
 
-def build_monthly_trend(qs):
-    metric_list = [
+def build_monthly_trend(qs, metrics=None):
+    _all_metrics = [
         'fca_ach', 'fca_target', 'g4_ach', 'g4_target',
         'mnp_ach', 'mnp_target', 'mbb_ach', 'mbb_target',
         'loading_ach', 'loading_target',
@@ -448,6 +461,7 @@ def build_monthly_trend(qs):
         'daily_active_evc', 'daily_active_served',
         'npr', 'active_so_daily_avg', 'cm_964_active',
     ]
+    metric_list = metrics if metrics else _all_metrics
     # Stock fields: use Sum() per month — each month's value is already the
     # closing snapshot for that month, so summing daily rows within a month is correct.
     _trend_annot = {f: Sum(f) for f in metric_list}
