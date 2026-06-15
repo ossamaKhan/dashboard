@@ -4,10 +4,15 @@ URL: /api/export/<excel|pdf>/?source=<marketing|channel>&<filters>
 """
 
 import io, datetime, re
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mticker
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as mticker
+    HAS_MATPLOTLIB = True
+except ImportError:
+    HAS_MATPLOTLIB = False
+    plt = None
 from collections import defaultdict
 
 from django.http import HttpResponse
@@ -70,6 +75,7 @@ def _build_filename(source, filters, ext):
 def _make_bar_chart(title, labels, datasets, color=ORANGE, width=9, height=3.2,
                     target_data=None, target_label='Target', y_label=''):
     """Return PNG bytes of a bar+line chart."""
+    if not HAS_MATPLOTLIB: return None
     fig, ax = plt.subplots(figsize=(width, height))
     fig.patch.set_facecolor('white')
     ax.set_facecolor('#FAFAFA')
@@ -128,6 +134,7 @@ def _make_bar_chart(title, labels, datasets, color=ORANGE, width=9, height=3.2,
 
 def _make_donut_chart(title, labels, values, colors=None, width=4.5, height=3.5):
     """Return PNG bytes of a donut chart."""
+    if not HAS_MATPLOTLIB: return None
     if not any(_safe(v) > 0 for v in values):
         return None
     fig, ax = plt.subplots(figsize=(width, height))
@@ -155,6 +162,7 @@ def _make_donut_chart(title, labels, values, colors=None, width=4.5, height=3.5)
 def _make_gauge_chart(title, value, max_val=100, color=GREEN,
                       width=3.2, height=2.8):
     """Return PNG bytes of a simple gauge/progress arc."""
+    if not HAS_MATPLOTLIB: return None
     fig, ax = plt.subplots(figsize=(width, height),
                            subplot_kw=dict(projection='polar'))
     fig.patch.set_facecolor('white')
