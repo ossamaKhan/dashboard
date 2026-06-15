@@ -684,7 +684,7 @@ function updateKPIs(data){
 }
 
 
-function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/channel/api/data/?'+p).then(r=>r.json()).then(data=>{lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});}
+function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/channel/api/data/?'+p+'&sections=kpis,monthly').then(r=>r.json()).then(data=>{lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});}
 
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 

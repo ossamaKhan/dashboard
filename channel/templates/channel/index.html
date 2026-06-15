@@ -287,6 +287,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <div class="sb-sec">Channel</div>
     <a href="/channel/" class="nv active" onclick="closeSidebar()">Channel Brief</a>
     <a href="/channel/performance/" class="nv" onclick="closeSidebar()">Target Performance</a>
+    <a href="/channel/retailers/" class="nv" onclick="closeSidebar()">Retailer Health</a>
     <a href="/channel/enablers/" class="nv" onclick="closeSidebar()">Enablers</a>
     <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
     <a href="/channel/kpi-summary/" class="nv" onclick="closeSidebar()">KPI Summary</a>
@@ -1045,7 +1046,7 @@ function hBarRanked(canvasId, labels, values){
 function fetchMapData(){}
 function initMap(){}
 
-function exportFile(type){const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});window.location.href=`/api/export/${type}/?${p}`;}
+function exportFile(type){const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});window.location.href=`/api/export/channel/${type}/?${p}`;}
 document.addEventListener('DOMContentLoaded',()=>{['coord-lat','coord-lng','coord-radius'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchByCoordinates();}});});});
 function toggleActMenu(){const d=document.getElementById('act-menu-drop');d.classList.toggle('open');}
 function closeActMenu(){const d=document.getElementById('act-menu-drop');if(d)d.classList.remove('open');}

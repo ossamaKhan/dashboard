@@ -1,881 +1,1114 @@
-import io
-from datetime import datetime
+"""
+exports/views.py  —  Rich Excel + PDF export with charts and styled KPI tables.
+URL: /api/export/<excel|pdf>/?source=<marketing|channel>&<filters>
+"""
+
+import io, datetime, re
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 from collections import defaultdict
 
-from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
-from django.db.models import Sum, Avg, Count
+from django.contrib.auth.decorators import login_required
+from django.db.models import Sum, Max
 
-from openpyxl import Workbook
-from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
+# ── Colour palette matching dashboard theme ──────────────────────────────────
+ORANGE  = '#f58220'
+PURPLE  = '#AB1DFE'
+TEAL    = '#00BCD4'
+GREEN   = '#00C853'
+RED     = '#FF3D00'
+DARK    = '#1A1235'
+MUTED   = '#8a85a5'
+YELLOW  = '#FFD600'
+COLORS  = [ORANGE, PURPLE, TEAL, GREEN, '#5E35B1', RED, YELLOW, '#E91E8C']
 
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, landscape
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import cm
-from reportlab.platypus import (
-    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
-)
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+MONTHS = ['Jan','Feb','Mar','Apr','May','Jun',
+          'Jul','Aug','Sep','Oct','Nov','Dec']
 
-from marketing.models import SiteData
+def _safe(v):
+    try:
+        f = float(v)
+        return 0.0 if f != f else f   # handle NaN
+    except (TypeError, ValueError):
+        return 0.0
 
+def _fmt(v):
+    v = _safe(v)
+    if abs(v) >= 1e9: return f"{v/1e9:.2f}B"
+    if abs(v) >= 1e6: return f"{v/1e6:.2f}M"
+    if abs(v) >= 1e3: return f"{v/1e3:.1f}K"
+    return f"{round(v):,}"
 
-# ── Constants ─────────────────────────────────────────────────
-ORANGE = 'F58220'
-PURPLE = 'AB1DFE'
-DARK   = '1A1235'
-WHITE  = 'FFFFFF'
-LIGHT  = 'FFF5EE'
-GREY   = 'F0F1F5'
-GREEN  = '00C853'
-RED    = 'FF3D00'
-TEAL   = '00897B'
-YELLOW = 'F9A825'
+def _pct(a, b):
+    a, b = _safe(a), _safe(b)
+    return round((a/b)*100, 1) if b else 0.0
 
+def _att(a, t):
+    return _pct(a, t)
 
-# ── Helpers ───────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+#  FILENAME BUILDER
+# ─────────────────────────────────────────────────────────────────────────────
 
-def _fill(color): return PatternFill('solid', fgColor=color)
-def _font(bold=False, color=DARK, size=10, italic=False):
-    return Font(bold=bold, color=color, size=size, italic=italic, name='Arial')
-def _border():
-    t = Side(style='thin', color='DDDDDD')
-    return Border(left=t, right=t, top=t, bottom=t)
-def _align(h='left', v='center', wrap=False):
-    return Alignment(horizontal=h, vertical=v, wrap_text=wrap)
-def _set_col(ws, col, width):
-    ws.column_dimensions[get_column_letter(col)].width = width
-
-def fmt_num(v):
-    if v is None: return '—'
-    if v >= 1e9: return f'{v/1e9:.2f}B'
-    if v >= 1e6: return f'{v/1e6:.2f}M'
-    if v >= 1e3: return f'{v/1e3:.1f}K'
-    return f'{v:,.0f}'
-
-def safe(v): return float(v) if v is not None else 0.0
-
-
-def apply_filters(request, qs=None):
-    """Apply ALL filters including month/year — use for KPI display."""
-    if qs is None:
-        qs = SiteData.objects.all()
-    region        = request.GET.get('region')
-    pta           = request.GET.get('pta_district')
-    franchise     = request.GET.get('franchise')
-    technology    = request.GET.get('technology')
-    business_unit = request.GET.get('business_unit')
-    site_status   = request.GET.get('site_status')
-    month         = request.GET.get('month')
-    year          = request.GET.get('year')
-    if region:        qs = qs.filter(region=region)
-    if pta:           qs = qs.filter(commercial_district=pta)
-    if franchise:     qs = qs.filter(franchise=franchise)
-    if technology:    qs = qs.filter(technology=technology)
-    if business_unit: qs = qs.filter(business_unit=business_unit)
-    if site_status:   qs = qs.filter(site_status=site_status)
-    if month:         qs = qs.filter(month=month)
-    if year:          qs = qs.filter(year=year)
-    return qs
-
-
-def apply_dimension_filters(request, qs=None):
-    """Apply ONLY non-time filters (region/BU/tech etc) — use as growth base."""
-    if qs is None:
-        qs = SiteData.objects.all()
-    region        = request.GET.get('region')
-    pta           = request.GET.get('pta_district')
-    franchise     = request.GET.get('franchise')
-    technology    = request.GET.get('technology')
-    business_unit = request.GET.get('business_unit')
-    site_status   = request.GET.get('site_status')
-    if region:        qs = qs.filter(region=region)
-    if pta:           qs = qs.filter(commercial_district=pta)
-    if franchise:     qs = qs.filter(franchise=franchise)
-    if technology:    qs = qs.filter(technology=technology)
-    if business_unit: qs = qs.filter(business_unit=business_unit)
-    if site_status:   qs = qs.filter(site_status=site_status)
-    return qs
-
-
-def get_filter_label(request):
-    parts = []
-    for key, label in {
-        'region': 'Region', 'pta_district': 'District',
-        'franchise': 'Franchise', 'technology': 'Technology',
-        'business_unit': 'BU', 'site_status': 'Status',
-        'month': 'Month', 'year': 'Year',
-    }.items():
-        val = request.GET.get(key)
+def _build_filename(source, filters, ext):
+    parts = [source.capitalize(), 'KPI_Report']
+    for key in ('region','business_unit','arm','franchise','year','month'):
+        val = filters.get(key)
         if val:
-            parts.append(f'{label}: {val}')
-    return ' | '.join(parts) if parts else 'All Data'
+            clean = re.sub(r'[^\w]', '_', str(val))
+            parts.append(clean)
+    parts.append(datetime.date.today().strftime('%Y%m%d'))
+    return '_'.join(parts) + '.' + ext
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  CHART HELPERS  (matplotlib → PNG bytes)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _make_bar_chart(title, labels, datasets, color=ORANGE, width=9, height=3.2,
+                    target_data=None, target_label='Target', y_label=''):
+    """Return PNG bytes of a bar+line chart."""
+    fig, ax = plt.subplots(figsize=(width, height))
+    fig.patch.set_facecolor('white')
+    ax.set_facecolor('#FAFAFA')
+
+    n_sets  = len(datasets)
+    n_bars  = len(labels)
+    x       = range(n_bars)
+    bar_w   = 0.7 / max(n_sets, 1)
+
+    for i, (ds_label, data) in enumerate(datasets):
+        offset = (i - (n_sets-1)/2) * bar_w
+        xs = [xi + offset for xi in x]
+        clr = COLORS[i % len(COLORS)]
+        alpha = 1.0 if i == n_sets-1 else 0.45
+        bars = ax.bar(xs, data, width=bar_w*0.92, color=clr, alpha=alpha,
+                      label=ds_label, zorder=3)
+        # Callout labels on latest year only
+        if i == n_sets - 1:
+            for bar, val in zip(bars, data):
+                if val and val > 0:
+                    ax.text(bar.get_x() + bar.get_width()/2,
+                            bar.get_height() + ax.get_ylim()[1]*0.01,
+                            _fmt(val), ha='center', va='bottom',
+                            fontsize=7, fontweight='bold', color=DARK)
+
+    # Target line
+    if target_data:
+        ax.plot(list(x), target_data, color=RED, linewidth=1.8,
+                linestyle='--', marker='o', markersize=4,
+                label=target_label, zorder=4)
+
+    ax.set_xticks(list(x))
+    ax.set_xticklabels(labels, fontsize=8)
+    ax.yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: _fmt(v)))
+    ax.tick_params(axis='y', labelsize=8)
+    ax.set_title(title, fontsize=10, fontweight='bold', color=DARK, pad=8)
+    if y_label:
+        ax.set_ylabel(y_label, fontsize=8, color=MUTED)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_color('#DDDDDD')
+    ax.spines['bottom'].set_color('#DDDDDD')
+    ax.yaxis.grid(True, color='#EEEEEE', linewidth=0.7, zorder=0)
+    ax.set_axisbelow(True)
+    if n_sets > 1 or target_data:
+        ax.legend(fontsize=7, loc='upper left', framealpha=0.7)
+
+    plt.tight_layout()
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=130, bbox_inches='tight',
+                facecolor='white')
+    plt.close(fig)
+    buf.seek(0)
+    return buf
 
 
-def get_kpis_and_growth(qs, year_param, growth_base=None):
-    """Compute KPIs from qs (with time filters), growth from growth_base (no time filters)."""
-    if growth_base is None:
-        growth_base = qs
+def _make_donut_chart(title, labels, values, colors=None, width=4.5, height=3.5):
+    """Return PNG bytes of a donut chart."""
+    if not any(_safe(v) > 0 for v in values):
+        return None
+    fig, ax = plt.subplots(figsize=(width, height))
+    fig.patch.set_facecolor('white')
+    clrs = colors or COLORS[:len(labels)]
+    vals = [max(_safe(v), 0) for v in values]
+    wedges, _ = ax.pie(vals, colors=clrs, startangle=90,
+                       wedgeprops=dict(width=0.55))
+    ax.set_title(title, fontsize=9, fontweight='bold', color=DARK, pad=6)
+    total = sum(vals)
+    legend_labels = [f"{l}: {_fmt(v)} ({_pct(v,total):.1f}%)"
+                     for l, v in zip(labels, vals)]
+    ax.legend(wedges, legend_labels, loc='lower center',
+              bbox_to_anchor=(0.5, -0.22), fontsize=7,
+              ncol=1, framealpha=0.7)
+    plt.tight_layout()
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=120, bbox_inches='tight',
+                facecolor='white')
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+
+def _make_gauge_chart(title, value, max_val=100, color=GREEN,
+                      width=3.2, height=2.8):
+    """Return PNG bytes of a simple gauge/progress arc."""
+    fig, ax = plt.subplots(figsize=(width, height),
+                           subplot_kw=dict(projection='polar'))
+    fig.patch.set_facecolor('white')
+    pct = min(_safe(value) / max(_safe(max_val), 1), 1.0)
+    # Background arc
+    theta = [i * 3.14159 / 100 for i in range(101)]
+    ax.plot(theta, [1]*101, color='#EEEEEE', linewidth=14, solid_capstyle='round')
+    # Value arc
+    n = max(int(pct * 100), 1)
+    ax.plot(theta[:n], [1]*n, color=color, linewidth=14, solid_capstyle='round')
+    ax.set_ylim(0, 1.5)
+    ax.set_theta_offset(3.14159)
+    ax.set_theta_direction(-1)
+    ax.set_thetamin(0); ax.set_thetamax(180)
+    ax.axis('off')
+    ax.text(0, 0.1, f"{_safe(value):.1f}%", ha='center', va='center',
+            fontsize=14, fontweight='bold', color=color,
+            transform=ax.transData)
+    ax.set_title(title, fontsize=8, fontweight='bold', color=DARK,
+                 pad=2, y=1.05)
+    plt.tight_layout()
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', dpi=110, bbox_inches='tight',
+                facecolor='white')
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  DATA COLLECTORS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _get_channel_kpis_and_charts(filters, request=None):
+    from channel.models import ChannelDaily
+    from channel.views import get_scoped_qs
+    # Use RBAC scoping if request available, else full queryset
+    if request is not None:
+        qs = get_scoped_qs(request.user)
+    else:
+        qs = ChannelDaily.objects.all()
+
+    r  = filters.get('region')
+    bu = filters.get('business_unit')
+    ar = filters.get('arm')
+    fr = filters.get('franchise')
+    yr = filters.get('year')
+    mo = filters.get('month')
+
+    if r:  qs = qs.filter(region=r)
+    if bu: qs = qs.filter(business_unit=bu)
+    if ar: qs = qs.filter(arm=ar)
+    if fr: qs = qs.filter(franchise_id=fr)
+    if yr: qs = qs.filter(date__year=int(yr))
+    if mo: qs = qs.filter(date__month=int(mo))
+
+    # Flow aggregate
     agg = qs.aggregate(
-        total_revenue=Sum('tot_revn_amt'),
-        total_activations=Sum('act_90d'),
-        total_net_add=Sum('net_add'),
-        avg_revenue=Avg('tot_revn_amt'),
-        total_churn=Sum('gross_churn'),
-        total_hvc=Sum('hvc_base'),
-        total_base_90d=Sum('act_90d'),
-        total_base_4g=Sum('act_90d_4g'),
-        total_base_30d=Sum('act_30d'),
-        total_prepaid_digi=Sum('prepaid_dgtl_amount'),
-        total_postpaid_digi=Sum('postpaid_dgtl_amount'),
-        total_conv_recharge=Sum('conventional_recharge'),
-        total_evc=Sum('evc_retailer'),
-        total_bvs=Sum('bvs_retailer'),
-        total_fca=Sum('fca'),
-        total_net_add_sum=Sum('net_add'),
+        fca_ach=Sum('fca_ach'), fca_target=Sum('fca_target'),
+        g4_ach=Sum('g4_ach'),   g4_target=Sum('g4_target'),
+        mnp_ach=Sum('mnp_ach'), mnp_target=Sum('mnp_target'),
+        loading_ach=Sum('loading_ach'), loading_target=Sum('loading_target'),
+        m0_revenue_ach=Sum('m0_revenue_ach'), m0_revenue_target=Sum('m0_revenue_target'),
+        hvc_ach=Sum('hvc_ach'), hvc_target=Sum('hvc_target'),
+        bundle_ach=Sum('bundle_ach'), bundle_target=Sum('bundle_target'),
+        qos_ach=Sum('qos_ach'), qos_target=Sum('qos_target'),
+        sd_bundle=Sum('sd_bundle'), zr=Sum('zr'), zr_fca=Sum('zr_fca'),
+        dormancy_count=Sum('dormancy_count'),
+        female_fca_count=Sum('female_fca_count'),
+        cm_ga=Sum('cm_ga'), uload_recharge_ach=Sum('uload_recharge_ach'),
+        cm_disown=Sum('cm_disown'),
+        new_sim_sale_disowned_cnics=Sum('new_sim_sale_disowned_cnics'),
+        fca_within_90d_disowned=Sum('fca_within_90d_disowned'),
+        active_90d_base_disown=Sum('active_90d_base_disown'),
+        m0_rev_ga=Sum('m0_rev_ga'), m0_rev_fca=Sum('m0_rev_fca'),
+        m0_rev_mnp=Sum('m0_rev_mnp'), m0_rev_mbb=Sum('m0_rev_mbb'),
+        m0_rev_data_sim=Sum('m0_rev_data_sim'), m0_hvc_rev=Sum('m0_hvc_rev'),
+        fca_m0=Sum('fca_m0'), mbb_ach=Sum('mbb_ach'),
+        data_sim_fca=Sum('data_sim_fca'),
+        latest_date=Max('date'),
     )
 
-    digi = safe(agg['total_prepaid_digi']) + safe(agg['total_postpaid_digi'])
-    conv = safe(agg['total_conv_recharge'])
-    act  = safe(agg['total_activations'])
-    b90  = safe(agg['total_base_90d'])
-    b4g  = safe(agg['total_base_4g'])
-    rev  = safe(agg['total_revenue'])
+    ld = agg.get('latest_date')
+    sq = (qs.filter(date__year=ld.year, date__month=ld.month)
+          if ld and not mo else qs)
+    stock = sq.aggregate(
+        cm_evc_active=Sum('cm_evc_active'),
+        cm_evc_active_platinum=Sum('cm_evc_active_platinum'),
+        cm_evc_active_gold=Sum('cm_evc_active_gold'),
+        cm_evc_active_silver=Sum('cm_evc_active_silver'),
+        cm_964_active=Sum('cm_964_active'),
+        cm_964_active_platinum=Sum('cm_964_active_platinum'),
+        cm_964_active_gold=Sum('cm_964_active_gold'),
+        cm_964_active_silver=Sum('cm_964_active_silver'),
+        evc_active_base=Sum('evc_active_base'),
+        evc_retailer=Sum('evc_retailer'),
+        npr=Sum('npr'),
+        active_so_daily_avg=Sum('active_so_daily_avg'),
+        daily_active_served=Sum('daily_active_served'),
+        daily_active_evc=Sum('daily_active_evc'),
+    )
 
-    total_sites = qs.exclude(key__isnull=True).exclude(key='').values('key').distinct().count()
+    k = {**agg, **stock}
+    s = _safe
 
-    kpis = {
-        'Total Revenue (PKR)':         rev,
-        'Total Recharge (PKR)':        digi + conv,
-        'Digital Recharge (PKR)':      digi,
-        'Conventional Recharge (PKR)': conv,
-        'ARPU (PKR)':                  (rev / act) if act else 0,
-        '90D Activations':             safe(agg['total_activations']),
-        '90D Base':                    b90,
-        '4G Base':                     b4g,
-        '4G Penetration (%)':          round((b4g / b90 * 100), 2) if b90 else 0,
-        '30D Base':                    safe(agg['total_base_30d']),
-        'HVC Base':                    safe(agg['total_hvc']),
-        'Net Additions':               safe(agg['total_net_add']),
-        'Gross Churn':                 safe(agg['total_churn']),
-        'FCA (Revival)':               safe(agg['total_fca']),
-        'EVC Retailers':               safe(agg['total_evc']),
-        'BVS Retailers':               safe(agg['total_bvs']),
-        'Avg Revenue / Site (PKR)':    safe(agg['avg_revenue']),
-        'Total Sites':                 total_sites,
-    }
+    def arpu(rev, vol):
+        r, v = s(rev), s(vol)
+        return round(r/v, 2) if v else 0.0
 
-    # Growth calculation
-    growth = {}
-    if year_param:
-        latest_period = growth_base.filter(year=year_param).order_by('-month').values('year', 'month').first()
+    fca = s(k.get('fca_ach'))
+
+    # ── KPI sections ─────────────────────────────────────────────────────────
+    sections = [
+        {
+            'title': 'Target Performance',
+            'color': ORANGE,
+            'rows': [
+                ('FCA Achievement',        s(k.get('fca_ach')),        'fca_ach'),
+                ('FCA Target',             s(k.get('fca_target')),     None),
+                ('FCA Attainment %',       _att(k.get('fca_ach'), k.get('fca_target')), None),
+                ('4G Achievement',         s(k.get('g4_ach')),         'g4_ach'),
+                ('4G Target',              s(k.get('g4_target')),      None),
+                ('4G Attainment %',        _att(k.get('g4_ach'), k.get('g4_target')), None),
+                ('4G Penetration % of FCA',_pct(s(k.get('g4_ach')), fca), None),
+                ('MNP Achievement',        s(k.get('mnp_ach')),        'mnp_ach'),
+                ('MNP Target',             s(k.get('mnp_target')),     None),
+                ('MNP Attainment %',       _att(k.get('mnp_ach'), k.get('mnp_target')), None),
+                ('Recharge Achievement',   s(k.get('loading_ach')),    'loading_ach'),
+                ('Recharge Target',        s(k.get('loading_target')), None),
+                ('Recharge Attainment %',  _att(k.get('loading_ach'), k.get('loading_target')), None),
+                ('M0 Revenue Achievement', s(k.get('m0_revenue_ach')), 'm0_revenue_ach'),
+                ('M0 Revenue Target',      s(k.get('m0_revenue_target')), None),
+                ('M0 Revenue Attainment %',_att(k.get('m0_revenue_ach'), k.get('m0_revenue_target')), None),
+                ('HVC Achievement',        s(k.get('hvc_ach')),        'hvc_ach'),
+                ('HVC Target',             s(k.get('hvc_target')),     None),
+                ('HVC Attainment %',       _att(k.get('hvc_ach'), k.get('hvc_target')), None),
+                ('Bundle Achievement',     s(k.get('bundle_ach')),     'bundle_ach'),
+                ('Bundle Target',          s(k.get('bundle_target')),  None),
+                ('Bundle Attainment %',    _att(k.get('bundle_ach'), k.get('bundle_target')), None),
+                ('QOS Achievement',        s(k.get('qos_ach')),        None),
+                ('QOS Target',             s(k.get('qos_target')),     None),
+                ('QOS Attainment %',       _att(k.get('qos_ach'), k.get('qos_target')), None),
+            ],
+        },
+        {
+            'title': 'Quality Metrics',
+            'color': PURPLE,
+            'rows': [
+                ('SD Bundle',                   s(k.get('sd_bundle')),          'sd_bundle'),
+                ('ZR Count',                    s(k.get('zr')),                 'zr'),
+                ('ZR of FCA %',                 _pct(s(k.get('zr_fca')), fca), None),
+                ('Dormancy Count',              s(k.get('dormancy_count')),     'dormancy_count'),
+                ('Female FCA Count',            s(k.get('female_fca_count')),   'female_fca_count'),
+                ('Female FCA % of FCA',         _pct(s(k.get('female_fca_count')), fca), None),
+                ('CM Disown',                   s(k.get('cm_disown')),          None),
+                ('New SIM Sale Disowned CNICs', s(k.get('new_sim_sale_disowned_cnics')), None),
+                ('FCA Within 90D Disowned',     s(k.get('fca_within_90d_disowned')), None),
+                ('Active 90D Base Disown',      s(k.get('active_90d_base_disown')), None),
+                ('U-Load Recharge Ach',         s(k.get('uload_recharge_ach')), None),
+                ('CM GA',                       s(k.get('cm_ga')),              None),
+            ],
+        },
+        {
+            'title': 'Enablers (Closing Month)',
+            'color': TEAL,
+            'rows': [
+                ('CM EVC Active',           s(k.get('cm_evc_active')),          'cm_evc_active'),
+                ('CM EVC Platinum',         s(k.get('cm_evc_active_platinum')), None),
+                ('CM EVC Gold',             s(k.get('cm_evc_active_gold')),     None),
+                ('CM EVC Silver',           s(k.get('cm_evc_active_silver')),   None),
+                ('CM 964 Active',           s(k.get('cm_964_active')),          'cm_964_active'),
+                ('CM 964 Platinum',         s(k.get('cm_964_active_platinum')), None),
+                ('CM 964 Gold',             s(k.get('cm_964_active_gold')),     None),
+                ('CM 964 Silver',           s(k.get('cm_964_active_silver')),   None),
+                ('EVC Active Base',         s(k.get('evc_active_base')),        None),
+                ('EVC Retailer',            s(k.get('evc_retailer')),           None),
+                ('NPR',                     s(k.get('npr')),                    None),
+                ('Active SO Daily Avg',     s(k.get('active_so_daily_avg')),    None),
+                ('Daily Active Served',     s(k.get('daily_active_served')),    None),
+                ('Daily Active EVC',        s(k.get('daily_active_evc')),       None),
+            ],
+        },
+        {
+            'title': 'ARPU & M0 Revenue',
+            'color': GREEN,
+            'rows': [
+                ('ARPU GA',          arpu(k.get('m0_rev_ga'),       k.get('fca_ach')),  None),
+                ('ARPU FCA',         arpu(k.get('m0_rev_fca'),      k.get('fca_m0')),   None),
+                ('ARPU MNP',         arpu(k.get('m0_rev_mnp'),      k.get('mnp_ach')),  None),
+                ('ARPU MBB',         arpu(k.get('m0_rev_mbb'),      k.get('mbb_ach')),  None),
+                ('ARPU Data SIM',    arpu(k.get('m0_rev_data_sim'), k.get('data_sim_fca')), None),
+                ('ARPU HVC',         arpu(k.get('m0_hvc_rev'),      k.get('hvc_ach')),  None),
+                ('M0 Rev GA',        s(k.get('m0_rev_ga')),          None),
+                ('M0 Rev FCA',       s(k.get('m0_rev_fca')),         None),
+                ('M0 Rev MNP',       s(k.get('m0_rev_mnp')),         None),
+                ('M0 Rev MBB',       s(k.get('m0_rev_mbb')),         None),
+                ('M0 Rev Data SIM',  s(k.get('m0_rev_data_sim')),    None),
+                ('M0 HVC Rev',       s(k.get('m0_hvc_rev')),         None),
+                ('FCA M0 Volume',    s(k.get('fca_m0')),             None),
+                ('MBB Ach',          s(k.get('mbb_ach')),            None),
+                ('Data SIM FCA',     s(k.get('data_sim_fca')),       None),
+            ],
+        },
+    ]
+
+    # ── Monthly trend data for charts ─────────────────────────────────────────
+    # Re-use same base queryset (already scoped + filtered), just drop month filter
+    if request is not None:
+        trend_qs = get_scoped_qs(request.user)
     else:
-        latest_period = growth_base.order_by('-year', '-month').values('year', 'month').first()
+        trend_qs = ChannelDaily.objects.all()
+    if r:  trend_qs = trend_qs.filter(region=r)
+    if bu: trend_qs = trend_qs.filter(business_unit=bu)
+    if ar: trend_qs = trend_qs.filter(arm=ar)
+    if fr: trend_qs = trend_qs.filter(franchise_id=fr)
+    if yr: trend_qs = trend_qs.filter(date__year=int(yr))
 
-    if latest_period:
-        ly = latest_period['year']
-        lm = latest_period['month']
-        py = ly - 1
-        mom_m = lm - 1 if lm > 1 else 12
-        mom_y = ly if lm > 1 else py
+    chart_metrics = ['fca_ach','fca_target','g4_ach','g4_target',
+                     'mnp_ach','mnp_target','loading_ach','loading_target',
+                     'm0_revenue_ach','m0_revenue_target',
+                     'hvc_ach','hvc_target','bundle_ach','bundle_target',
+                     'cm_evc_active','cm_964_active','sd_bundle','zr',
+                     'dormancy_count','female_fca_count']
 
-        agg_kw = dict(
-            total_revenue=Sum('tot_revn_amt'),
-            total_activations=Sum('act_90d'),
-            total_net_add=Sum('net_add'),
-            total_churn=Sum('gross_churn'),
-            total_hvc=Sum('hvc_base'),
-            total_base_90d=Sum('act_90d'),
-            total_base_4g=Sum('act_90d_4g'),
-            total_base_30d=Sum('act_30d'),
-            total_prepaid_digi=Sum('prepaid_dgtl_amount'),
-            total_postpaid_digi=Sum('postpaid_dgtl_amount'),
-            total_conv_recharge=Sum('conventional_recharge'),
-        )
+    monthly_rows = (trend_qs.exclude(date__isnull=True)
+                    .values('date__year','date__month')
+                    .annotate(**{f: Sum(f) for f in chart_metrics}))
 
-        def _agg(q): return q.aggregate(**agg_kw)
-        def gb_filter(**kwargs): return growth_base.filter(**kwargs)
-        def _derived(a):
-            d = safe(a.get('total_prepaid_digi')) + safe(a.get('total_postpaid_digi'))
-            a['total_digi'] = d
-            a['total_recharge'] = d + safe(a.get('total_conv_recharge'))
-            act_ = safe(a.get('total_activations'))
-            b90_ = safe(a.get('total_base_90d'))
-            b4g_ = safe(a.get('total_base_4g'))
-            a['arpu'] = safe(a.get('total_revenue')) / act_ if act_ else 0
-            a['pen4g'] = (b4g_ / b90_ * 100) if b90_ else 0
-            return a
+    by_year = defaultdict(lambda: {m: [0]*12 for m in chart_metrics})
+    for row in monthly_rows:
+        yy, mm = row['date__year'], row['date__month']
+        for f in chart_metrics:
+            by_year[yy][f][mm-1] = _safe(row.get(f))
 
-        ytd_c = _derived(_agg(gb_filter(year=ly, month__lte=lm)))
-        ytd_p = _derived(_agg(gb_filter(year=py, month__lte=lm)))
-        yoy_c = _derived(_agg(gb_filter(year=ly, month=lm)))
-        yoy_p = _derived(_agg(gb_filter(year=py, month=lm)))
-        mom_p = _derived(_agg(gb_filter(year=mom_y, month=mom_m)))
+    years = sorted(by_year.keys())
+    # Last valid month index
+    def last_idx(metric):
+        li = -1
+        for yy in years:
+            for i, v in enumerate(by_year[yy][metric]):
+                if v and v > 0: li = i
+        return li if li >= 0 else 11
 
-        def pct(c, p): return round(((c - p) / p * 100), 1) if p else (100.0 if c else 0.0)
+    def month_labels(li):
+        return MONTHS[:li+1]
 
-        metric_map = {
-            'Total Revenue (PKR)': 'total_revenue',
-            'Total Recharge (PKR)': 'total_recharge',
-            'Digital Recharge (PKR)': 'total_digi',
-            'Conventional Recharge (PKR)': 'total_conv_recharge',
-            'ARPU (PKR)': 'arpu',
-            '90D Activations': 'total_activations',
-            '90D Base': 'total_base_90d',
-            '4G Base': 'total_base_4g',
-            '4G Penetration (%)': 'pen4g',
-            '30D Base': 'total_base_30d',
-            'HVC Base': 'total_hvc',
-            'Net Additions': 'total_net_add',
-            'Gross Churn': 'total_churn',
-        }
+    def datasets_for(metric, years_list):
+        li = last_idx(metric)
+        lbs = month_labels(li)
+        dsets = [(str(y), by_year[y][metric][:li+1]) for y in years_list]
+        return lbs, dsets
 
-        for kpi_name, field in metric_map.items():
-            growth[kpi_name] = {
-                'ytd_curr': safe(ytd_c.get(field)),
-                'ytd_prev': safe(ytd_p.get(field)),
-                'ytd_pct':  pct(safe(ytd_c.get(field)), safe(ytd_p.get(field))),
-                'yoy_curr': safe(yoy_c.get(field)),
-                'yoy_prev': safe(yoy_p.get(field)),
-                'yoy_pct':  pct(safe(yoy_c.get(field)), safe(yoy_p.get(field))),
-                'mom_curr': safe(yoy_c.get(field)),
-                'mom_prev': safe(mom_p.get(field)),
-                'mom_pct':  pct(safe(yoy_c.get(field)), safe(mom_p.get(field))),
-                'latest_period': f"{lm}/{ly}",
-                'prev_period':   f"{mom_m}/{mom_y}",
-            }
+    def target_for(metric, tgt_metric, years_list):
+        li = last_idx(metric)
+        latest_y = years_list[-1] if years_list else None
+        if not latest_y: return None
+        return by_year[latest_y][tgt_metric][:li+1]
 
-    return kpis, growth
+    # ── Build charts ──────────────────────────────────────────────────────────
+    charts = []
 
+    chart_defs = [
+        ('FCA Monthly Trend',        'fca_ach',        'fca_target',        ORANGE),
+        ('4G Achievement Trend',     'g4_ach',         'g4_target',         '#5E35B1'),
+        ('MNP Trend',                'mnp_ach',        'mnp_target',        PURPLE),
+        ('Recharge Trend',           'loading_ach',    'loading_target',    TEAL),
+        ('M0 Revenue Trend',         'm0_revenue_ach', 'm0_revenue_target', GREEN),
+        ('HVC Trend',                'hvc_ach',        'hvc_target',        YELLOW),
+        ('Bundle Trend',             'bundle_ach',     'bundle_target',     '#E91E8C'),
+        ('CM EVC Active Trend',      'cm_evc_active',  None,                TEAL),
+        ('CM 964 Active Trend',      'cm_964_active',  None,                PURPLE),
+        ('SD Bundle Trend',          'sd_bundle',      None,                ORANGE),
+        ('ZR Count Trend',           'zr',             None,                RED),
+        ('Dormancy Trend',           'dormancy_count', None,                MUTED),
+        ('Female FCA Trend',         'female_fca_count',None,               '#E91E8C'),
+    ]
 
-# ── Excel cell writer helpers ─────────────────────────────────
+    for title, metric, tgt_metric, color in chart_defs:
+        li = last_idx(metric)
+        if li < 0: continue
+        lbs, dsets = datasets_for(metric, years)
+        tgt = target_for(metric, tgt_metric, years) if tgt_metric else None
+        buf = _make_bar_chart(title, lbs, dsets, color=color, target_data=tgt,
+                              target_label=f'Target {years[-1]}' if tgt else None)
+        charts.append((title, buf))
 
-def write_title_block(ws, title, subtitle, cols=10):
-    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=cols)
-    c = ws['A1']
-    c.value = title
-    c.font = Font(bold=True, size=16, color=WHITE, name='Arial')
-    c.fill = _fill(DARK)
-    c.alignment = _align('center')
-    ws.row_dimensions[1].height = 38
+    # EVC tier donut
+    evc_vals = [s(k.get('cm_evc_active_platinum')),
+                s(k.get('cm_evc_active_gold')),
+                s(k.get('cm_evc_active_silver'))]
+    if any(v > 0 for v in evc_vals):
+        buf = _make_donut_chart('CM EVC Tier Distribution',
+                                ['Platinum', 'Gold', 'Silver'], evc_vals,
+                                colors=['#FFD700','#C0C0C0','#CD7F32'])
+        charts.append(('CM EVC Tier Distribution', buf))
 
-    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=cols)
-    c2 = ws['A2']
-    c2.value = subtitle
-    c2.font = Font(size=9, color='666666', name='Arial')
-    c2.fill = _fill(GREY)
-    c2.alignment = _align('center')
-    ws.row_dimensions[2].height = 16
-    ws.row_dimensions[3].height = 6
+    # Attainment gauges
+    gauge_defs = [
+        ('FCA Attainment', _att(k.get('fca_ach'), k.get('fca_target')), ORANGE),
+        ('4G Attainment',  _att(k.get('g4_ach'),  k.get('g4_target')),  '#5E35B1'),
+        ('MNP Attainment', _att(k.get('mnp_ach'), k.get('mnp_target')), PURPLE),
+        ('HVC Attainment', _att(k.get('hvc_ach'), k.get('hvc_target')), GREEN),
+    ]
+    gauge_bufs = []
+    for g_title, g_val, g_clr in gauge_defs:
+        if g_val > 0:
+            color = GREEN if g_val >= 100 else (YELLOW if g_val >= 70 else RED)
+            buf = _make_gauge_chart(g_title, g_val, 100, color=color)
+            gauge_bufs.append((g_title, buf))
 
-
-def write_section_header(ws, row, title, color=ORANGE, cols=10, start_col=1):
-    if cols > 1:
-        ws.merge_cells(start_row=row, start_column=start_col, end_row=row, end_column=start_col + cols - 1)
-    c = ws.cell(row=row, column=start_col, value=f'  {title}')
-    c.font = Font(bold=True, size=11, color=WHITE, name='Arial')
-    c.fill = _fill(color)
-    c.alignment = _align('left')
-    ws.row_dimensions[row].height = 22
-    return row + 1
+    return sections, charts, gauge_bufs
 
 
-def write_header_row(ws, row, headers, color='333333', start_col=1):
-    for ci, h in enumerate(headers, start_col):
-        c = ws.cell(row=row, column=ci, value=h)
-        c.font = Font(bold=True, color=WHITE, size=9, name='Arial')
-        c.fill = _fill(color)
-        c.alignment = _align('center')
-        c.border = _border()
-    ws.row_dimensions[row].height = 16
-    return row + 1
+def _get_marketing_kpis_and_charts(filters, request=None):
+    from marketing.models import SiteData
+
+    qs = SiteData.objects.all()
+    r  = filters.get('region')
+    bu = filters.get('business_unit')
+    ar = filters.get('arm')
+    fr = filters.get('franchise')
+    yr = filters.get('year')
+    mo = filters.get('month')
+
+    if r:  qs = qs.filter(region=r)
+    if bu: qs = qs.filter(business_unit=bu)
+    if ar: qs = qs.filter(arm=ar)
+    if fr: qs = qs.filter(key=fr)
+    if yr: qs = qs.filter(year=int(yr))
+    if mo: qs = qs.filter(month=int(mo))
+
+    flow = qs.aggregate(
+        total_revenue=Sum('tot_revn_amt'), total_net_add=Sum('net_add'),
+        total_churn=Sum('gross_churn'),    total_revival=Sum('tot_revival'),
+        total_fca=Sum('fca'),
+        prepaid_digi=Sum('prepaid_dgtl_amount'),
+        postpaid_digi=Sum('postpaid_dgtl_amount'),
+        total_conv=Sum('conventional_recharge'),
+    )
+    latest = qs.aggregate(d=Max('year'), m=Max('month'))
+    lp = (qs.filter(year=latest['d'], month=latest['m'])
+          if latest['d'] else qs.none())
+    stock = lp.aggregate(
+        total_activations=Sum('act_90d'),
+        total_base_4g=Sum('act_90d_4g'),
+        total_base_30d=Sum('act_30d'),
+        total_hvc=Sum('hvc_base'),
+        total_bvs=Sum('bvs_retailer'),
+        total_evc=Sum('evc_retailer'),
+        total_handset_4g=Sum('handset_4g'),
+        total_act_recharge=Sum('act_recharger'),
+        total_daily_active=Sum('avg_dly_act'),
+        total_rev_lm=Sum('tot_revn_amt'),
+    )
+
+    k = {**flow, **stock}
+    s = _safe
+    digi   = s(k.get('prepaid_digi')) + s(k.get('postpaid_digi'))
+    conv   = s(k.get('total_conv'))
+    b90    = s(k.get('total_activations'))
+    b4g    = s(k.get('total_base_4g'))
+    hvc    = s(k.get('total_hvc'))
+    b30    = s(k.get('total_base_30d'))
+    rev    = s(k.get('total_revenue'))
+    rev_lm = s(k.get('total_rev_lm'))
+    bvs    = s(k.get('total_bvs'))
+    evc    = s(k.get('total_evc'))
+    sites  = (qs.exclude(key__isnull=True).exclude(key='')
+              .values('key').distinct().count())
+    arpu   = (rev_lm / b90) if b90 else 0
+
+    # Tier breakdown
+    plat = gold = silv = 0
+    try:
+        rev_rows = (lp.exclude(key__isnull=True).exclude(key='')
+                    .values('key').annotate(sr=Sum('tot_revn_amt')))
+        for rr in rev_rows:
+            sv = _safe(rr.get('sr'))
+            if sv > 800_000:   plat += 1
+            elif sv > 500_000: gold += 1
+            else:              silv += 1
+    except Exception:
+        pass
+
+    sections = [
+        {
+            'title': 'Revenue & Base',
+            'color': ORANGE,
+            'rows': [
+                ('Total Revenue (PKR)',   rev,              None),
+                ('Total Net Adds',        s(k.get('total_net_add')), None),
+                ('Active 90D Base',       b90,              None),
+                ('Active 4G Base',        b4g,              None),
+                ('HVC Base',              hvc,              None),
+                ('Active 30D Base',       b30,              None),
+                ('ARPU (PKR)',            round(arpu,2),    None),
+                ('4G Penetration %',      _pct(b4g, b90),   None),
+                ('Total Sites',           sites,            None),
+            ],
+        },
+        {
+            'title': 'Recharge',
+            'color': TEAL,
+            'rows': [
+                ('Total Recharge (PKR)',       digi + conv,   None),
+                ('Digital Recharge (PKR)',     digi,          None),
+                ('Conventional Recharge',      conv,          None),
+                ('Gross Churn',                s(k.get('total_churn')), None),
+                ('Total Revival',              s(k.get('total_revival')), None),
+                ('Act Rechargers',             s(k.get('total_act_recharge')), None),
+                ('Act Recharger % of 90D',     _pct(s(k.get('total_act_recharge')), b90), None),
+                ('Avg Daily Active',           s(k.get('total_daily_active')), None),
+                ('Daily Active % of 90D',      _pct(s(k.get('total_daily_active')), b90), None),
+            ],
+        },
+        {
+            'title': 'Retailers & Tiers',
+            'color': PURPLE,
+            'rows': [
+                ('BVS Retailers',              bvs,                           None),
+                ('EVC Retailers',              evc,                           None),
+                ('BVS per Site',               round(bvs/sites,2) if sites else 0, None),
+                ('EVC per Site',               round(evc/sites,2) if sites else 0, None),
+                ('Handset 4G',                 s(k.get('total_handset_4g')),  None),
+                ('Tier Platinum Sites (>800K)',plat,                          None),
+                ('Tier Gold Sites (500K-800K)',gold,                          None),
+                ('Tier Silver Sites (<500K)',   silv,                          None),
+            ],
+        },
+    ]
+
+    # Monthly trends for charts
+    trend_qs = SiteData.objects.all()
+    if r:  trend_qs = trend_qs.filter(region=r)
+    if bu: trend_qs = trend_qs.filter(business_unit=bu)
+    if ar: trend_qs = trend_qs.filter(arm=ar)
+    if fr: trend_qs = trend_qs.filter(key=fr)
+    if yr: trend_qs = trend_qs.filter(year=int(yr))
+
+    mfields = ['tot_revn_amt','net_add','gross_churn','act_90d',
+               'act_90d_4g','hvc_base','prepaid_dgtl_amount',
+               'conventional_recharge','act_recharger']
+
+    mrows = (trend_qs.values('year','month')
+             .annotate(**{f: Sum(f) for f in mfields}))
+
+    by_yr = defaultdict(lambda: {f: [0]*12 for f in mfields})
+    for row in mrows:
+        yy, mm = row['year'], row['month']
+        for f in mfields:
+            by_yr[yy][f][mm-1] = _safe(row.get(f))
+
+    years = sorted(by_yr.keys())
+
+    def last_idx(metric):
+        li = -1
+        for yy in years:
+            for i, v in enumerate(by_yr[yy][metric]):
+                if v and v > 0: li = i
+        return li if li >= 0 else 11
+
+    def ds_for(metric):
+        li = last_idx(metric)
+        lbs = MONTHS[:li+1]
+        dsets = [(str(y), by_yr[y][metric][:li+1]) for y in years]
+        return lbs, dsets
+
+    charts = []
+    chart_defs = [
+        ('Revenue Monthly Trend',     'tot_revn_amt',            ORANGE),
+        ('Net Adds Monthly Trend',    'net_add',                 GREEN),
+        ('Gross Churn Trend',         'gross_churn',             RED),
+        ('90D Base Trend',            'act_90d',                 TEAL),
+        ('4G Base Trend',             'act_90d_4g',              '#5E35B1'),
+        ('HVC Base Trend',            'hvc_base',                YELLOW),
+        ('Digital Recharge Trend',    'prepaid_dgtl_amount',     PURPLE),
+        ('Conventional Recharge',     'conventional_recharge',   '#E91E8C'),
+        ('Active Rechargers Trend',   'act_recharger',           TEAL),
+    ]
+    for title, metric, color in chart_defs:
+        li = last_idx(metric)
+        if li < 0: continue
+        lbs, dsets = ds_for(metric)
+        buf = _make_bar_chart(title, lbs, dsets, color=color)
+        charts.append((title, buf))
+
+    # Tier donut
+    if plat + gold + silv > 0:
+        buf = _make_donut_chart('Revenue Tier Distribution',
+                                ['Platinum (>800K)', 'Gold (500-800K)', 'Silver (<500K)'],
+                                [plat, gold, silv],
+                                colors=['#FFD700','#C0C0C0','#CD7F32'])
+        charts.append(('Revenue Tier Distribution', buf))
+
+    # 4G penetration gauge
+    pen_val = _pct(b4g, b90)
+    if pen_val > 0:
+        clr = GREEN if pen_val >= 60 else (YELLOW if pen_val >= 40 else RED)
+        buf = _make_gauge_chart('4G Penetration', pen_val, 100, color=clr)
+        charts.append(('4G Penetration Gauge', buf))
+
+    return sections, charts, []
 
 
-def write_data_row(ws, row, values, start_col=1, num_cols=None):
-    bg = LIGHT if row % 2 == 0 else WHITE
-    for ci, val in enumerate(values, start_col):
-        c = ws.cell(row=row, column=ci, value=val)
-        c.fill = _fill(bg)
-        c.border = _border()
-        c.font = Font(size=9, name='Arial')
-        if isinstance(val, float) and val != int(val):
-            c.number_format = '#,##0.00'
-            c.alignment = _align('right')
-        elif isinstance(val, (int, float)):
-            c.number_format = '#,##0'
-            c.alignment = _align('right')
-        else:
-            c.alignment = _align('left')
-    return row + 1
+# ─────────────────────────────────────────────────────────────────────────────
+#  EXCEL BUILDER
+# ─────────────────────────────────────────────────────────────────────────────
 
-
-def write_pct_cell(ws, row, col, value, positive_good=True):
-    c = ws.cell(row=row, column=col, value=value / 100 if value is not None else 0)
-    c.number_format = '+0.0%;-0.0%;0.0%'
-    c.font = Font(bold=True, size=9, name='Arial',
-                  color=GREEN if (value or 0) >= 0 else RED)
-    c.fill = _fill(LIGHT if row % 2 == 0 else WHITE)
-    c.border = _border()
-    c.alignment = _align('center')
-
-
-# ── Excel Export ──────────────────────────────────────────────
-
-@login_required(login_url='login')
-def export_excel(request):
-    qs = apply_filters(request)
-    filter_label = get_filter_label(request)
-    year_param = request.GET.get('year')
-    generated = datetime.now().strftime('%Y-%m-%d %H:%M')
-    growth_base = apply_dimension_filters(request)
-    kpis, growth = get_kpis_and_growth(qs, year_param, growth_base)
+def _build_excel(sections, charts, gauges, title, filters):
+    from openpyxl import Workbook
+    from openpyxl.styles import (Font, PatternFill, Alignment,
+                                  Border, Side, GradientFill)
+    from openpyxl.drawing.image import Image as XLImage
+    from openpyxl.utils import get_column_letter
 
     wb = Workbook()
 
-    # ══════════════════════════════════════════════════════════
-    # SHEET 1 — KPI Summary + Growth
-    # ══════════════════════════════════════════════════════════
-    ws1 = wb.active
-    ws1.title = 'KPI Summary'
-    ws1.sheet_view.showGridLines = False
+    # ── Sheet 1: KPI Summary ──────────────────────────────────────────────────
+    ws = wb.active
+    ws.title = "KPI Summary"
+    ws.sheet_view.showGridLines = False
+    ws.column_dimensions['A'].width = 38
+    ws.column_dimensions['B'].width = 18
+    ws.column_dimensions['C'].width = 16
 
-    write_title_block(ws1, '📊 Ufone 5G — Dashboard Export',
-                      f'Filters: {filter_label}   |   Generated: {generated}', cols=10)
+    thin = Side(style='thin', color='E8E9ED')
+    bdr  = Border(left=thin, right=thin, top=thin, bottom=thin)
 
-    row = 4
-    row = write_section_header(ws1, row, 'KEY PERFORMANCE INDICATORS', ORANGE, cols=10)
-    headers = ['Metric', 'Current Value', 'Formatted', 'YTD Curr', 'YTD Prev', 'YTD %',
-               'YOY Curr', 'YOY Prev', 'YOY %', 'MOM %']
-    row = write_header_row(ws1, row, headers)
+    def hex_fill(h): return PatternFill("solid", fgColor='FF' + h.lstrip('#').upper())
+    def wfont(sz=10, bold=False, color='1A1235'):
+        c = ('FF' + color.lstrip('#').upper())[:8]
+        return Font(size=sz, bold=bold, color=c, name='Calibri')
 
-    for metric, value in kpis.items():
-        g = growth.get(metric, {})
-        bg = LIGHT if row % 2 == 0 else WHITE
+    # Title banner
+    ws.merge_cells('A1:C1')
+    ws['A1'] = title.replace('_', ' ')
+    ws['A1'].font      = Font(size=15, bold=True, color='FFFFFFFF', name='Calibri')
+    ws['A1'].fill      = hex_fill(DARK)
+    ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[1].height = 36
 
-        ws1.cell(row=row, column=1, value=metric).font = Font(bold=True, size=9, color=DARK, name='Arial')
-        ws1.cell(row=row, column=1).fill = _fill(bg)
-        ws1.cell(row=row, column=1).border = _border()
+    # Filter info row
+    ws.merge_cells('A2:C2')
+    filter_str = '  |  '.join(
+        f"{k.replace('_',' ').title()}: {v}"
+        for k, v in filters.items() if v
+    ) or 'All Data'
+    ws['A2'] = f"Filters: {filter_str}"
+    ws['A2'].font      = Font(size=9, italic=True, color='FF8A85A5', name='Calibri')
+    ws['A2'].fill      = hex_fill('#F0F1F5')
+    ws['A2'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.row_dimensions[2].height = 18
 
-        ws1.cell(row=row, column=2, value=round(value, 2)).number_format = '#,##0.00'
-        ws1.cell(row=row, column=2).fill = _fill(bg)
-        ws1.cell(row=row, column=2).border = _border()
-        ws1.cell(row=row, column=2).alignment = _align('right')
-        ws1.cell(row=row, column=2).font = Font(size=9, name='Arial')
+    ws['A3'] = f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}"
+    ws['A3'].font = Font(size=8, italic=True, color='FF8A85A5')
+    ws.row_dimensions[3].height = 14
 
-        ws1.cell(row=row, column=3, value=fmt_num(value)).font = Font(bold=True, color=ORANGE, size=9, name='Arial')
-        ws1.cell(row=row, column=3).fill = _fill(bg)
-        ws1.cell(row=row, column=3).border = _border()
-        ws1.cell(row=row, column=3).alignment = _align('center')
+    current_row = 5
+    for sec in sections:
+        sec_color = sec['color'].lstrip('#')
+        sec_title = sec['title']
 
-        if g:
-            for ci, key in enumerate(['ytd_curr', 'ytd_prev'], 4):
-                c = ws1.cell(row=row, column=ci, value=round(g[key], 2))
-                c.number_format = '#,##0.00'
-                c.fill = _fill(bg)
-                c.border = _border()
-                c.alignment = _align('right')
-                c.font = Font(size=9, name='Arial')
+        # Section header
+        ws.merge_cells(f'A{current_row}:C{current_row}')
+        ws[f'A{current_row}'] = f"  {sec_title}"
+        ws[f'A{current_row}'].font      = Font(size=11, bold=True,
+                                                color='FFFFFFFF', name='Calibri')
+        ws[f'A{current_row}'].fill      = hex_fill(sec['color'])
+        ws[f'A{current_row}'].alignment = Alignment(horizontal='left',
+                                                     vertical='center')
+        ws.row_dimensions[current_row].height = 24
+        current_row += 1
 
-            write_pct_cell(ws1, row, 6, g.get('ytd_pct'))
+        # Column sub-headers
+        for col, txt in [(1,'KPI'),(2,'Value (Raw)'),(3,'Formatted')]:
+            c = ws.cell(row=current_row, column=col, value=txt)
+            c.font      = Font(size=9, bold=True, color='FFFFFFFF', name='Calibri')
+            c.fill      = hex_fill(ORANGE)
+            c.alignment = Alignment(horizontal='center' if col>1 else 'left',
+                                    vertical='center')
+            c.border    = bdr
+        ws.row_dimensions[current_row].height = 18
+        current_row += 1
 
-            for ci, key in enumerate(['yoy_curr', 'yoy_prev'], 7):
-                c = ws1.cell(row=row, column=ci, value=round(g[key], 2))
-                c.number_format = '#,##0.00'
-                c.fill = _fill(bg)
-                c.border = _border()
-                c.alignment = _align('right')
-                c.font = Font(size=9, name='Arial')
+        for i, (label, raw, _) in enumerate(sec['rows']):
+            bg = 'FFF5EE' if i % 2 == 0 else 'FAFAFA'
+            fill = hex_fill(bg)
 
-            write_pct_cell(ws1, row, 9, g.get('yoy_pct'))
-            write_pct_cell(ws1, row, 10, g.get('mom_pct'))
-        else:
-            for ci in range(4, 11):
-                c = ws1.cell(row=row, column=ci, value='N/A')
-                c.fill = _fill(bg)
-                c.border = _border()
-                c.font = Font(size=9, color='999999', name='Arial')
-                c.alignment = _align('center')
+            lbl_cell = ws.cell(row=current_row, column=1, value=label)
+            lbl_cell.font      = wfont(10)
+            lbl_cell.fill      = fill
+            lbl_cell.border    = bdr
+            lbl_cell.alignment = Alignment(horizontal='left', vertical='center',
+                                           indent=1)
 
-        row += 1
+            raw_cell = ws.cell(row=current_row, column=2, value=raw)
+            raw_cell.font      = wfont(10, bold=True, color=sec_color)
+            raw_cell.fill      = fill
+            raw_cell.border    = bdr
+            raw_cell.alignment = Alignment(horizontal='right', vertical='center')
+            raw_cell.number_format = '#,##0.00' if isinstance(raw, float) and raw != int(raw) else '#,##0'
 
-    # Period info
-    if growth:
-        sample = next(iter(growth.values()), {})
-        if sample:
-            row += 1
-            ws1.cell(row=row, column=1, value=f"Latest Period: {sample.get('latest_period','—')}   |   MOM Comparison vs: {sample.get('prev_period','—')}").font = Font(italic=True, size=8, color='888888', name='Arial')
+            fmt_cell = ws.cell(row=current_row, column=3, value=_fmt(raw))
+            fmt_cell.font      = wfont(10)
+            fmt_cell.fill      = fill
+            fmt_cell.border    = bdr
+            fmt_cell.alignment = Alignment(horizontal='right', vertical='center')
 
-    col_widths = [30, 16, 12, 14, 14, 9, 14, 14, 9, 9]
-    for i, w in enumerate(col_widths, 1):
-        _set_col(ws1, i, w)
+            ws.row_dimensions[current_row].height = 17
+            current_row += 1
 
-    ws1.freeze_panes = 'A5'
+        current_row += 1  # spacer
 
-    # ══════════════════════════════════════════════════════════
-    # SHEET 2 — Chart Data (all charts as tables)
-    # ══════════════════════════════════════════════════════════
-    ws2 = wb.create_sheet('Chart Data')
-    ws2.sheet_view.showGridLines = False
-    write_title_block(ws2, '📈 Chart Data — All Dashboard Charts',
-                      f'Filters: {filter_label}   |   Generated: {generated}', cols=6)
+    ws.freeze_panes = 'A5'
 
-    row = 4
+    # ── Sheet 2: Charts ───────────────────────────────────────────────────────
+    if charts or gauges:
+        ws2 = wb.create_sheet("Charts")
+        ws2.sheet_view.showGridLines = False
 
-    def write_chart_table(ws, start_row, title, headers, data_rows, color=ORANGE):
-        r = write_section_header(ws, start_row, title, color, cols=len(headers))
-        r = write_header_row(ws, r, headers)
-        for d in data_rows:
-            r = write_data_row(ws, r, d)
-        return r + 1
+        ws2.merge_cells('A1:L1')
+        ws2['A1'] = f"{title.replace('_',' ')} — Monthly Trend Charts"
+        ws2['A1'].font      = Font(size=13, bold=True, color='FFFFFFFF', name='Calibri')
+        ws2['A1'].fill      = hex_fill(DARK)
+        ws2['A1'].alignment = Alignment(horizontal='center', vertical='center')
+        ws2.row_dimensions[1].height = 32
 
-    # Revenue by Region
-    rev_region = list(qs.exclude(region__isnull=True).values('region')
-                      .annotate(revenue=Sum('tot_revn_amt')).order_by('-revenue')[:15])
-    row = write_chart_table(ws2, row, 'Revenue by Region (Top 15)',
-                            ['Region', 'Revenue (PKR)', 'Formatted'],
-                            [(r['region'], round(safe(r['revenue']), 2), fmt_num(safe(r['revenue'])))
-                             for r in rev_region], ORANGE)
+        # Gauges side by side at top
+        if gauges:
+            ws2.merge_cells('A2:L2')
+            ws2['A2'] = "Attainment Gauges"
+            ws2['A2'].font = Font(size=10, bold=True, color='FF1A1235')
+            ws2.row_dimensions[2].height = 16
 
-    # Activations by Technology
-    act_tech = list(qs.exclude(technology__isnull=True).values('technology')
-                    .annotate(activations=Sum('act_90d'), base4g=Sum('act_90d_4g'))
-                    .order_by('-activations'))
-    row = write_chart_table(ws2, row, 'Activations & 4G Base by Technology',
-                            ['Technology', '90D Activations', '4G Base'],
-                            [(r['technology'], r['activations'] or 0, r['base4g'] or 0)
-                             for r in act_tech], PURPLE)
+            col_offset = 1
+            for g_title, g_buf in gauges:
+                img = XLImage(g_buf)
+                img.width  = 200
+                img.height = 175
+                col_letter = get_column_letter(col_offset)
+                ws2.add_image(img, f'{col_letter}3')
+                col_offset += 3
 
-    # Revenue by BU
-    rev_bu = list(qs.exclude(business_unit__isnull=True).values('business_unit')
-                  .annotate(revenue=Sum('tot_revn_amt'), act=Sum('act_90d'),
-                             churn=Sum('gross_churn'), netadd=Sum('net_add'))
-                  .order_by('-revenue'))
-    row = write_chart_table(ws2, row, 'KPIs by Business Unit',
-                            ['Business Unit', 'Revenue (PKR)', '90D Act', 'Gross Churn', 'Net Add'],
-                            [(r['business_unit'], round(safe(r['revenue']), 2),
-                              r['act'] or 0, r['churn'] or 0, r['netadd'] or 0)
-                             for r in rev_bu], ORANGE)
+        # Charts in 2-column grid
+        CHART_W  = 540   # px
+        CHART_H  = 215
+        ROW_H_PX = 15
+        rows_per_chart = int(CHART_H / ROW_H_PX) + 1
+        gauge_rows = 14 if gauges else 0
+        start_row  = 3 + gauge_rows
 
-    # Site Status
-    status_data = list(qs.exclude(site_status__isnull=True).values('site_status')
-                       .annotate(count=Count('key', distinct=True)).order_by('-count'))
-    row = write_chart_table(ws2, row, 'Site Count by Status',
-                            ['Status', 'Site Count'],
-                            [(r['site_status'], r['count']) for r in status_data], TEAL)
+        for ci, (c_title, c_buf) in enumerate(charts):
+            row_i = ci // 2
+            col_i = ci %  2
+            img = XLImage(c_buf)
+            img.width  = CHART_W
+            img.height = CHART_H
+            row_num  = start_row + row_i * rows_per_chart
+            col_num  = 1 + col_i * 8
+            col_letter = get_column_letter(col_num)
+            ws2.add_image(img, f'{col_letter}{row_num}')
 
-    # Monthly trend
-    monthly = list(qs.exclude(year__isnull=True).values('year', 'month')
-                   .annotate(
-                       net_add=Sum('net_add'),
-                       churn=Sum('gross_churn'),
-                       fca=Sum('fca'),
-                       revenue=Sum('tot_revn_amt'),
-                       activations=Sum('act_90d'),
-                       base_90d=Sum('act_90d'),
-                       base_4g=Sum('act_90d_4g'),
-                   ).order_by('year', 'month'))
-    row = write_chart_table(ws2, row, 'Monthly Trend (Net Add, Churn, FCA, Revenue)',
-                            ['Year', 'Month', 'Net Additions', 'Gross Churn', 'FCA Revival',
-                             'Revenue (PKR)', '90D Activations', '4G Base'],
-                            [(r['year'], r['month'], r['net_add'] or 0, r['churn'] or 0,
-                              round(safe(r['fca']), 2), round(safe(r['revenue']), 2),
-                              r['activations'] or 0, r['base_4g'] or 0)
-                             for r in monthly], RED)
+        # Column widths for chart sheet
+        for ci in range(1, 17):
+            ws2.column_dimensions[get_column_letter(ci)].width = 10
 
-    # Recharge breakdown
-    recharge = qs.aggregate(
-        prepaid=Sum('prepaid_dgtl_amount'),
-        postpaid=Sum('postpaid_dgtl_amount'),
-        conventional=Sum('conventional_recharge'),
-    )
-    digi_total = safe(recharge['prepaid']) + safe(recharge['postpaid'])
-    total_rch = digi_total + safe(recharge['conventional'])
-    row = write_chart_table(ws2, row, 'Recharge Channel Breakdown',
-                            ['Channel', 'Amount (PKR)', 'Formatted', 'Share (%)'],
-                            [
-                                ('Prepaid Digital', round(safe(recharge['prepaid']), 2),
-                                 fmt_num(safe(recharge['prepaid'])),
-                                 round(safe(recharge['prepaid']) / total_rch * 100, 1) if total_rch else 0),
-                                ('Postpaid Digital', round(safe(recharge['postpaid']), 2),
-                                 fmt_num(safe(recharge['postpaid'])),
-                                 round(safe(recharge['postpaid']) / total_rch * 100, 1) if total_rch else 0),
-                                ('Conventional', round(safe(recharge['conventional']), 2),
-                                 fmt_num(safe(recharge['conventional'])),
-                                 round(safe(recharge['conventional']) / total_rch * 100, 1) if total_rch else 0),
-                                ('Total', round(total_rch, 2), fmt_num(total_rch), 100.0),
-                            ], YELLOW)
-
-    # Traffic by Region
-    traffic = list(qs.exclude(region__isnull=True).values('region')
-                   .annotate(outgoing=Sum('minutes_outgoing'), incoming=Sum('minutes_incoming'))
-                   .order_by('-outgoing')[:12])
-    row = write_chart_table(ws2, row, 'Voice Traffic by Region (Top 12)',
-                            ['Region', 'Outgoing Mins', 'Incoming Mins', 'Total Mins'],
-                            [(r['region'], round(safe(r['outgoing']), 0), round(safe(r['incoming']), 0),
-                              round(safe(r['outgoing']) + safe(r['incoming']), 0))
-                             for r in traffic], PURPLE)
-
-    # Data Volume by Technology
-    data_vol = list(qs.exclude(technology__isnull=True).values('technology')
-                    .annotate(volume=Sum('volume_gbs'), vol4g=Sum('data_ntwrk_vol_4g'))
-                    .order_by('-volume'))
-    row = write_chart_table(ws2, row, 'Data Volume by Technology (GBs)',
-                            ['Technology', 'Total GBs', '4G GBs'],
-                            [(r['technology'], round(safe(r['volume']), 2), round(safe(r['vol4g']), 2))
-                             for r in data_vol], TEAL)
-
-    # EVC/BVS by Region
-    retailer = list(qs.exclude(region__isnull=True).values('region')
-                    .annotate(evc=Sum('evc_retailer'), bvs=Sum('bvs_retailer'))
-                    .order_by('-evc'))
-    row = write_chart_table(ws2, row, 'EVC & BVS Retailers by Region',
-                            ['Region', 'EVC Retailers', 'BVS Retailers'],
-                            [(r['region'], r['evc'] or 0, r['bvs'] or 0) for r in retailer], ORANGE)
-
-    for col in range(1, 9):
-        _set_col(ws2, col, 22)
-    ws2.freeze_panes = 'A5'
-
-    # ══════════════════════════════════════════════════════════
-    # SHEET 3 — Growth Detail
-    # ══════════════════════════════════════════════════════════
-    ws3 = wb.create_sheet('Growth Detail')
-    ws3.sheet_view.showGridLines = False
-    write_title_block(ws3, '📊 Growth Detail — YTD / YOY / MOM',
-                      f'Filters: {filter_label}   |   Generated: {generated}', cols=10)
-
-    row = 4
-    row = write_section_header(ws3, row, 'GROWTH METRICS — YTD / YEAR-ON-YEAR / MONTH-ON-MONTH', PURPLE, cols=10)
-    headers_g = ['Metric', 'YTD Current', 'YTD Previous', 'YTD %',
-                 'YOY Current', 'YOY Previous', 'YOY %',
-                 'MOM Current', 'MOM Previous', 'MOM %']
-    row = write_header_row(ws3, row, headers_g)
-
-    for metric, g in growth.items():
-        bg = LIGHT if row % 2 == 0 else WHITE
-        ws3.cell(row=row, column=1, value=metric).font = Font(bold=True, size=9, color=DARK, name='Arial')
-        ws3.cell(row=row, column=1).fill = _fill(bg)
-        ws3.cell(row=row, column=1).border = _border()
-
-        for ci, key in enumerate(['ytd_curr', 'ytd_prev'], 2):
-            c = ws3.cell(row=row, column=ci, value=round(g.get(key, 0), 2))
-            c.number_format = '#,##0.00'
-            c.fill = _fill(bg)
-            c.border = _border()
-            c.alignment = _align('right')
-            c.font = Font(size=9, name='Arial')
-
-        write_pct_cell(ws3, row, 4, g.get('ytd_pct', 0))
-
-        for ci, key in enumerate(['yoy_curr', 'yoy_prev'], 5):
-            c = ws3.cell(row=row, column=ci, value=round(g.get(key, 0), 2))
-            c.number_format = '#,##0.00'
-            c.fill = _fill(bg)
-            c.border = _border()
-            c.alignment = _align('right')
-            c.font = Font(size=9, name='Arial')
-
-        write_pct_cell(ws3, row, 7, g.get('yoy_pct', 0))
-
-        for ci, key in enumerate(['mom_curr', 'mom_prev'], 8):
-            c = ws3.cell(row=row, column=ci, value=round(g.get(key, 0), 2))
-            c.number_format = '#,##0.00'
-            c.fill = _fill(bg)
-            c.border = _border()
-            c.alignment = _align('right')
-            c.font = Font(size=9, name='Arial')
-
-        write_pct_cell(ws3, row, 10, g.get('mom_pct', 0))
-        row += 1
-
-    col_widths_g = [30, 14, 14, 9, 14, 14, 9, 14, 14, 9]
-    for i, w in enumerate(col_widths_g, 1):
-        _set_col(ws3, i, w)
-    ws3.freeze_panes = 'A6'
-
-    # ══════════════════════════════════════════════════════════
-    # SHEET 4 — Raw Site Data (ALL columns, ALL rows)
-    # ══════════════════════════════════════════════════════════
-    ws4 = wb.create_sheet('Raw Site Data')
-    ws4.sheet_view.showGridLines = False
-
-    raw_headers = [
-        'Key', 'Region', 'District', 'Franchise', 'Business Unit',
-        'Technology', 'Site Status', 'ARM', 'Year', 'Month',
-        'Latitude', 'Longitude',
-        'Revenue (PKR)', '90D Activations', '4G Activations', '30D Activations',
-        'HVC Base', 'Net Additions', 'Gross Churn', 'FCA',
-        'Avg Daily Active', 'Recharger Base',
-        'Prepaid Digital (PKR)', 'Postpaid Digital (PKR)', 'Conventional Recharge (PKR)',
-        'EVC Retailers', 'BVS Retailers',
-        'Outgoing Mins', 'Incoming Mins', 'Volume GBs', '4G Volume GBs',
-        'M0 Revenue (PKR)', 'MNP FCA', 'Handset 4G',
-    ]
-
-    write_title_block(ws4,
-                      f'🗃️ Complete Site Data — {filter_label}',
-                      f'Generated: {generated}   |   All available fields', cols=len(raw_headers))
-
-    row = 4
-    for ci, h in enumerate(raw_headers, 1):
-        c = ws4.cell(row=row, column=ci, value=h)
-        c.font = Font(bold=True, color=WHITE, size=8, name='Arial')
-        c.fill = _fill(ORANGE)
-        c.alignment = _align('center')
-        c.border = _border()
-    ws4.row_dimensions[row].height = 16
-    row += 1
-
-    raw_qs = qs.values(
-        'key', 'region', 'commercial_district', 'franchise', 'business_unit',
-        'technology', 'site_status', 'arm', 'year', 'month',
-        'latitude', 'longitude',
-        'tot_revn_amt', 'act_90d', 'act_90d_4g', 'act_30d',
-        'hvc_base', 'net_add', 'gross_churn', 'fca',
-        'avg_dly_act', 'act_recharger',
-        'prepaid_dgtl_amount', 'postpaid_dgtl_amount', 'conventional_recharge',
-        'evc_retailer', 'bvs_retailer',
-        'minutes_outgoing', 'minutes_incoming', 'volume_gbs', 'data_ntwrk_vol_4g',
-        'm0_revn', 'mnp_fca', 'handset_4g',
-    ).order_by('region', 'business_unit', 'key', 'year', 'month')
-
-    for ri, r in enumerate(raw_qs, row):
-        bg = LIGHT if ri % 2 == 0 else WHITE
-        vals = [
-            r['key'], r['region'], r['commercial_district'], r['franchise'], r['business_unit'],
-            r['technology'], r['site_status'], r['arm'], r['year'], r['month'],
-            r['latitude'], r['longitude'],
-            round(safe(r['tot_revn_amt']), 2), r['act_90d'] or 0, r['act_90d_4g'] or 0, r['act_30d'] or 0,
-            r['hvc_base'] or 0, r['net_add'] or 0, r['gross_churn'] or 0, round(safe(r['fca']), 2),
-            round(safe(r['avg_dly_act']), 2), r['act_recharger'] or 0,
-            round(safe(r['prepaid_dgtl_amount']), 2), round(safe(r['postpaid_dgtl_amount']), 2),
-            round(safe(r['conventional_recharge']), 2),
-            r['evc_retailer'] or 0, r['bvs_retailer'] or 0,
-            round(safe(r['minutes_outgoing']), 2), round(safe(r['minutes_incoming']), 2),
-            round(safe(r['volume_gbs']), 2), round(safe(r['data_ntwrk_vol_4g']), 2),
-            round(safe(r['m0_revn']), 2), r['mnp_fca'] or 0, r['handset_4g'] or 0,
-        ]
-        for ci, val in enumerate(vals, 1):
-            c = ws4.cell(row=ri, column=ci, value=val)
-            c.fill = _fill(bg)
-            c.border = _border()
-            c.font = Font(size=8, name='Arial')
-            if isinstance(val, float):
-                c.number_format = '#,##0.00'
-                c.alignment = _align('right')
-            elif isinstance(val, int) and ci > 8:
-                c.number_format = '#,##0'
-                c.alignment = _align('right')
-
-    raw_col_widths = [
-        14, 14, 16, 14, 16, 12, 12, 20, 7, 7,
-        10, 10,
-        14, 10, 10, 10,
-        10, 10, 10, 10,
-        12, 12,
-        14, 14, 16,
-        10, 10,
-        12, 12, 12, 12,
-        14, 10, 10,
-    ]
-    for i, w in enumerate(raw_col_widths, 1):
-        _set_col(ws4, i, w)
-    ws4.freeze_panes = 'A5'
-
-    # ── Stream ─────────────────────────────────────────────────
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
-    filename = f'dashboard_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
-    response = HttpResponse(
-        buf,
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    return response
+    return buf
 
 
-# ── PDF Export ────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+#  PDF BUILDER
+# ─────────────────────────────────────────────────────────────────────────────
 
-@login_required(login_url='login')
-def export_pdf(request):
-    qs = apply_filters(request)
-    filter_label = get_filter_label(request)
-    year_param = request.GET.get('year')
-    generated = datetime.now().strftime('%Y-%m-%d %H:%M')
-    growth_base = apply_dimension_filters(request)
-    kpis, growth = get_kpis_and_growth(qs, year_param, growth_base)
+def _build_pdf(sections, charts, gauges, title, filters):
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors as rl_colors
+    from reportlab.lib.units import cm
+    from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
+                                     Paragraph, Spacer, Image as RLImage,
+                                     PageBreak, HRFlowable)
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
-    buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
-                            rightMargin=1.5*cm, leftMargin=1.5*cm,
-                            topMargin=1.5*cm, bottomMargin=1.5*cm)
+    buf    = io.BytesIO()
+    PAGE   = landscape(A4)
+    L_MAR  = 1.5*cm
+    doc    = SimpleDocTemplate(buf, pagesize=PAGE,
+                                leftMargin=L_MAR, rightMargin=L_MAR,
+                                topMargin=1.2*cm, bottomMargin=1.2*cm)
 
-    orange = colors.HexColor('#F58220')
-    dark   = colors.HexColor('#1A1235')
-    purple = colors.HexColor('#AB1DFE')
-    light  = colors.HexColor('#FFF5EE')
-    grey   = colors.HexColor('#F0F1F5')
-    green  = colors.HexColor('#00C853')
-    red    = colors.HexColor('#FF3D00')
-    white  = colors.white
-    teal   = colors.HexColor('#00897B')
+    styles = getSampleStyleSheet()
+    RL_ORANGE = rl_colors.HexColor(ORANGE)
+    RL_DARK   = rl_colors.HexColor(DARK)
+    RL_MUTED  = rl_colors.HexColor(MUTED)
+    RL_WHITE  = rl_colors.white
 
-    def fmt_pct(v):
-        if v is None: return '—'
-        sign = '+' if v >= 0 else ''
-        return f'{sign}{v:.1f}%'
+    title_sty = ParagraphStyle('T', fontName='Helvetica-Bold',
+                                fontSize=18, textColor=RL_WHITE,
+                                alignment=TA_CENTER, spaceAfter=4)
+    sec_sty   = ParagraphStyle('S', fontName='Helvetica-Bold',
+                                fontSize=11, textColor=RL_WHITE,
+                                alignment=TA_LEFT, leftIndent=6)
+    filt_sty  = ParagraphStyle('F', fontName='Helvetica-Oblique',
+                                fontSize=8, textColor=RL_MUTED,
+                                alignment=TA_CENTER, spaceAfter=6)
+    chart_lbl = ParagraphStyle('CL', fontName='Helvetica-Bold',
+                                fontSize=9, textColor=RL_DARK,
+                                alignment=TA_CENTER, spaceAfter=2)
 
-    def pdf_section(title, color=orange):
-        style = ParagraphStyle('sh', fontSize=11, textColor=white,
-                               fontName='Helvetica-Bold')
-        t = Table([[Paragraph(f'  {title}', style)]], colWidths=[doc.width])
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0,0),(-1,-1), color),
-            ('TOPPADDING', (0,0),(-1,-1), 5),
-            ('BOTTOMPADDING', (0,0),(-1,-1), 5),
-        ]))
-        return t
-
-    def pdf_table(headers, rows, col_widths=None):
-        if col_widths is None:
-            col_widths = [doc.width / len(headers)] * len(headers)
-        hstyle = ParagraphStyle('th', fontSize=7, textColor=white,
-                                fontName='Helvetica-Bold', alignment=1)
-        dstyle = ParagraphStyle('td', fontSize=7, fontName='Helvetica')
-        data = [[Paragraph(str(h), hstyle) for h in headers]]
-        for ri, row in enumerate(rows):
-            data.append([Paragraph(str(v) if not isinstance(v, float) else f'{v:,.2f}', dstyle)
-                         for v in row])
-        t = Table(data, colWidths=col_widths)
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0,0),(-1,0), colors.HexColor('#333333')),
-            ('ROWBACKGROUNDS', (0,1),(-1,-1), [light, white]),
-            ('BOX', (0,0),(-1,-1), 0.5, colors.HexColor('#DDDDDD')),
-            ('INNERGRID', (0,0),(-1,-1), 0.3, colors.HexColor('#EEEEEE')),
-            ('TOPPADDING', (0,0),(-1,-1), 3),
-            ('BOTTOMPADDING', (0,0),(-1,-1), 3),
-            ('LEFTPADDING', (0,0),(-1,-1), 5),
-            ('RIGHTPADDING', (0,0),(-1,-1), 5),
-        ]))
-        return t
+    PAGE_W = PAGE[0] - 2*L_MAR
 
     story = []
 
-    # Title
-    t = Table([[Paragraph('📊 Ufone 5G — Dashboard Export Report',
-                           ParagraphStyle('t', fontSize=18, textColor=white,
-                                          fontName='Helvetica-Bold', alignment=1))]],
-              colWidths=[doc.width])
-    t.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),dark),
-                            ('TOPPADDING',(0,0),(-1,-1),12),
-                            ('BOTTOMPADDING',(0,0),(-1,-1),12)]))
-    story.append(t)
-    story.append(Spacer(1, 0.2*cm))
+    # ── Cover / title ─────────────────────────────────────────────────────────
+    title_data = [[Paragraph(title.replace('_',' '), title_sty)]]
+    title_tbl  = Table(title_data, colWidths=[PAGE_W])
+    title_tbl.setStyle(TableStyle([
+        ('BACKGROUND', (0,0),(-1,-1), RL_DARK),
+        ('TOPPADDING',    (0,0),(-1,-1), 12),
+        ('BOTTOMPADDING', (0,0),(-1,-1), 12),
+        ('ROUNDEDCORNERS', [8]),
+    ]))
+    story.append(title_tbl)
+    story.append(Spacer(1, 0.3*cm))
 
-    meta = Table([[Paragraph(f'Filters: {filter_label}',
-                              ParagraphStyle('m', fontSize=8, textColor=colors.HexColor('#666666'),
-                                             fontName='Helvetica', alignment=1)),
-                   Paragraph(f'Generated: {generated}',
-                              ParagraphStyle('m2', fontSize=8, textColor=colors.HexColor('#666666'),
-                                             fontName='Helvetica', alignment=2))]],
-                 colWidths=[doc.width*0.6, doc.width*0.4])
-    meta.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,-1),grey),
-                               ('TOPPADDING',(0,0),(-1,-1),5),
-                               ('BOTTOMPADDING',(0,0),(-1,-1),5)]))
-    story.append(meta)
+    filter_str = '  |  '.join(
+        f"{k.replace('_',' ').title()}: {v}" for k,v in filters.items() if v
+    ) or 'All Data'
+    story.append(Paragraph(f"Filters: {filter_str}     Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", filt_sty))
+    story.append(HRFlowable(width=PAGE_W, thickness=2, color=RL_ORANGE))
     story.append(Spacer(1, 0.4*cm))
 
-    # KPI grid
-    story.append(pdf_section('KEY PERFORMANCE INDICATORS'))
-    story.append(Spacer(1, 0.1*cm))
-    kpi_items = list(kpis.items())
-    kpi_rows = []
-    for i in range(0, len(kpi_items), 4):
-        chunk = kpi_items[i:i+4]
-        labels = [Paragraph(f'<font size=7 color="#666666"><b>{m}</b></font>', ParagraphStyle('kl', fontName='Helvetica-Bold', alignment=1)) for m, _ in chunk]
-        values = [Paragraph(f'<font size=12 color="#F58220"><b>{fmt_num(v)}</b></font>', ParagraphStyle('kv', fontName='Helvetica-Bold', alignment=1)) for _, v in chunk]
-        while len(labels) < 4:
-            labels.append(Paragraph('', ParagraphStyle('e', fontName='Helvetica')))
-            values.append(Paragraph('', ParagraphStyle('e', fontName='Helvetica')))
-        kpi_rows.append(labels)
-        kpi_rows.append(values)
+    # ── KPI Tables ────────────────────────────────────────────────────────────
+    for sec in sections:
+        sec_color = rl_colors.HexColor(sec['color'])
 
-    kt = Table(kpi_rows, colWidths=[doc.width/4]*4)
-    kt.setStyle(TableStyle([
-        ('ROWBACKGROUNDS', (0,0),(-1,-1), [light, white]),
-        ('BOX', (0,0),(-1,-1), 0.5, colors.HexColor('#DDDDDD')),
-        ('INNERGRID', (0,0),(-1,-1), 0.3, colors.HexColor('#EEEEEE')),
-        ('TOPPADDING', (0,0),(-1,-1), 5),
-        ('BOTTOMPADDING', (0,0),(-1,-1), 5),
-    ]))
-    story.append(kt)
-    story.append(PageBreak())
-
-    # Growth table
-    if growth:
-        story.append(pdf_section('GROWTH — YTD / YOY / MOM', purple))
+        sec_hdr = [[Paragraph(f"  {sec['title']}", sec_sty)]]
+        sec_tbl = Table(sec_hdr, colWidths=[PAGE_W])
+        sec_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0,0),(-1,-1), sec_color),
+            ('TOPPADDING',    (0,0),(-1,-1), 7),
+            ('BOTTOMPADDING', (0,0),(-1,-1), 7),
+        ]))
+        story.append(sec_tbl)
         story.append(Spacer(1, 0.1*cm))
-        g_headers = ['Metric', 'YTD Curr', 'YTD Prev', 'YTD %', 'YOY Curr', 'YOY Prev', 'YOY %', 'MOM %']
-        g_rows = [(m, fmt_num(g['ytd_curr']), fmt_num(g['ytd_prev']), fmt_pct(g['ytd_pct']),
-                   fmt_num(g['yoy_curr']), fmt_num(g['yoy_prev']), fmt_pct(g['yoy_pct']),
-                   fmt_pct(g['mom_pct'])) for m, g in growth.items()]
-        cw = [doc.width*0.22] + [doc.width*0.11]*7
-        story.append(pdf_table(g_headers, g_rows, cw))
-        story.append(Spacer(1, 0.3*cm))
 
-    # Chart tables
-    def add_pdf_chart(title, headers, rows, color=orange, col_widths=None):
-        story.append(pdf_section(title, color))
-        story.append(Spacer(1, 0.1*cm))
-        story.append(pdf_table(headers, rows, col_widths))
-        story.append(Spacer(1, 0.3*cm))
+        # Two-column KPI table
+        rows = sec['rows']
+        half = (len(rows)+1)//2
+        left  = rows[:half]
+        right = rows[half:]
 
-    rev_region = list(qs.exclude(region__isnull=True).values('region')
-                      .annotate(revenue=Sum('tot_revn_amt')).order_by('-revenue')[:10])
-    add_pdf_chart('Revenue by Region (Top 10)', ['Region', 'Revenue (PKR)', 'Formatted'],
-                  [(r['region'], round(safe(r['revenue']), 2), fmt_num(safe(r['revenue'])))
-                   for r in rev_region])
+        col_w = (PAGE_W - 0.3*cm) / 2
 
-    act_tech = list(qs.exclude(technology__isnull=True).values('technology')
-                    .annotate(activations=Sum('act_90d'), base4g=Sum('act_90d_4g'))
-                    .order_by('-activations'))
-    add_pdf_chart('Activations by Technology', ['Technology', '90D Activations', '4G Base'],
-                  [(r['technology'], r['activations'] or 0, r['base4g'] or 0)
-                   for r in act_tech], purple)
+        def make_kpi_tbl(rows_list):
+            data = [['KPI', 'Value', 'Fmt']]
+            for i, (lbl, raw, _) in enumerate(rows_list):
+                data.append([lbl, _safe(raw), _fmt(raw)])
+            t = Table(data, colWidths=[col_w*0.55, col_w*0.25, col_w*0.20])
+            t.setStyle(TableStyle([
+                ('BACKGROUND', (0,0),(-1,0), RL_ORANGE),
+                ('TEXTCOLOR',  (0,0),(-1,0), RL_WHITE),
+                ('FONTNAME',   (0,0),(-1,0), 'Helvetica-Bold'),
+                ('FONTSIZE',   (0,0),(-1,0), 8),
+                ('ALIGN',      (0,0),(-1,0), 'CENTER'),
+                ('ROWBACKGROUNDS',(0,1),(-1,-1),
+                 [rl_colors.HexColor('#FFF5EE'), rl_colors.HexColor('#FAFAFA')]),
+                ('FONTNAME', (0,1),(-1,-1), 'Helvetica'),
+                ('FONTSIZE', (0,1),(-1,-1), 8),
+                ('TEXTCOLOR',(0,1),(-1,-1), RL_DARK),
+                ('ALIGN',    (1,1),(-1,-1), 'RIGHT'),
+                ('ALIGN',    (0,1),(0,-1),  'LEFT'),
+                ('GRID',     (0,0),(-1,-1), 0.4, rl_colors.HexColor('#E8E9ED')),
+                ('LEFTPADDING',  (0,0),(-1,-1), 5),
+                ('RIGHTPADDING', (0,0),(-1,-1), 5),
+                ('TOPPADDING',   (0,0),(-1,-1), 3),
+                ('BOTTOMPADDING',(0,0),(-1,-1), 3),
+            ]))
+            return t
 
-    rev_bu = list(qs.exclude(business_unit__isnull=True).values('business_unit')
-                  .annotate(revenue=Sum('tot_revn_amt')).order_by('-revenue'))
-    add_pdf_chart('Revenue by Business Unit', ['Business Unit', 'Revenue (PKR)'],
-                  [(r['business_unit'], round(safe(r['revenue']), 2)) for r in rev_bu])
+        # Pad right side if unequal
+        if len(right) < len(left):
+            right = right + [('', '', None)] * (len(left) - len(right))
 
-    recharge = qs.aggregate(prepaid=Sum('prepaid_dgtl_amount'),
-                            postpaid=Sum('postpaid_dgtl_amount'),
-                            conventional=Sum('conventional_recharge'))
-    add_pdf_chart('Recharge Breakdown', ['Channel', 'Amount (PKR)', 'Formatted'],
-                  [('Prepaid Digital', round(safe(recharge['prepaid']), 2), fmt_num(safe(recharge['prepaid']))),
-                   ('Postpaid Digital', round(safe(recharge['postpaid']), 2), fmt_num(safe(recharge['postpaid']))),
-                   ('Conventional', round(safe(recharge['conventional']), 2), fmt_num(safe(recharge['conventional'])))],
-                  colors.HexColor('#F9A825'))
+        pair_data = [[make_kpi_tbl(left), make_kpi_tbl(right)]]
+        pair_tbl  = Table(pair_data,
+                          colWidths=[col_w, col_w],
+                          hAlign='LEFT')
+        pair_tbl.setStyle(TableStyle([
+            ('VALIGN', (0,0),(-1,-1), 'TOP'),
+            ('LEFTPADDING',  (0,0),(-1,-1), 0),
+            ('RIGHTPADDING', (0,0),(-1,-1), 3),
+        ]))
+        story.append(pair_tbl)
+        story.append(Spacer(1, 0.35*cm))
 
-    status_data = list(qs.exclude(site_status__isnull=True).values('site_status')
-                       .annotate(count=Count('key', distinct=True)).order_by('-count'))
-    add_pdf_chart('Site Count by Status', ['Status', 'Site Count'],
-                  [(r['site_status'], r['count']) for r in status_data], teal)
+    # ── Charts page ───────────────────────────────────────────────────────────
+    if charts or gauges:
+        story.append(PageBreak())
 
-    def add_footer(canvas, doc):
-        canvas.saveState()
-        canvas.setFont('Helvetica', 7)
-        canvas.setFillColor(colors.HexColor('#999999'))
-        canvas.drawString(1.5*cm, 0.8*cm, f'Ufone 5G Dashboard  |  {filter_label}  |  {generated}')
-        canvas.drawRightString(doc.pagesize[0]-1.5*cm, 0.8*cm, f'Page {doc.page}')
-        canvas.restoreState()
+        chart_title = [[Paragraph("Monthly Trend Charts", title_sty)]]
+        ct_tbl = Table(chart_title, colWidths=[PAGE_W])
+        ct_tbl.setStyle(TableStyle([
+            ('BACKGROUND', (0,0),(-1,-1), RL_DARK),
+            ('TOPPADDING',    (0,0),(-1,-1), 10),
+            ('BOTTOMPADDING', (0,0),(-1,-1), 10),
+        ]))
+        story.append(ct_tbl)
+        story.append(Spacer(1, 0.4*cm))
 
-    doc.build(story, onFirstPage=add_footer, onLaterPages=add_footer)
+        # Gauges row
+        if gauges:
+            story.append(Paragraph("Attainment Gauges", styles['Heading3']))
+            gauge_imgs = []
+            gw = PAGE_W / max(len(gauges), 1) - 0.3*cm
+            gh = gw * 0.88
+            for g_title, g_buf in gauges:
+                gauge_imgs.append(RLImage(g_buf, width=gw, height=gh))
+            g_row  = [gauge_imgs]
+            g_tbl  = Table(g_row, colWidths=[gw+0.3*cm]*len(gauges))
+            g_tbl.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+                                        ('ALIGN', (0,0),(-1,-1),'CENTER')]))
+            story.append(g_tbl)
+            story.append(Spacer(1, 0.5*cm))
+            story.append(HRFlowable(width=PAGE_W, thickness=1, color=RL_ORANGE))
+            story.append(Spacer(1, 0.3*cm))
+
+        # Charts in 2-per-row grid
+        CHART_W_PT = (PAGE_W - 0.4*cm) / 2
+        CHART_H_PT = CHART_W_PT * 0.40
+
+        for i in range(0, len(charts), 2):
+            row_imgs = []
+            for ci in range(i, min(i+2, len(charts))):
+                c_title, c_buf = charts[ci]
+                img = RLImage(c_buf, width=CHART_W_PT, height=CHART_H_PT)
+                row_imgs.append(img)
+            if len(row_imgs) == 1:
+                row_imgs.append('')
+
+            row_data = [row_imgs]
+            row_tbl  = Table(row_data,
+                             colWidths=[CHART_W_PT+0.2*cm]*2,
+                             hAlign='LEFT')
+            row_tbl.setStyle(TableStyle([
+                ('VALIGN',       (0,0),(-1,-1),'TOP'),
+                ('LEFTPADDING',  (0,0),(-1,-1), 2),
+                ('RIGHTPADDING', (0,0),(-1,-1), 2),
+                ('BOTTOMPADDING',(0,0),(-1,-1), 6),
+            ]))
+            story.append(row_tbl)
+
+    doc.build(story)
     buf.seek(0)
-    filename = f'dashboard_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
-    response = HttpResponse(buf, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    return response
+    return buf
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  MAIN VIEW
+# ─────────────────────────────────────────────────────────────────────────────
+
+@login_required(login_url='/')
+def export_view(request, export_type, source=None):
+    """
+    Main export view.
+    URL: /api/export/<source>/<type>/  e.g. /api/export/channel/excel/
+    source is passed via URL path — no query param needed.
+    """
+    # source from URL path (most reliable), then query param, then Referer
+    if not source:
+        source = request.GET.get('source', '')
+    if not source:
+        referer = request.META.get('HTTP_REFERER', '')
+        source = 'channel' if '/channel/' in referer else 'marketing'
+
+    filters = {
+        'region':        request.GET.get('region', ''),
+        'business_unit': request.GET.get('business_unit', ''),
+        'arm':           request.GET.get('arm', ''),
+        'franchise':     request.GET.get('franchise', ''),
+        'year':          request.GET.get('year', ''),
+        'month':         request.GET.get('month', ''),
+    }
+
+    try:
+        if source == 'channel':
+            sections, charts, gauges = _get_channel_kpis_and_charts(filters, request)
+        else:
+            sections, charts, gauges = _get_marketing_kpis_and_charts(filters, request)
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        resp = HttpResponse(
+            f"Export Error\n{'='*60}\nSource: {source}\n{e}\n\n{tb}",
+            content_type='text/plain'
+        )
+        resp['Content-Disposition'] = 'attachment; filename="export_error.txt"'
+        return resp
+
+    title    = _build_title(source, filters)
+    filename = _build_filename(source, filters, export_type)
+
+    try:
+        if export_type == 'excel':
+            data  = _build_excel(sections, charts, gauges, title, filters)
+            ct    = ('application/vnd.openxmlformats-officedocument'
+                     '.spreadsheetml.sheet')
+            fname = filename + '.xlsx'
+        elif export_type == 'pdf':
+            data  = _build_pdf(sections, charts, gauges, title, filters)
+            ct    = 'application/pdf'
+            fname = filename + '.pdf'
+        else:
+            return HttpResponse("Unknown export type. Use 'excel' or 'pdf'.", status=400)
+    except Exception as e:
+        import traceback
+        resp = HttpResponse(
+            f"Build Error\n{'='*60}\n{e}\n\n{traceback.format_exc()}",
+            content_type='text/plain'
+        )
+        resp['Content-Disposition'] = 'attachment; filename="build_error.txt"'
+        return resp
+
+    resp = HttpResponse(data.read(), content_type=ct)
+    resp['Content-Disposition'] = f'attachment; filename="{fname}"'
+    return resp
+
+
+@login_required(login_url='/')
+def export_view_legacy(request, export_type):
+    """Legacy: /api/export/excel/ — infers source from Referer header."""
+    referer = request.META.get('HTTP_REFERER', '')
+    source  = 'channel' if '/channel/' in referer else 'marketing'
+    return export_view(request, export_type, source=source)
+
+
+def _build_title(source, filters):
+    parts = [source.capitalize(), 'KPI Report']
+    for k in ('region','business_unit','arm','franchise','year','month'):
+        v = filters.get(k)
+        if v:
+            parts.append(v)
+    return ' — '.join(parts)
+
+
+def _build_filename(source, filters, ext):
+    parts = [source.capitalize(), 'KPI_Report']
+    for k in ('region','business_unit','arm','franchise','year','month'):
+        v = filters.get(k)
+        if v:
+            parts.append(re.sub(r'[^\w]', '_', str(v)))
+    parts.append(datetime.date.today().strftime('%Y%m%d'))
+    name = '_'.join(parts)
+    return name

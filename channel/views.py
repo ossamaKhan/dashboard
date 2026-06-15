@@ -202,7 +202,7 @@ def channel_data(request):
     month_param   = request.GET.get('month')
     year_param    = request.GET.get('year')
 
-    ck = _cache_key('ch_data_v12_', {
+    ck = _cache_key('ch_data_v14_', {
         'r': region, 'f': franchise, 'bu': business_unit,
         'a': arm, 'm': month_param, 'y': year_param,
         'sec': request.GET.get('sections', ''),
@@ -342,8 +342,7 @@ def channel_data(request):
     if need('monthly'):
         trend_qs = qs_base
         if year_param: trend_qs = trend_qs.filter(date__year=int(year_param))
-        _mmets = _brief_metrics if _is_brief else None
-        response['monthly'] = build_monthly_trend(trend_qs, metrics=_mmets)
+        response['monthly'] = build_monthly_trend(trend_qs)
 
     if need('breakdowns'):
         response['top_franchises']   = build_top_franchises(qs)
