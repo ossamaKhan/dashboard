@@ -378,7 +378,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
       <div><div style="font-size:12px;font-weight:800;color:var(--orange)">Ufone 5G</div></div>
     </div>
     <div class="sb-sec">Marketing</div>
-    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Marketing Brief</a>
+    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Executive Brief</a>
     <a href="/base/" class="nv" onclick="closeSidebar()">Base Analytics</a>
     <a href="/revenue/" class="nv" onclick="closeSidebar()">Revenue Analytics</a>
     <div class="sb-sec">Channel</div>
@@ -387,10 +387,9 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <a href="/channel/enablers/" class="nv active" onclick="closeSidebar()">Enablers</a>
     <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
     <a href="/channel/kpi-summary/" class="nv" onclick="closeSidebar()">KPI Summary</a>
-    <div class="sb-sec">Other</div>
-    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div class="sb-sec">Account</div>
     <a href="/profile/" class="nv" onclick="closeSidebar()">Profile Settings</a>
+    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div style="flex:1"></div>
   </div>
   <div class="sb-footer">
@@ -887,7 +886,7 @@ function updateKPIs(data){
   });
   updateLogoSub();
 }
-function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/channel/api/data/?'+p+'&sections=kpis,monthly').then(r=>r.json()).then(data=>{lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});
+function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/channel/api/data/?'+p+'&sections=kpis,growth,monthly&growth_metrics=daily_active_served,daily_active_evc,npr,active_so_daily_avg,cm_964_active&monthly_metrics=cm_evc_active,cm_964_active,npr,active_so_daily_avg,daily_active_served,daily_active_evc,evc_active_base').then(r=>r.json()).then(data=>{lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});
   fetchThroughput();
 }
 
@@ -954,11 +953,11 @@ function buildCharts(d){
       label:'Active SO %',
       data: pctData,
       type:'line', order:1,
-      borderColor:'#FF3D00',
-      backgroundColor:'rgba(255,61,0,0.1)',
+      borderColor:'#f58220',
+      backgroundColor:'transparent',
       borderWidth:2.5,
       borderDash:[5,3],
-      pointRadius:3, pointHoverRadius:5,
+      pointRadius:3, pointHoverRadius:5, pointBackgroundColor:'#f58220',
       tension:0.3, fill:false,
       yAxisID:'y2',
     });
@@ -969,14 +968,25 @@ function buildCharts(d){
     const nprCallout={id:'nprCallout',afterDatasetsDraw(chart){
       const ctx=chart.ctx;
       chart.data.datasets.forEach((ds,di)=>{
-        if(!ds._showCallout) return;
         const meta=chart.getDatasetMeta(di); if(meta.hidden) return;
-        meta.data.forEach((bar,j)=>{
-          const v=ds.data[j]; if(v==null||v===0) return;
-          ctx.save(); ctx.textAlign='center'; ctx.textBaseline='bottom';
-          ctx.font='bold 9px Poppins'; ctx.fillStyle=textColor();
-          ctx.fillText(fmt(v), bar.x, bar.y-6); ctx.restore();
-        });
+        if(ds._showCallout){
+          // Bar callout labels
+          meta.data.forEach((bar,j)=>{
+            const v=ds.data[j]; if(v==null||v===0) return;
+            ctx.save(); ctx.textAlign='center'; ctx.textBaseline='bottom';
+            ctx.font='bold 9px Poppins'; ctx.fillStyle=textColor();
+            ctx.fillText(fmt(v), bar.x, bar.y-6); ctx.restore();
+          });
+        }
+        if(ds.yAxisID==='y2'){
+          // Always show % labels on the Active SO % line
+          meta.data.forEach((point,j)=>{
+            const v=ds.data[j]; if(v==null) return;
+            ctx.save(); ctx.textAlign='center'; ctx.textBaseline='bottom';
+            ctx.font='bold 9px Poppins'; ctx.fillStyle=textColor();
+            ctx.fillText(v+'%', point.x, point.y-6); ctx.restore();
+          });
+        }
       });
     }};
 
@@ -996,7 +1006,7 @@ function buildCharts(d){
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
           y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
-          y2:{position:'right',grid:{display:false},ticks:{color:'#FF3D00',font:{size:10,weight:'700'},callback:v=>v+'%',maxTicksLimit:5},border:{display:false}},
+          y2:{position:'right',grid:{display:false},ticks:{color:'#f58220',font:{size:10,weight:'700'},callback:v=>v+'%',maxTicksLimit:5},border:{display:false}},
         }
       }
     });
@@ -1209,26 +1219,47 @@ function buildCharts(d){
     src.datasets.forEach(ds=>ds.data.forEach((v,i)=>{if(v!=null&&v!==0&&i>lastIdx)lastIdx=i;}));
     if(lastIdx<0) return;
     const labels   = src.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
+    const nBars=src.datasets.length;
+    const latestDs964=src.datasets[nBars-1].data.slice(0,lastIdx+1);
+    const yearTotal964=latestDs964.reduce((a,v)=>a+(v||0),0);
     const datasets = src.datasets.map((ds,i)=>({
       label: String(ds.label), data: ds.data.slice(0,lastIdx+1),
       backgroundColor: ['rgba(94,53,177,0.75)','rgba(171,29,254,0.65)','rgba(126,87,194,0.6)'][i%3],
       borderColor:     ['#5E35B1','#AB1DFE','#7E57C2'][i%3],
       borderWidth:1.5, borderRadius:3, borderSkipped:false,
-      type:'bar', order:1, _showCallout:true,
+      type:'bar', order:2, _showCallout:false, _isLatest:(i===nBars-1),
     }));
+    const pts964=latestDs964.map((v,i)=>({x:i,y:v||0})).filter(p=>p.y>0);
+    if(pts964.length>=2){
+      const n=pts964.length,sx=pts964.reduce((a,p)=>a+p.x,0),sy=pts964.reduce((a,p)=>a+p.y,0);
+      const sxy=pts964.reduce((a,p)=>a+p.x*p.y,0),sx2=pts964.reduce((a,p)=>a+p.x*p.x,0);
+      const slope=(n*sxy-sx*sy)/(n*sx2-sx*sx)||0,intercept=(sy-slope*sx)/n;
+      datasets.push({
+        label:'Trend',
+        data:latestDs964.map((_,i)=>Math.max(0,+(slope*i+intercept).toFixed(0))),
+        _pctData:latestDs964.map(v=>yearTotal964>0?+(v/yearTotal964*100).toFixed(1):null),
+        type:'line', order:1,
+        borderColor:'#f58220', backgroundColor:'transparent',
+        borderWidth:2.5, borderDash:[6,3],
+        pointRadius:4, pointBackgroundColor:'#f58220',
+        tension:0.3, spanGaps:true, skipGlobal:true,
+      });
+    }
     dc(canvasId);
     const el=document.getElementById(canvasId); if(!el) return;
     const callout964={id:'callout964bar',afterDatasetsDraw(chart){
       const ctx=chart.ctx;
       chart.data.datasets.forEach((ds,di)=>{
-        if(!ds._showCallout) return;
         const meta=chart.getDatasetMeta(di); if(meta.hidden) return;
-        meta.data.forEach((bar,j)=>{
-          const v=ds.data[j]; if(v==null||v===0) return;
-          ctx.save(); ctx.textAlign='center'; ctx.textBaseline='bottom';
-          ctx.font='bold 9px Poppins'; ctx.fillStyle=textColor();
-          ctx.fillText(fmt(v),bar.x,bar.y-6); ctx.restore();
-        });
+        if(ds.label==='Trend'&&ds._pctData){
+          // Draw % of year on each trend node — always visible
+          meta.data.forEach((point,j)=>{
+            const pct=ds._pctData[j]; if(pct==null) return;
+            ctx.save(); ctx.textAlign='center'; ctx.textBaseline='bottom';
+            ctx.font='bold 9px Poppins'; ctx.fillStyle=textColor();
+            ctx.fillText(pct+'%',point.x,point.y-6); ctx.restore();
+          });
+        }
       });
     }};
     charts[canvasId]=new Chart(el,{
@@ -1239,7 +1270,7 @@ function buildCharts(d){
         skipGlobalLabels:true,
         plugins:{
           legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
-          tooltip:{...tip(),callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fmt(ctx.raw)}`}},
+          tooltip:{...tip(),callbacks:{label:ctx=>{if(ctx.dataset.label==='Trend'){const pct=ctx.dataset._pctData?ctx.dataset._pctData[ctx.dataIndex]:null;return pct!=null?` ${pct}% of year`:` Trend: ${fmt(ctx.raw)}`;}return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;}}},
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
@@ -1359,7 +1390,7 @@ function buildCharts(d){
 function fetchMapData(){}
 function initMap(){}
 
-function exportFile(type){const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});window.location.href=`/api/export/${type}/?${p}`;}
+function exportFile(type){const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});window.location.href=`/api/export/channel/${type}/?${p}`;}
 document.addEventListener('DOMContentLoaded',()=>{['coord-lat','coord-lng','coord-radius'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchByCoordinates();}});});});
 function toggleActMenu(){const d=document.getElementById('act-menu-drop');d.classList.toggle('open');}
 function closeActMenu(){const d=document.getElementById('act-menu-drop');if(d)d.classList.remove('open');}

@@ -1365,7 +1365,7 @@ def dashboard_data(request):
     s_hvc_pct  = build_series(trend_rows, lambda r: round(safe(r.get('hvc')) / safe(r.get('b90')) * 100, 2) if safe(r.get('b90')) else None)
     s_fca      = build_series(trend_rows, lambda r: safe(r.get('fca'))     if r.get('fca')     is not None else None)
     s_actrch_pct = build_series(trend_rows, lambda r: round(safe(r.get('act_rch')) / safe(r.get('b90')) * 100, 2) if safe(r.get('b90')) else None)
-    s_hs4g_pct   = build_series(trend_rows, lambda r: round(safe(r.get('hs4g'))    / safe(r.get('b4g')) * 100, 2) if safe(r.get('b4g')) else None)
+    s_hs4g_pct   = build_series(trend_rows, lambda r: round(safe(r.get('hs4g'))    / safe(r.get('b90')) * 100, 2) if safe(r.get('b90')) else None)
     s_ada_pct    = build_series(trend_rows, lambda r: round(safe(r.get('avg_dly_act')) / safe(r.get('b90')) * 100, 2) if safe(r.get('b90')) else None)
 
     avg_qs = (

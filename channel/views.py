@@ -202,10 +202,12 @@ def channel_data(request):
     month_param   = request.GET.get('month')
     year_param    = request.GET.get('year')
 
-    ck = _cache_key('ch_data_v14_', {
+    ck = _cache_key('ch_data_v19_', {
         'r': region, 'f': franchise, 'bu': business_unit,
         'a': arm, 'm': month_param, 'y': year_param,
         'sec': request.GET.get('sections', ''),
+        'gm':  request.GET.get('growth_metrics', ''),
+        'mm':  request.GET.get('monthly_metrics', ''),
         'uid': request.user.id,
     })
     cached = cache.get(ck)
@@ -333,16 +335,24 @@ def channel_data(request):
     ]
     _sections_set = set(s.strip() for s in sections_param.split(',') if s.strip())
     # Brief-only: has kpis+growth+monthly but NOT quality/enablers-only fields
-    _is_brief = _sections_set == {'kpis', 'growth', 'monthly'} and not need('breakdowns')
+    _is_brief = request.GET.get('brief') == '1'
 
     if need('growth'):
-        _gmets = _brief_metrics if _is_brief else None
+        _gm_param = request.GET.get('growth_metrics', '')
+        if _gm_param:
+            _gmets = [m.strip() for m in _gm_param.split(',') if m.strip()]
+        elif _is_brief:
+            _gmets = _brief_metrics
+        else:
+            _gmets = None
         response['growth'] = build_growth_dict(qs_base, metrics=_gmets)
 
     if need('monthly'):
         trend_qs = qs_base
         if year_param: trend_qs = trend_qs.filter(date__year=int(year_param))
-        response['monthly'] = build_monthly_trend(trend_qs)
+        _mm_param = request.GET.get('monthly_metrics', '')
+        _mm_list  = [m.strip() for m in _mm_param.split(',') if m.strip()] if _mm_param else None
+        response['monthly'] = build_monthly_trend(trend_qs, metrics=_mm_list)
 
     if need('breakdowns'):
         response['top_franchises']   = build_top_franchises(qs)
@@ -411,7 +421,7 @@ def build_growth_dict(qs_base, metrics=None):
         'evc_active_base', 'evc_retailer',
         'cm_evc_active', 'cm_evc_active_platinum', 'cm_evc_active_gold', 'cm_evc_active_silver',
         'cm_964_active', 'cm_964_active_platinum', 'cm_964_active_gold', 'cm_964_active_silver',
-        'npr', 'active_so_daily_avg',
+        'npr', 'active_so_daily_avg', 'daily_active_served', 'daily_active_evc',
     ] if m in out]
 
     if _base_metrics:

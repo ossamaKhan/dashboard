@@ -366,8 +366,8 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
       <img src="{% static 'images/logo1.jpg' %}" style="height:34px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
       <div><div style="font-size:12px;font-weight:800;color:var(--orange)">Ufone 5G</div></div>
     </div>
-   <div class="sb-sec">Marketing</div>
-    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Marketing Brief</a>
+    <div class="sb-sec">Marketing</div>
+    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Executive Brief</a>
     <a href="/base/" class="nv" onclick="closeSidebar()">Base Analytics</a>
     <a href="/revenue/" class="nv" onclick="closeSidebar()">Revenue Analytics</a>
     <div class="sb-sec">Channel</div>
@@ -376,10 +376,9 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <a href="/channel/enablers/" class="nv" onclick="closeSidebar()">Enablers</a>
     <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
     <a href="/channel/kpi-summary/" class="nv" onclick="closeSidebar()">KPI Summary</a>
-    <div class="sb-sec">Other</div>
-    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div class="sb-sec">Account</div>
     <a href="/profile/" class="nv" onclick="closeSidebar()">Profile Settings</a>
+    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div style="flex:1"></div>
   </div>
   <div class="sb-footer">
@@ -508,8 +507,15 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   </div>
 
   <div class="chart-panel span-full">
-    <div class="ph"><div><div class="pt">FCA Monthly Trend</div></div></div>
+    <div class="ph"><div><div class="pt">FCA TVA Trend</div><div class="ps">Achievement vs Target · TVA%</div></div></div>
     <div class="h260" style="position:relative"><canvas id="chart-ga"></canvas></div>
+  </div>
+
+  <div class="chart-panel span-full">
+    <div class="ph">
+      <div><div class="pt">FCA Monthly Trend</div><div class="ps">Month-on-month change · with linear trendline</div></div>
+    </div>
+    <div class="h260" style="position:relative"><canvas id="chart-ga-mom"></canvas></div>
   </div>
 
   <div class="kpi span-full k-mnp">
@@ -771,7 +777,7 @@ function updateKPIs(data){
 
   updateLogoSub();
 }
-function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/channel/api/data/?'+p+'&sections=kpis,monthly').then(r=>r.json()).then(data=>{lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});}
+function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/channel/api/data/?'+p+'&sections=kpis,growth,monthly&growth_metrics=fca_ach,mnp_ach,loading_ach&monthly_metrics=fca_ach,fca_target,mnp_ach,mnp_target,loading_ach,loading_target,evc_active_base,loading_ach_site_conv,total_site_loading,mbb_ach,data_sim_fca').then(r=>r.json()).then(data=>{lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});}
 
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
@@ -842,10 +848,7 @@ function buildCharts(d){
         skipGlobalLabels:true,
         plugins:{
           legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
-          tooltip:{...tip(),callbacks:{label:ctx=>{
-            if(ctx.dataset.type==='line') return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
-            return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
-          }}},
+          tooltip:{...tip(),callbacks:{label:ctx=>{const t=ctx.dataset._yearTotal||0;return t?` ${ctx.dataset.label}: ${fmt(ctx.raw)} (${(ctx.raw/t*100).toFixed(1)}% of year)`:` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;}},},
         },
         scales:{
           x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
@@ -865,7 +868,6 @@ function buildCharts(d){
     if(lastIdx<0) return;
     const labels = src.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
 
-    // Pre-compute yearly totals for % callout
     const datasets = src.datasets.map((ds,i)=>{
       const sliced = ds.data.slice(0,lastIdx+1);
       const yearTotal = sliced.reduce((s,v)=>s+(v||0), 0);
@@ -876,10 +878,29 @@ function buildCharts(d){
         backgroundColor: COLORS[(i)%COLORS.length]+'bb',
         borderColor:     COLORS[(i)%COLORS.length],
         borderWidth:1.5, borderRadius:3, borderSkipped:false,
-        type:'bar', order:1,
-        _showCallout: true,  // all years get callouts
+        type:'bar', order:2,
+        _showCallout: true,
       };
     });
+
+    // Trendline on latest year using linear regression
+    const latestData = src.datasets[src.datasets.length-1].data.slice(0,lastIdx+1);
+    const pts = latestData.map((v,i)=>({x:i,y:v||0})).filter(p=>p.y>0);
+    if(pts.length>=2){
+      const n=pts.length, sx=pts.reduce((a,p)=>a+p.x,0), sy=pts.reduce((a,p)=>a+p.y,0);
+      const sxy=pts.reduce((a,p)=>a+p.x*p.y,0), sx2=pts.reduce((a,p)=>a+p.x*p.x,0);
+      const slope=(n*sxy-sx*sy)/(n*sx2-sx*sx)||0;
+      const intercept=(sy-slope*sx)/n;
+      const trendData = latestData.map((_,i)=>Math.max(0,+(slope*i+intercept).toFixed(0)));
+      datasets.push({
+        label:'Trend', data:trendData,
+        type:'line', borderColor:'#FF3D00', backgroundColor:'transparent',
+        borderWidth:2.5, borderDash:[6,3],
+        pointRadius:3, pointBackgroundColor:'#FF3D00',
+        tension:0.3, order:1, spanGaps:true,
+        skipGlobal:true,
+      });
+    }
 
     dc(canvasId);
     const el = document.getElementById(canvasId); if(!el) return;
@@ -910,9 +931,8 @@ function buildCharts(d){
           legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
           tooltip:{...tip(),callbacks:{
             label:ctx=>{
-              const v=ctx.raw, total=ctx.dataset._yearTotal||0;
-              const pct=total>0?(v/total*100).toFixed(1)+'%':'—';
-              return ` ${ctx.dataset.label}: ${fmt(v)}`;
+              if(ctx.dataset.label==='Trend'){const bd=ctx.chart.data.datasets.filter(ds=>ds.type==='bar');const lb=bd[bd.length-1];return ` Actual: ${fmt(lb?lb.data[ctx.dataIndex]:ctx.raw)}`;}
+              const t=ctx.dataset._yearTotal||0; return t?` ${ctx.dataset.label}: ${fmt(ctx.raw)} (${(ctx.raw/t*100).toFixed(1)}% of year)`:` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
             }
           }},
         },
@@ -1013,7 +1033,7 @@ function buildCharts(d){
           tooltip:{...tip(),callbacks:{
             label:ctx=>{
               if(ctx.dataset.label==='TVA%') return ` TVA: ${ctx.raw}%`;
-              return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+              const t=ctx.dataset._yearTotal||0; return t?` ${ctx.dataset.label}: ${fmt(ctx.raw)} (${(ctx.raw/t*100).toFixed(1)}% of year)`:` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
             }
           }},
         },
@@ -1111,7 +1131,7 @@ function buildCharts(d){
           tooltip:{...tip(),callbacks:{
             label:ctx=>{
               if(ctx.dataset.label==='TVA%') return ` TVA: ${ctx.raw}%`;
-              return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+              const t=ctx.dataset._yearTotal||0; return t?` ${ctx.dataset.label}: ${fmt(ctx.raw)} (${(ctx.raw/t*100).toFixed(1)}% of year)`:` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
             }
           }},
         },
@@ -1205,13 +1225,10 @@ function buildCharts(d){
           legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
           tooltip:{...tip(),callbacks:{
             label:ctx=>{
-              if(ctx.dataset._isTvaLine){
-                const pct=ctx.dataset._pctData?ctx.dataset._pctData[ctx.dataIndex]:null;
-                return pct!=null?` TVA: ${pct}%`:` Target: ${fmt(ctx.raw)}`;
-              }
+              if(ctx.dataset._isTvaLine){const pct=ctx.dataset._pctData?ctx.dataset._pctData[ctx.dataIndex]:null;return pct!=null?` TVA: ${pct}%`:` Target: ${fmt(ctx.raw)}`;}
               const total=ctx.dataset._yearTotal||0;
               const pct=total>0?(ctx.raw/total*100).toFixed(1)+'%':'—';
-              return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+              const t=ctx.dataset._yearTotal||0; return t?` ${ctx.dataset.label}: ${fmt(ctx.raw)} (${(ctx.raw/t*100).toFixed(1)}% of year)`:` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
             }
           }},
         },
@@ -1302,7 +1319,7 @@ function buildCharts(d){
           tooltip:{...tip(),callbacks:{
             label:ctx=>{
               if(ctx.dataset._isTva) return ` TVA: ${ctx.raw}%`;
-              return ` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+              const t=ctx.dataset._yearTotal||0; return t?` ${ctx.dataset.label}: ${fmt(ctx.raw)} (${(ctx.raw/t*100).toFixed(1)}% of year)`:` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
             }
           }},
         },
@@ -1511,10 +1528,99 @@ function buildCharts(d){
     });
   }
 
+
+  // ── FCA Monthly Trend (mirrors MNP Monthly Trend exactly) ───────────────
+  function chartFcaMom(canvasId){
+    const src = d.monthly['fca_ach'];
+    if(!src||!src.datasets||!src.datasets.length) return;
+    let lastIdx=-1;
+    src.datasets.forEach(ds=>ds.data.forEach((v,i)=>{if(v!=null&&v!==0&&i>lastIdx)lastIdx=i;}));
+    if(lastIdx<0) return;
+    const labels = src.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
+
+    // Use colour offset 2 (teal/green) to distinguish from MNP (orange/purple)
+    const datasets = src.datasets.map((ds,i)=>{
+      const sliced = ds.data.slice(0,lastIdx+1);
+      const yearTotal = sliced.reduce((s,v)=>s+(v||0), 0);
+      return {
+        label: String(ds.label),
+        data: sliced,
+        _yearTotal: yearTotal,
+        backgroundColor: COLORS[(i+2)%COLORS.length]+'bb',
+        borderColor:     COLORS[(i+2)%COLORS.length],
+        borderWidth:1.5, borderRadius:3, borderSkipped:false,
+        type:'bar', order:2,
+        _showCallout: true,
+      };
+    });
+
+    // Trendline on latest year using linear regression
+    const latestData = src.datasets[src.datasets.length-1].data.slice(0,lastIdx+1);
+    const pts = latestData.map((v,i)=>({x:i,y:v||0})).filter(p=>p.y>0);
+    if(pts.length>=2){
+      const n=pts.length, sx=pts.reduce((a,p)=>a+p.x,0), sy=pts.reduce((a,p)=>a+p.y,0);
+      const sxy=pts.reduce((a,p)=>a+p.x*p.y,0), sx2=pts.reduce((a,p)=>a+p.x*p.x,0);
+      const slope=(n*sxy-sx*sy)/(n*sx2-sx*sx)||0;
+      const intercept=(sy-slope*sx)/n;
+      const trendData = latestData.map((_,i)=>Math.max(0,+(slope*i+intercept).toFixed(0)));
+      datasets.push({
+        label:'Trend', data:trendData,
+        type:'line', borderColor:'#FF3D00', backgroundColor:'transparent',
+        borderWidth:2.5, borderDash:[6,3],
+        pointRadius:3, pointBackgroundColor:'#FF3D00',
+        tension:0.3, order:1, spanGaps:true,
+        skipGlobal:true,
+      });
+    }
+
+    dc(canvasId);
+    const el = document.getElementById(canvasId); if(!el) return;
+
+    const calloutPlugin = {id:'fcaMomCallout', afterDatasetsDraw(chart){
+      const ctx = chart.ctx;
+      chart.data.datasets.forEach((ds,di)=>{
+        if(!ds._showCallout) return;
+        const meta = chart.getDatasetMeta(di); if(meta.hidden) return;
+        meta.data.forEach((bar,j)=>{
+          const v = ds.data[j]; if(v==null||v===0) return;
+          ctx.save();
+          ctx.textAlign='center'; ctx.textBaseline='bottom';
+          ctx.font='bold 9px Poppins'; ctx.fillStyle=textColor();
+          ctx.fillText(fmt(v), bar.x, bar.y-6);
+          ctx.restore();
+        });
+      });
+    }};
+
+    charts[canvasId] = new Chart(el,{
+      type:'bar', plugins:[calloutPlugin],
+      data:{labels, datasets},
+      options:{
+        responsive:true, maintainAspectRatio:false, animation:{duration:800},
+        skipGlobalLabels:true,
+        plugins:{
+          legend:{display:true,position:'top',labels:{color:textColor(),font:{weight:'700',size:11},boxWidth:12,padding:10}},
+          tooltip:{...tip(),callbacks:{
+            label:ctx=>{
+              if(ctx.dataset.label==='Trend'){const bd=ctx.chart.data.datasets.filter(ds=>ds.type==='bar');const lb=bd[bd.length-1];return ` Actual: ${fmt(lb?lb.data[ctx.dataIndex]:ctx.raw)}`;}
+              const t=ctx.dataset._yearTotal||0; return t?` ${ctx.dataset.label}: ${fmt(ctx.raw)} (${(ctx.raw/t*100).toFixed(1)}% of year)`:` ${ctx.dataset.label}: ${fmt(ctx.raw)}`;
+            }
+          }},
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},maxRotation:0}},
+          y:{grid:{display:false},ticks:{color:tickColor(),font:{size:10,weight:'600'},callback:v=>fmt(v),maxTicksLimit:5},border:{display:false}},
+        }
+      }
+    });
+  }
+
+
   setTimeout(()=>{
     chartMnpTrend('chart-mnp', d);
     chartMnpVsTarget('chart-mnp2', d);
     chartFcaVsTarget('chart-ga', d);
+    chartFcaMom('chart-ga-mom');
     chartGrowth('chart-rech',      'loading_ach',      null, 1);
     chartGrowth('chart-conv',      'loading_ach_site_conv', null, 3);
     chartGrowth('chart-rech-site', 'total_site_loading',null, 6);
@@ -1530,7 +1636,7 @@ function buildCharts(d){
 function fetchMapData(){}
 function initMap(){}
 
-function exportFile(type){const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});window.location.href=`/api/export/${type}/?${p}`;}
+function exportFile(type){const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});window.location.href=`/api/export/channel/${type}/?${p}`;}
 document.addEventListener('DOMContentLoaded',()=>{['coord-lat','coord-lng','coord-radius'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchByCoordinates();}});});});
 function toggleActMenu(){const d=document.getElementById('act-menu-drop');d.classList.toggle('open');}
 function closeActMenu(){const d=document.getElementById('act-menu-drop');if(d)d.classList.remove('open');}
@@ -1561,6 +1667,8 @@ function saveFiltersToStorage(){try{localStorage.setItem('ufone_filters_v2',JSON
 function loadFiltersFromStorage(){try{const saved=localStorage.getItem('ufone_filters_v2');if(!saved)return;const parsed=JSON.parse(saved);Object.keys(S).forEach(k=>{if(parsed[k]!==undefined)S[k]=parsed[k]!==null?String(parsed[k]):null;});}catch(e){}}
 loadFiltersFromStorage();
 applyRoleLocks();loadOptions(true);renderTags();updateFilterBadge();
+
+
 </script>
 </body>
 </html>

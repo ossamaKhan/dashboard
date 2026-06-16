@@ -367,19 +367,18 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
       <div><div style="font-size:12px;font-weight:800;color:var(--orange)">Ufone 5G</div></div>
     </div>
     <div class="sb-sec">Marketing</div>
-    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Marketing Brief</a>
+    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Executive Brief</a>
     <a href="/base/" class="nv" onclick="closeSidebar()">Base Analytics</a>
     <a href="/revenue/" class="nv" onclick="closeSidebar()">Revenue Analytics</a>
     <div class="sb-sec">Channel</div>
     <a href="/channel/" class="nv" onclick="closeSidebar()">Channel Brief</a>
     <a href="/channel/performance/" class="nv" onclick="closeSidebar()">Target Performance</a>
     <a href="/channel/enablers/" class="nv" onclick="closeSidebar()">Enablers</a>
-    <a href="/channel/quality/" class="nv active" onclick="closeSidebar()">Quality</a>
+    <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
     <a href="/channel/kpi-summary/" class="nv" onclick="closeSidebar()">KPI Summary</a>
-    <div class="sb-sec">Other</div>
-    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div class="sb-sec">Account</div>
     <a href="/profile/" class="nv" onclick="closeSidebar()">Profile Settings</a>
+    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div style="flex:1"></div>
   </div>
   <div class="sb-footer">
@@ -684,7 +683,7 @@ function updateKPIs(data){
 }
 
 
-function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/channel/api/data/?'+p+'&sections=kpis,monthly').then(r=>r.json()).then(data=>{lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});}
+function fetchData(){document.getElementById("loading").classList.remove("hidden");const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});fetch('/channel/api/data/?'+p+'&sections=kpis,growth,monthly&growth_metrics=fca_ach,g4_ach,qos_ach,sd_bundle,zr&monthly_metrics=fca_ach,g4_ach,g4_target,qos_ach,sd_bundle,zr,zr_fca,dormancy_count,female_fca_count,bundle_ach,cm_disown,new_sim_sale_disowned_cnics,fca_within_90d_disowned,active_90d_base_disown').then(r=>r.json()).then(data=>{lastData=data;try{updateKPIs(data);}catch(e){console.error('updateKPIs error:',e);}try{buildCharts(data);}catch(e){console.error('buildCharts error:',e);}document.getElementById('loading').classList.add('hidden');anime({targets:'.kpi',opacity:[0,1],translateY:[16,0],delay:anime.stagger(50),duration:500,easing:'easeOutCubic'});}).catch(err=>{console.error('fetchData error:',err);document.getElementById('loading').classList.add('hidden');});}
 
 function dc(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
@@ -1156,7 +1155,7 @@ function buildCharts(d){
 function fetchMapData(){}
 function initMap(){}
 
-function exportFile(type){const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});window.location.href=`/api/export/${type}/?${p}`;}
+function exportFile(type){const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});window.location.href=`/api/export/channel/${type}/?${p}`;}
 document.addEventListener('DOMContentLoaded',()=>{['coord-lat','coord-lng','coord-radius'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchByCoordinates();}});});});
 function toggleActMenu(){const d=document.getElementById('act-menu-drop');d.classList.toggle('open');}
 function closeActMenu(){const d=document.getElementById('act-menu-drop');if(d)d.classList.remove('open');}
@@ -1189,4 +1188,4 @@ loadFiltersFromStorage();
 applyRoleLocks();loadOptions(true);renderTags();updateFilterBadge();
 </script>
 </body>
-</html>
+</html> 

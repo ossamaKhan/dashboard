@@ -496,7 +496,7 @@ function buildBaseCharts(d){
   multiLine('chart-t-revival',sliceToActive(bt.revival),null);
   multiLine('chart-ada',sliceToActive(bt.ada),sliceToActive(bt.ada_pct));
 }
-function exportFile(type){const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});window.location.href=`/api/export/${type}/?${p}`;}
+function exportFile(type){const p=new URLSearchParams();Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});window.location.href=`/api/export/marketing/${type}/?${p}`;}
 function toggleActMenu(){const d=document.getElementById('act-menu-drop');d.classList.toggle('open');}
 function closeActMenu(){const d=document.getElementById('act-menu-drop');if(d)d.classList.remove('open');}
 document.addEventListener('click',function(e){const wrap=document.querySelector('.act-menu-wrap');if(wrap&&!wrap.contains(e.target))closeActMenu();});
@@ -536,7 +536,7 @@ function updateBaseKPIs(data){
   set('kpi-actrch-ratio',b90?((actrch/b90)*100).toFixed(1)+'%':'—');
   set('kpi-bvs-ratio',sites?(bvs/sites).toFixed(1)+' / site':'—');
   set('kpi-evc-ratio',sites?(evc/sites).toFixed(1)+' / site':'—');
-  set('kpi-hs4g-ratio',b4g?((hs4g/b4g)*100).toFixed(1)+'%':'—');
+  set('kpi-hs4g-ratio',b90?((hs4g/b90)*100).toFixed(1)+'%':'—');
   const map={base90:'total_base_90d',base4g:'total_base_4g',base30:'total_base_30d',hvc:'total_hvc',actrch:'total_act_recharge',bvs:'total_bvs',evc:'total_evc',hs4g:'total_handset_4g',grossadds:'total_fca',netadds:'computed_net_adds',churnk:'total_gross_churn',revival:'total_revival'};
   const periodMeta={ytd:{prevKey:'ytd_prev',currKey:'ytd_curr',pctKey:'ytd_pct'},mtd:{prevKey:'mtd_prev',currKey:'mtd_curr',pctKey:'mtd_pct'},yoy:{prevKey:'yoy_prev',currKey:'yoy_curr',pctKey:'yoy_pct'}};
   Object.entries(map).forEach(([prefix,key])=>{
