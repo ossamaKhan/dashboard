@@ -1047,12 +1047,10 @@ def dashboard_data(request):
         # YTD includes December of previous year as the base month
         from django.db.models import Q
         ytd_curr_qs = growth_base.filter(
-            Q(year=latest_year, month__lte=latest_month) |
-            Q(year=prev_year, month=12)
+            year=latest_year, month__lte=latest_month
         )
         ytd_prev_qs = growth_base.filter(
-            Q(year=prev_year, month__lte=latest_month) |
-            Q(year=prev_year-1, month=12)
+            year=prev_year, month__lte=latest_month
         )
         yoy_curr_qs = growth_base.filter(year=latest_year, month=latest_month)
         yoy_prev_qs = growth_base.filter(year=prev_year,   month=latest_month)
