@@ -76,6 +76,11 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             auth_login(request, user)
+            try:
+                from login_tracker import record_login
+                record_login(request, user)
+            except Exception:
+                pass   # never block login
             return redirect('dashboard')
         messages.error(request, 'Incorrect password. Please try again.')
         return render(request, 'dashboard/login.html')

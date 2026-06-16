@@ -112,9 +112,7 @@ class UserProfile(models.Model):
         ('ARM', 'ARM'),
     ]
     category           = models.CharField(
-        max_length=10,
-        choices=CATEGORY_CHOICES,
-        default='Region',
+        max_length=10, choices=CATEGORY_CHOICES, default='Region',
         help_text='Region = full access | BU = locked to one business unit | ARM = locked to one ARM'
     )
     user_business_unit = models.CharField(
@@ -151,13 +149,11 @@ class ChatMessage(models.Model):
     sender         = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_messages')
     text           = models.TextField(blank=True, default='')
     image          = models.ImageField(upload_to='chat_images/', blank=True, null=True)
-    # ── Voice messages ──
     audio          = models.FileField(upload_to='chat_audio/', blank=True, null=True)
     audio_duration = models.PositiveIntegerField(null=True, blank=True)
     created_at     = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        # No default ordering — views specify order_by() explicitly for best performance
         db_table = 'chat_message'
         indexes = [
             models.Index(fields=['id'],         name='idx_chat_id'),
@@ -166,3 +162,29 @@ class ChatMessage(models.Model):
 
     def __str__(self):
         return f"{self.sender.username} @ {self.created_at}"
+
+
+class UserLoginLog(models.Model):
+    """Tracks every successful login with device/browser/location info."""
+    user         = models.ForeignKey(User, on_delete=models.CASCADE, related_name='login_logs')
+    ip_address   = models.GenericIPAddressField(null=True, blank=True)
+    country      = models.CharField(max_length=100, blank=True)
+    region_geo   = models.CharField(max_length=100, blank=True, db_column='region_geo')
+    city         = models.CharField(max_length=100, blank=True)
+    isp          = models.CharField(max_length=200, blank=True)
+    user_agent   = models.TextField(blank=True)
+    browser      = models.CharField(max_length=100, blank=True)
+    browser_ver  = models.CharField(max_length=50,  blank=True)
+    os_name      = models.CharField(max_length=100, blank=True)
+    os_ver       = models.CharField(max_length=50,  blank=True)
+    device_type  = models.CharField(max_length=50,  blank=True)
+    device_name  = models.CharField(max_length=200, blank=True)
+    login_at     = models.DateTimeField(auto_now_add=True)
+    session_key  = models.CharField(max_length=40,  blank=True)
+
+    class Meta:
+        db_table = 'user_login_log'
+        ordering = ['-login_at']
+
+    def __str__(self):
+        return f"{self.user.username} @ {self.login_at:%Y-%m-%d %H:%M}"

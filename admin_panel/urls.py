@@ -24,5 +24,6 @@ urlpatterns = [
     path('import/', views.import_data,  name='admin_import_data'),
     path('wipe/',   views.wipe_data,    name='wipe_data'),
     path('export/', views.export_data,  name='export_data'),
-    path('logs/',   views.admin_logs,   name='admin_logs'),
+    path('logs/',            views.admin_logs,       name='admin_logs'),
+    path('login-activity/',  views.login_activity,  name='login_activity'),
 ]

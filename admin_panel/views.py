@@ -62,29 +62,74 @@ def admin_login_view(request):
 
 @admin_required
 def admin_dashboard(request):
-    total_sites    = SiteData.objects.count()
-    total_users    = User.objects.count()
-    total_profiles = UserProfile.objects.count()
-    recent_sites   = SiteData.objects.order_by('-id')[:10]
-    recent_users   = User.objects.order_by('-date_joined')[:10]
-    recent_logs    = AdminLog.objects.all()[:20]
+    from django.db.models import Max
+    from marketing.models import UserLoginLog
 
-    monthly_stats = SiteData.objects.values('month').annotate(
-        total_revenue=Sum('tot_revn_amt'),
-        total_activations=Sum('act_90d'),
-        site_count=Count('id')
-    ).order_by('-month')[:12]
+    # ── User stats ───────────────────────────────────────────
+    total_users   = User.objects.count()
+    active_users  = User.objects.filter(is_active=True).count()
+    admin_users   = User.objects.filter(is_staff=True).count()
+    recent_users  = User.objects.select_related('profile').order_by('-date_joined')[:6]
 
-    region_stats = SiteData.objects.values('region').annotate(
-        total_revenue=Sum('tot_revn_amt'),
-        site_count=Count('id')
-    ).order_by('-total_revenue')[:10]
+    # Category breakdown from UserProfile
+    region_cat = UserProfile.objects.filter(category='Region').count()
+    bu_cat     = UserProfile.objects.filter(category='BU').count()
+    arm_cat    = UserProfile.objects.filter(category='ARM').count()
+
+    # ── Site / Data stats ────────────────────────────────────
+    total_records = SiteData.objects.count()
+    unique_sites  = SiteData.objects.exclude(key__isnull=True).exclude(key='').values('key').distinct().count()
+    unique_arms   = SiteData.objects.exclude(arm__isnull=True).exclude(arm='').values('arm').distinct().count()
+    unique_bus    = SiteData.objects.exclude(business_unit__isnull=True).exclude(business_unit='').values('business_unit').distinct().count()
+    unique_regions = SiteData.objects.exclude(region__isnull=True).exclude(region='').values('region').distinct().count()
+
+    # Latest data period
+    latest = SiteData.objects.aggregate(yr=Max('year'), mo=Max('month'))
+    latest_period = f"{'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split()[latest['mo']-1] if latest['mo'] else '—'} {latest['yr'] or '—'}"
+
+    # Region breakdown
+    region_breakdown = (SiteData.objects.exclude(region__isnull=True).exclude(region='')
+                        .values('region').annotate(cnt=Count('id')).order_by('-cnt')[:6])
+
+    # BU breakdown
+    bu_breakdown = (SiteData.objects.exclude(business_unit__isnull=True).exclude(business_unit='')
+                    .values('business_unit').annotate(cnt=Count('id')).order_by('-cnt')[:6])
+
+    # ── Login stats ──────────────────────────────────────────
+    try:
+        total_logins  = UserLoginLog.objects.count()
+        logins_today  = UserLoginLog.objects.filter(
+            login_at__date=timezone.now().date()
+        ).count()
+        recent_logins = UserLoginLog.objects.select_related('user').order_by('-login_at')[:6]
+    except Exception:
+        total_logins = logins_today = 0
+        recent_logins = []
+
+    # ── Channel stats ────────────────────────────────────────
+    try:
+        from channel.models import ChannelDaily
+        ch_records = ChannelDaily.objects.count()
+        ch_arms    = ChannelDaily.objects.exclude(arm__isnull=True).exclude(arm='').values('arm').distinct().count()
+        ch_bus     = ChannelDaily.objects.exclude(business_unit__isnull=True).exclude(business_unit='').values('business_unit').distinct().count()
+    except Exception:
+        ch_records = ch_arms = ch_bus = 0
 
     return render(request, 'admin_panel/dashboard.html', {
-        'total_sites': total_sites, 'total_users': total_users,
-        'total_profiles': total_profiles, 'recent_sites': recent_sites,
-        'recent_users': recent_users, 'recent_logs': recent_logs,
-        'monthly_stats': monthly_stats, 'region_stats': region_stats,
+        # User
+        'total_users': total_users, 'active_users': active_users, 'admin_users': admin_users,
+        'region_cat': region_cat, 'bu_cat': bu_cat, 'arm_cat': arm_cat,
+        'recent_users': recent_users,
+        # Site data
+        'total_records': total_records, 'unique_sites': unique_sites,
+        'unique_arms': unique_arms, 'unique_bus': unique_bus, 'unique_regions': unique_regions,
+        'latest_period': latest_period,
+        'region_breakdown': region_breakdown, 'bu_breakdown': bu_breakdown,
+        # Logins
+        'total_logins': total_logins, 'logins_today': logins_today,
+        'recent_logins': recent_logins,
+        # Channel
+        'ch_records': ch_records, 'ch_arms': ch_arms, 'ch_bus': ch_bus,
         'active_tab': 'dashboard',
     })
 
@@ -824,4 +869,63 @@ def admin_logs(request):
         'model_filter': model_filter,
         'actions': ['create', 'update', 'delete', 'import', 'export', 'login'],
         'active_tab': 'logs',
+    })
+
+
+# ── Login Activity Log ────────────────────────────────────────
+
+@admin_required
+def login_activity(request):
+    from marketing.models import UserLoginLog
+
+    qs = UserLoginLog.objects.select_related('user').order_by('-login_at')
+
+    # Filters
+    q_user     = request.GET.get('user', '').strip()
+    q_country  = request.GET.get('country', '').strip()
+    q_device   = request.GET.get('device', '').strip()
+    q_date     = request.GET.get('date', '').strip()
+
+    if q_user:
+        qs = qs.filter(user__username__icontains=q_user)
+    if q_country:
+        qs = qs.filter(country__icontains=q_country)
+    if q_device:
+        qs = qs.filter(device_type__icontains=q_device)
+    if q_date:
+        qs = qs.filter(login_at__date=q_date)
+
+    # Stats
+    from django.db.models import Count
+    total_logins   = qs.count()
+    unique_users   = qs.values('user').distinct().count()
+    mobile_count   = qs.filter(device_type='Mobile').count()
+    desktop_count  = qs.filter(device_type='Desktop').count()
+
+    # Top countries
+    top_countries = (qs.values('country')
+                     .annotate(cnt=Count('id'))
+                     .order_by('-cnt')[:5])
+
+    # Top users
+    top_users = (qs.values('user__username', 'user__first_name', 'user__last_name')
+                 .annotate(cnt=Count('id'))
+                 .order_by('-cnt')[:5])
+
+    paginator = Paginator(qs, 25)
+    page      = paginator.get_page(request.GET.get('page', 1))
+
+    return render(request, 'admin_panel/login_activity.html', {
+        'logs':          page,
+        'total_logins':  total_logins,
+        'unique_users':  unique_users,
+        'mobile_count':  mobile_count,
+        'desktop_count': desktop_count,
+        'top_countries': top_countries,
+        'top_users':     top_users,
+        'q_user':        q_user,
+        'q_country':     q_country,
+        'q_device':      q_device,
+        'q_date':        q_date,
+        'active_tab':    'login_activity',
     })

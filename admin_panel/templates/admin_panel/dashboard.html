@@ -1,81 +1,253 @@
 {% extends 'admin_panel/base.html' %}
-{% load static %}
-
-{% block title %}Admin Panel - NetIQ{% endblock %}
-
+{% block title %}Dashboard — Admin{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
 {% block content %}
-<div class="page-header">
-    <div class="page-title">Admin Panel</div>
-    <div class="page-sub">
-        Welcome back, {{ request.user.get_full_name|default:request.user.username }}
-    </div>
-</div>
-
-<div class="section-card">
-    <div class="section-title">
-        <i class="fas fa-users me-2"></i>User Management
-    </div>
-    <div class="section-sub">
-        Add, edit, and manage system users
-    </div>
-
-    <div class="mt-4">
-        <a href="{% url 'admin_user_list' %}" class="btn-primary">
-            <i class="fas fa-users me-2"></i>View All Users
-        </a>
-
-        <a href="{% url 'admin_user_create' %}" class="btn-secondary ms-2">
-            <i class="fas fa-user-plus me-2"></i>Create New User
-        </a>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_css %}
 <style>
-    .section-card {
-        background: var(--card);
-        border-radius: 16px;
-        padding: 30px;
-        box-shadow: var(--shadow);
-        margin-top: 20px;
-    }
-
-    .section-title {
-        font-size: 18px;
-        font-weight: 700;
-        color: var(--text);
-    }
-
-    .section-sub {
-        font-size: 13px;
-        color: var(--muted);
-        margin-top: 5px;
-    }
-
-    .btn-primary {
-        background: linear-gradient(135deg, #f58220, #fd9745);
-        color: #fff;
-        padding: 10px 18px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    .btn-secondary {
-        background: linear-gradient(135deg, #AB1DFE, #c44eff);
-        color: #fff;
-        padding: 10px 18px;
-        border-radius: 8px;
-        text-decoration: none;
-        font-size: 13px;
-        font-weight: 600;
-    }
-
-    .btn-primary:hover,
-    .btn-secondary:hover {
-        opacity: 0.9;
-    }
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px}
+.kpi-card{background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent,var(--orange))}
+.kpi-val{font-size:28px;font-weight:900;color:var(--accent,var(--orange));line-height:1}
+.kpi-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-top:5px}
+.kpi-sub{font-size:11px;color:var(--text2);margin-top:3px;font-weight:600}
+.kpi-icon{position:absolute;top:14px;right:16px;font-size:22px;opacity:.18}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.panel{background:var(--card);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+.panel-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-size:13px;font-weight:800;color:var(--text)}
+.panel-link{font-size:11px;font-weight:700;color:var(--orange);text-decoration:none}
+.panel-link:hover{text-decoration:underline}
+.panel-body{padding:4px 0}
+.list-row{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--border);gap:10px;font-size:12px}
+.list-row:last-child{border-bottom:none}
+.list-row:hover{background:rgba(245,130,32,0.03)}
+.lr-left{display:flex;align-items:center;gap:10px;min-width:0}
+.lr-name{font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lr-sub{font-size:10px;color:var(--muted)}
+.lr-val{font-size:12px;font-weight:800;color:var(--text2);white-space:nowrap}
+.bar-row{display:flex;align-items:center;gap:10px;padding:8px 18px;font-size:12px}
+.bar-row:hover{background:rgba(245,130,32,0.03)}
+.bar-lbl{min-width:90px;font-weight:600;color:var(--text);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;background:var(--input);border-radius:4px;height:6px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;background:var(--accent,var(--orange))}
+.bar-num{min-width:40px;text-align:right;font-weight:700;color:var(--muted);font-size:11px}
+.av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;background:linear-gradient(135deg,var(--orange),var(--purple))}
+.section-sep{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;padding:18px 0 8px}
+@media(max-width:900px){.two-col,.three-col{grid-template-columns:1fr}}
+@media(max-width:600px){.dash-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
+
+<div class="page-hdr">
+  <div>
+    <div class="page-title">Admin Dashboard</div>
+    <div class="page-sub">Overview of users, data and system activity</div>
+  </div>
+  <a href="{% url 'admin_user_create' %}" class="btn-primary">+ Add User</a>
+</div>
+
+<!-- ── KPI Cards Row 1: Users ── -->
+<div class="section-sep">👥 User Overview</div>
+<div class="dash-grid">
+  <div class="kpi-card" style="--accent:var(--orange)">
+    <div class="kpi-icon">👥</div>
+    <div class="kpi-val">{{ total_users }}</div>
+    <div class="kpi-lbl">Total Users</div>
+    <div class="kpi-sub">{{ active_users }} active · {{ admin_users }} admin</div>
+  </div>
+  <div class="kpi-card" style="--accent:var(--green)">
+    <div class="kpi-icon">✅</div>
+    <div class="kpi-val">{{ active_users }}</div>
+    <div class="kpi-lbl">Active Users</div>
+    <div class="kpi-sub">{{ admin_users }} with admin access</div>
+  </div>
+  <div class="kpi-card" style="--accent:var(--purple)">
+    <div class="kpi-icon">🌍</div>
+    <div class="kpi-val">{{ region_cat }}</div>
+    <div class="kpi-lbl">Region Access</div>
+    <div class="kpi-sub">Full data access</div>
+  </div>
+  <div class="kpi-card" style="--accent:var(--teal)">
+    <div class="kpi-icon">🏢</div>
+    <div class="kpi-val">{{ bu_cat }}</div>
+    <div class="kpi-lbl">BU Access</div>
+    <div class="kpi-sub">Business unit scoped</div>
+  </div>
+  <div class="kpi-card" style="--accent:#5E35B1">
+    <div class="kpi-icon">🤝</div>
+    <div class="kpi-val">{{ arm_cat }}</div>
+    <div class="kpi-lbl">ARM Access</div>
+    <div class="kpi-sub">ARM scoped</div>
+  </div>
+  <div class="kpi-card" style="--accent:var(--yellow)">
+    <div class="kpi-icon">🔐</div>
+    <div class="kpi-val">{{ total_logins }}</div>
+    <div class="kpi-lbl">Total Logins</div>
+    <div class="kpi-sub">{{ logins_today }} today</div>
+  </div>
+</div>
+
+<!-- ── KPI Cards Row 2: Data ── -->
+<div class="section-sep">📊 Marketing Data (SiteData)</div>
+<div class="dash-grid">
+  <div class="kpi-card" style="--accent:var(--orange)">
+    <div class="kpi-icon">📋</div>
+    <div class="kpi-val">{{ total_records|default:"0" }}</div>
+    <div class="kpi-lbl">Total Records</div>
+    <div class="kpi-sub">Latest: {{ latest_period }}</div>
+  </div>
+  <div class="kpi-card" style="--accent:var(--teal)">
+    <div class="kpi-icon">📡</div>
+    <div class="kpi-val">{{ unique_sites|default:"0" }}</div>
+    <div class="kpi-lbl">Unique Sites</div>
+    <div class="kpi-sub">Distinct franchise keys</div>
+  </div>
+  <div class="kpi-card" style="--accent:var(--purple)">
+    <div class="kpi-icon">🏢</div>
+    <div class="kpi-val">{{ unique_bus|default:"0" }}</div>
+    <div class="kpi-lbl">Business Units</div>
+    <div class="kpi-sub">{{ unique_regions }} regions</div>
+  </div>
+  <div class="kpi-card" style="--accent:#5E35B1">
+    <div class="kpi-icon">🤝</div>
+    <div class="kpi-val">{{ unique_arms|default:"0" }}</div>
+    <div class="kpi-lbl">ARMs</div>
+    <div class="kpi-sub">Unique ARM values</div>
+  </div>
+  <div class="kpi-card" style="--accent:var(--green)">
+    <div class="kpi-icon">📶</div>
+    <div class="kpi-val">{{ ch_records|default:"0" }}</div>
+    <div class="kpi-lbl">Channel Records</div>
+    <div class="kpi-sub">{{ ch_bus }} BUs · {{ ch_arms }} ARMs</div>
+  </div>
+  <div class="kpi-card" style="--accent:var(--red)">
+    <div class="kpi-icon">🗺️</div>
+    <div class="kpi-val">{{ unique_regions|default:"0" }}</div>
+    <div class="kpi-lbl">Regions</div>
+    <div class="kpi-sub">{{ unique_bus }} business units</div>
+  </div>
+</div>
+
+<!-- ── Bottom panels ── -->
+<div class="two-col">
+
+  <!-- Region breakdown -->
+  <div class="panel">
+    <div class="panel-hdr">
+      <div class="panel-title">📍 Region Breakdown</div>
+      <span style="font-size:10px;color:var(--muted)">by record count</span>
+    </div>
+    <div class="panel-body">
+      {% if region_breakdown %}
+        {% with max_cnt=region_breakdown.0.cnt %}
+        {% for r in region_breakdown %}
+        <div class="bar-row">
+          <div class="bar-lbl" title="{{ r.region }}">{{ r.region|default:"Unknown" }}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:{% widthratio r.cnt max_cnt 100 %}%;--accent:var(--orange)"></div></div>
+          <div class="bar-num">{{ r.cnt }}</div>
+        </div>
+        {% endfor %}
+        {% endwith %}
+      {% else %}
+        <div style="padding:30px;text-align:center;color:var(--muted);font-size:12px">No data uploaded yet</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Recent users -->
+  <div class="panel">
+    <div class="panel-hdr">
+      <div class="panel-title">🆕 Recent Users</div>
+      <a href="{% url 'admin_user_list' %}" class="panel-link">View all →</a>
+    </div>
+    <div class="panel-body">
+      {% for user in recent_users %}
+      <div class="list-row">
+        <div class="lr-left">
+          <div class="av">{{ user.first_name|first|default:user.username|first|upper }}</div>
+          <div>
+            <div class="lr-name">{{ user.get_full_name|default:user.username }}</div>
+            <div class="lr-sub">{{ user.email }}</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          {% if user.is_staff %}<span class="badge badge-orange">Admin</span>{% else %}<span class="badge badge-grey">User</span>{% endif %}
+          <div class="lr-sub" style="margin-top:2px">{{ user.date_joined|date:"d M Y" }}</div>
+        </div>
+      </div>
+      {% empty %}
+      <div style="padding:30px;text-align:center;color:var(--muted);font-size:12px">No users yet</div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<div class="two-col">
+
+  <!-- BU breakdown -->
+  <div class="panel">
+    <div class="panel-hdr">
+      <div class="panel-title">🏢 Business Unit Breakdown</div>
+      <span style="font-size:10px;color:var(--muted)">by record count</span>
+    </div>
+    <div class="panel-body">
+      {% if bu_breakdown %}
+        {% with max_cnt=bu_breakdown.0.cnt %}
+        {% for b in bu_breakdown %}
+        <div class="bar-row">
+          <div class="bar-lbl" title="{{ b.business_unit }}">{{ b.business_unit|default:"Unknown"|truncatechars:20 }}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:{% widthratio b.cnt max_cnt 100 %}%;--accent:var(--purple)"></div></div>
+          <div class="bar-num">{{ b.cnt }}</div>
+        </div>
+        {% endfor %}
+        {% endwith %}
+      {% else %}
+        <div style="padding:30px;text-align:center;color:var(--muted);font-size:12px">No data uploaded yet</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Recent logins -->
+  <div class="panel">
+    <div class="panel-hdr">
+      <div class="panel-title">🔐 Recent Logins</div>
+      <a href="{% url 'login_activity' %}" class="panel-link">View all →</a>
+    </div>
+    <div class="panel-body">
+      {% for log in recent_logins %}
+      <div class="list-row">
+        <div class="lr-left">
+          <div class="av">{{ log.user.username|first|upper }}</div>
+          <div>
+            <div class="lr-name">{{ log.user.get_full_name|default:log.user.username }}</div>
+            <div class="lr-sub">{{ log.city|default:"" }}{% if log.city and log.country %} · {% endif %}{{ log.country|default:"Unknown" }}</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          {% if log.device_type == 'Mobile' %}<span class="badge badge-purple">📱 Mobile</span>{% elif log.device_type == 'Tablet' %}<span class="badge badge-orange">📟 Tablet</span>{% else %}<span class="badge badge-teal">🖥 Desktop</span>{% endif %}
+          <div class="lr-sub" style="margin-top:2px" data-utc="{{ log.login_at|date:'c' }}">{{ log.login_at|date:"d M H:i" }}</div>
+        </div>
+      </div>
+      {% empty %}
+      <div style="padding:30px;text-align:center;color:var(--muted);font-size:12px">No logins recorded yet</div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Convert login times to PKT
+document.querySelectorAll('[data-utc]').forEach(el => {
+  try {
+    const d = new Date(el.dataset.utc);
+    const pkt = new Date(d.getTime() + 5*60*60*1000);
+    const day = pkt.getUTCDate();
+    const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][pkt.getUTCMonth()];
+    const h = String(pkt.getUTCHours()).padStart(2,'0');
+    const m = String(pkt.getUTCMinutes()).padStart(2,'0');
+    el.textContent = `${day} ${mon} ${h}:${m} PKT`;
+  } catch(e){}
+});
+</script>
 {% endblock %}
