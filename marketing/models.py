@@ -100,10 +100,11 @@ class SiteData(models.Model):
 
 class UserProfile(models.Model):
     DESIGNATION_CHOICES = [
+        ('VP', 'VP'),
         ('RD', 'RD'),
-        ('ARM', 'ARM'),
         ('Manager', 'Manager'),
-        ('Executive', 'Executive'),
+        ('ARM', 'ARM'),
+        ('Executive', 'Executive')
     ]
 
     CATEGORY_CHOICES = [

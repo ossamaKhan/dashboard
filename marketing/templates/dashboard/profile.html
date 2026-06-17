@@ -313,9 +313,10 @@ select.form-input{appearance:none;cursor:pointer;background-image:url("data:imag
                 <label class="form-label">Designation</label>
                 <select name="designation" class="form-input no-ico">
                   <option value="">— Select —</option>
+                  <option value="VP" {% if profile.designation == "VP" %}selected{% endif %}>VP</option>
                   <option value="rd" {% if profile.designation == "rd" %}selected{% endif %}>RD</option>
-                  <option value="arm" {% if profile.designation == "arm" %}selected{% endif %}>ARM</option>
                   <option value="manager" {% if profile.designation == "manager" %}selected{% endif %}>Manager</option>
+                  <option value="arm" {% if profile.designation == "arm" %}selected{% endif %}>ARM</option>
                   <option value="executive" {% if profile.designation == "executive" %}selected{% endif %}>Executive</option>
                 </select>
               </div>
