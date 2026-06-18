@@ -378,19 +378,17 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
       <div><div style="font-size:12px;font-weight:800;color:var(--orange)">Ufone 5G</div></div>
     </div>
     <div class="sb-sec">Marketing</div>
-    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Marketing Brief</a>
+    <a href="/dashboard/" class="nv" onclick="closeSidebar()">Executive Brief</a>
     <a href="/base/" class="nv" onclick="closeSidebar()">Base Analytics</a>
     <a href="/revenue/" class="nv" onclick="closeSidebar()">Revenue Analytics</a>
     <div class="sb-sec">Channel</div>
     <a href="/channel/" class="nv" onclick="closeSidebar()">Channel Brief</a>
     <a href="/channel/performance/" class="nv" onclick="closeSidebar()">Target Performance</a>
+    <a href="/channel/retailers/" class="nv" onclick="closeSidebar()">Retailer Health</a>
     <a href="/channel/enablers/" class="nv active" onclick="closeSidebar()">Enablers</a>
-    <a href="/channel/quality/" class="nv" onclick="closeSidebar()">Quality</a>
-    <a href="/channel/kpi-summary/" class="nv" onclick="closeSidebar()">KPI Summary</a>
-    <div class="sb-sec">Other</div>
-    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div class="sb-sec">Account</div>
     <a href="/profile/" class="nv" onclick="closeSidebar()">Profile Settings</a>
+    <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
     <div style="flex:1"></div>
   </div>
   <div class="sb-footer">
@@ -1222,7 +1220,11 @@ function buildCharts(d){
     const labels   = src.labels.slice(0,lastIdx+1).map(m=>MN[m-1]);
     const nBars=src.datasets.length;
     const latestDs964=src.datasets[nBars-1].data.slice(0,lastIdx+1);
-    const yearTotal964=latestDs964.reduce((a,v)=>a+(v||0),0);
+    // Denominator: cm_evc_active per month (total EVC base)
+    const evcSrc964=d.monthly['cm_evc_active'];
+    const evcBase964=(evcSrc964&&evcSrc964.datasets&&evcSrc964.datasets.length)
+      ? evcSrc964.datasets[evcSrc964.datasets.length-1].data.slice(0,lastIdx+1)
+      : new Array(lastIdx+1).fill(null);
     const datasets = src.datasets.map((ds,i)=>({
       label: String(ds.label), data: ds.data.slice(0,lastIdx+1),
       backgroundColor: ['rgba(94,53,177,0.75)','rgba(171,29,254,0.65)','rgba(126,87,194,0.6)'][i%3],
@@ -1238,7 +1240,7 @@ function buildCharts(d){
       datasets.push({
         label:'Trend',
         data:latestDs964.map((_,i)=>Math.max(0,+(slope*i+intercept).toFixed(0))),
-        _pctData:latestDs964.map(v=>yearTotal964>0?+(v/yearTotal964*100).toFixed(1):null),
+        _pctData:latestDs964.map((v,i)=>{const base=evcBase964[i];return (base&&base>0)?+(v/base*100).toFixed(1):null;}),
         type:'line', order:1,
         borderColor:'#f58220', backgroundColor:'transparent',
         borderWidth:2.5, borderDash:[6,3],
@@ -1507,7 +1509,6 @@ function renderThroughput(data){
     <th>2 Tx</th><th>%</th>
     <th>3+ Tx</th><th>%</th>
     <th>Total EVC</th>
-    <th>Trans ≥3%</th>
   </tr>`;
 
   const rowHTML = rows.map(r=>`<tr>
@@ -1521,7 +1522,7 @@ function renderThroughput(data){
     <td style="color:#00C853;font-weight:800">${fmt(r.cnt3plus)}</td>
     <td><span class="pct-pill pct-g">${r.cnt3plus_pct.toFixed(1)}%</span></td>
     <td style="color:var(--orange);font-weight:800">${fmt(r.total)}</td>
-    <td style="color:var(--teal)">${r.ge3_pct.toFixed(1)}%</td>
+    
   </tr>`).join('');
 
   const t=totals;
@@ -1536,7 +1537,6 @@ function renderThroughput(data){
     <td style="color:#00C853">${fmt(t.cnt3plus)}</td>
     <td><span class="pct-pill pct-g">${(t.cnt3plus_pct||0).toFixed(1)}%</span></td>
     <td style="color:var(--orange)">${fmt(t.total)}</td>
-    <td>—</td>
   </tr>`;
 
   tbody.innerHTML = rowHTML + totalHTML;

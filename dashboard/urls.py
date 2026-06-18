@@ -7,7 +7,7 @@ from marketing.views import (
     dashboard, base_page, profile_view,
     dashboard_data, filter_options, map_data,
     nearby_sites, chat_page, chat_messages, chat_users,
-    revenue_page, export_kml, bu_boundaries_json, site_performance_table
+    revenue_page, export_kml, bu_boundaries_json, site_performance_table,site_search,
 )
 
 urlpatterns = [
@@ -23,6 +23,7 @@ urlpatterns = [
     path('api/data/',           dashboard_data,          name='dashboard_data'),
     path('api/filters/',        filter_options,          name='filter_options'),
     path('api/map/',            map_data,                name='map_data'),
+    path('api/site-search/',  site_search, name='site_search'),
     path('api/nearby/',         nearby_sites,            name='nearby_sites'),
     path('api/chat/messages/',  chat_messages,           name='chat_messages'),
     path('api/chat/users/',     chat_users,              name='chat_users'),

@@ -1,7 +1,7 @@
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-from django.db.models import Sum, Avg, Count, F, Value, DecimalField, Case, When, FloatField, Q
+from django.db.models import Sum, Avg, Count, Max, F, Value, DecimalField, Case, When, FloatField, Q
 from django.db.models.functions import Coalesce
 from django.contrib.auth.models import User
 from .models import SiteData, UserProfile, ChatMessage
@@ -258,13 +258,10 @@ def filter_options(request):
 
 # ── Map Data ──────────────────────────────────────────────────
 
-from django.db.models import Max, Sum, Count
-from collections import defaultdict
-from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
-
 @login_required(login_url='login')
 def map_data(request):
+    from django.core.cache import cache
+
     region        = request.GET.get('region')
     pta           = request.GET.get('pta_district')
     franchise     = request.GET.get('franchise')
@@ -276,64 +273,68 @@ def map_data(request):
     month         = request.GET.get('month')
     year          = request.GET.get('year')
 
-    # Base Queryset with structural filters applied
-    base_qs = get_scoped_qs(request.user)
-    if region:        base_qs = base_qs.filter(region=region)
-    if pta:           base_qs = base_qs.filter(commercial_district=pta)
-    if arm:           base_qs = base_qs.filter(arm=arm)
-    if franchise:     base_qs = base_qs.filter(franchise=franchise)
-    if key:           base_qs = base_qs.filter(key=key)
-    if technology:    base_qs = base_qs.filter(technology=technology)
-    if business_unit: base_qs = base_qs.filter(business_unit=business_unit)
-    if site_status:   base_qs = base_qs.filter(site_status=site_status)
+    # ── Cache key ──────────────────────────────────────────────────────────
+    ck = f"mapdata_v3_{request.user.id}_{region}_{business_unit}_{arm}_{franchise}_{key}_{technology}_{site_status}_{month}_{year}"
+    cached = cache.get(ck)
+    if cached is not None:
+        return JsonResponse(cached, safe=False)
 
-    base_qs = base_qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
+    qs = get_scoped_qs(request.user)
+    if region:        qs = qs.filter(region=region)
+    if pta:           qs = qs.filter(commercial_district=pta)
+    if arm:           qs = qs.filter(arm=arm)
+    if franchise:     qs = qs.filter(franchise=franchise)
+    if key:           qs = qs.filter(key=key)
+    if technology:    qs = qs.filter(technology=technology)
+    if business_unit: qs = qs.filter(business_unit=business_unit)
+    if site_status:   qs = qs.filter(site_status=site_status)
+    if month:         qs = qs.filter(month=int(month))
+    if year:          qs = qs.filter(year=int(year))
+    qs = qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
 
-    # 1. DETERMINE TIME PERIOD FOR CLOSING BALANCES
-    time_qs = base_qs
-    if year:        time_qs = time_qs.filter(year=year)
-    if month:       time_qs = time_qs.filter(month=month)
+    # ── Closing month for stock fields ─────────────────────────────────────
+    _latest = qs.aggregate(ly=Max('year'), lm=Max('month'))
+    _ly, _lm = _latest.get('ly'), _latest.get('lm')
+    if _ly and _lm:
+        _stock_ann = {
+            'total_activations': Max(Case(When(year=_ly, month=_lm, then='act_90d'),    default=None, output_field=FloatField())),
+            'total_base_4g':     Max(Case(When(year=_ly, month=_lm, then='act_90d_4g'), default=None, output_field=FloatField())),
+            'total_base_30d':    Max(Case(When(year=_ly, month=_lm, then='act_30d'),    default=None, output_field=FloatField())),
+            'total_hvc':         Max(Case(When(year=_ly, month=_lm, then='hvc_base'),   default=None, output_field=FloatField())),
+            'total_evc':         Max(Case(When(year=_ly, month=_lm, then='evc_retailer'), default=None, output_field=FloatField())),
+            'total_bvs':         Max(Case(When(year=_ly, month=_lm, then='bvs_retailer'), default=None, output_field=FloatField())),
+            'total_handset_4g':  Max(Case(When(year=_ly, month=_lm, then='handset_4g'), default=None, output_field=FloatField())),
+        }
+    else:
+        _stock_ann = {
+            'total_activations': Max('act_90d'),
+            'total_base_4g':     Max('act_90d_4g'),
+            'total_base_30d':    Max('act_30d'),
+            'total_hvc':         Max('hvc_base'),
+            'total_evc':         Max('evc_retailer'),
+            'total_bvs':         Max('bvs_retailer'),
+            'total_handset_4g':  Max('handset_4g'),
+        }
 
-    # Find the absolute latest year and month matching the active filters
-    latest_time = time_qs.aggregate(max_yr=Max('year'), max_mo=Max('month'))
-    target_year = latest_time['max_yr']
-    target_month = latest_time['max_mo']
-
-    # 2. EXTRACT CLOSING BALANCES (Using a clean, flat dictionary lookup)
-    closing_balances = {}
-    if target_year and target_month:
-        closing_qs = base_qs.filter(
-            year=target_year, 
-            month=target_month
-        ).order_by().values('key', 'act_90d_4g', 'hvc_base', 'evc_retailer', 'bvs_retailer')
-        
-        for item in closing_qs:
-            f_key = item['key']
-            if f_key:
-                closing_balances[f_key] = {
-                    'base_4g': item['act_90d_4g'],
-                    'hvc': item['hvc_base'],
-                    'evc': item['evc_retailer'],
-                    'bvs': item['bvs_retailer'],
-                }
-
-    # 3. RUN MAIN AGGREGATIONS (For running totals like revenue, activations, etc.)
-    sum_qs = base_qs
-    if year:        sum_qs = sum_qs.filter(year=year)
-    if month:       sum_qs = sum_qs.filter(month=month)
-
-    franchises = sum_qs.values(
+    franchises = qs.values(
         'key', 'latitude', 'longitude', 'region', 'commercial_district',
         'technology', 'site_status', 'business_unit', 'franchise', 'arm'
     ).annotate(
         total_revenue=Sum('tot_revn_amt'),
         site_count=Count('id'),
-        total_activations=Sum('act_90d'),
         total_net_add=Sum('net_add'),
         total_gross_churn=Sum('gross_churn'),
+        total_revival=Sum('tot_revival'),
+        total_fca=Sum('fca'),
+        total_mnp=Sum('mnp_fca'),
         total_conv_recharge=Sum('conventional_recharge'),
         total_prepaid_digi=Sum('prepaid_dgtl_amount'),
         total_postpaid_digi=Sum('postpaid_dgtl_amount'),
+        total_m0_revenue=Sum('m0_revn'),
+        total_volume_gbs=Sum('volume_gbs'),
+        total_data_4g_gbs=Sum('data_ntwrk_vol_4g'),
+        total_avg_dly_act=Sum('avg_dly_act'),
+        **_stock_ann,
     ).order_by('key')
 
     def safe(val):
@@ -345,23 +346,21 @@ def map_data(request):
     bu_points = defaultdict(list)
     seen_keys = set()
 
-    # 4. MAP DATA IN LOOP
     for f in franchises:
         lat = f['latitude']; lng = f['longitude']
-        if lat is None or lng is None: continue
-        try: lat = float(lat); lng = float(lng)
-        except: continue
-        if not (20 <= lat <= 40 and 60 <= lng <= 80): continue
+        if lat is None or lng is None:
+            continue
+        try:
+            lat = float(lat); lng = float(lng)
+        except:
+            continue
+        if not (20 <= lat <= 40 and 60 <= lng <= 80):
+            continue
 
-        f_key = f['key'] or 'Unknown'
         bu = f['business_unit'] if f['business_unit'] else 'Unknown'
         digi = safe(f.get('total_prepaid_digi')) + safe(f.get('total_postpaid_digi'))
-        
-        # Pull the absolute un-summed closing row metrics from our lookup map
-        closing_data = closing_balances.get(f['key'], {'base_4g': 0, 'hvc': 0, 'evc': 0, 'bvs': 0})
-
         markers.append({
-            'key':           f_key,
+            'key':           f['key'] or 'Unknown',
             'lat':           lat,
             'lng':           lng,
             'region':        f['region'] or '',
@@ -372,18 +371,25 @@ def map_data(request):
             'site_status':   f['site_status'] or '',
             'business_unit': bu,
             'revenue':       safe(f['total_revenue']),
-            'activations':   safe(f['total_activations']),
             'net_add':       safe(f.get('total_net_add')),
             'churn':         safe(f.get('total_gross_churn')),
+            'revival':       safe(f.get('total_revival')),
+            'fca':           safe(f.get('total_fca')),
+            'mnp':           safe(f.get('total_mnp')),
             'conv_recharge': safe(f.get('total_conv_recharge')),
             'digi_recharge': digi,
             'total_recharge': safe(f.get('total_conv_recharge')) + digi,
-            
-            # Non-summed month-end closing snapshot values:
-            'base_4g':       safe(closing_data['base_4g']), 
-            'hvc':           safe(closing_data['hvc']),
-            'evc_base':      safe(closing_data['evc']),
-            'bvs_base':      safe(closing_data['bvs']),
+            'm0_revenue':    safe(f.get('total_m0_revenue')),
+            'volume_gbs':    safe(f.get('total_volume_gbs')),
+            'data_4g_gbs':   safe(f.get('total_data_4g_gbs')),
+            'avg_dly_act':   safe(f.get('total_avg_dly_act')),
+            'activations':   safe(f['total_activations']),
+            'base_4g':       safe(f.get('total_base_4g')),
+            'base_30d':      safe(f.get('total_base_30d')),
+            'hvc':           safe(f.get('total_hvc')),
+            'evc_base':      safe(f.get('total_evc')),
+            'bvs_base':      safe(f.get('total_bvs')),
+            'handset_4g':    safe(f.get('total_handset_4g')),
         })
         bu_points[bu].append((lng, lat))
         if f['key']:
@@ -391,35 +397,93 @@ def map_data(request):
 
     def convex_hull(points):
         pts = sorted(set(points))
-        if len(pts) < 3: return pts
+        if len(pts) < 3:
+            return pts
         def cross(o, a, b):
             return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
         lower = []
         for p in pts:
-            while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0: lower.pop()
+            while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
+                lower.pop()
             lower.append(p)
         upper = []
         for p in reversed(pts):
-            while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0: upper.pop()
+            while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
+                upper.pop()
             upper.append(p)
         return lower[:-1] + upper[:-1]
 
     bu_boundaries = []
     for bu, pts in bu_points.items():
-        if len(set(pts)) < 3: continue
+        if len(set(pts)) < 3:
+            continue
         hull = convex_hull(pts)
-        if len(hull) < 3: continue
+        if len(hull) < 3:
+            continue
         bu_boundaries.append({
             'business_unit': bu,
             'polygon': [[lat, lng] for (lng, lat) in hull],
             'site_count': len(pts),
         })
 
-    return JsonResponse({
+    payload = {
         'markers':       markers,
         'total':         len(seen_keys),
         'bu_boundaries': bu_boundaries,
-    })
+    }
+
+    cache.set(ck, payload, 60)  # cache 60 seconds
+    return JsonResponse(payload)
+
+
+def site_search(request):
+    """Search for a site by key — returns lat/lng + basic info, ignores data filters."""
+    query = (request.GET.get('key') or '').strip()
+    if not query:
+        return JsonResponse({'error': 'No key provided'}, status=400)
+
+    qs = get_scoped_qs(request.user).exclude(
+        latitude__isnull=True).exclude(longitude__isnull=True)
+
+    # Exact match first
+    sites = qs.filter(key=query).values(
+        'key','latitude','longitude','region','commercial_district',
+        'franchise','arm','technology','site_status','business_unit'
+    ).distinct()[:5]
+
+    if not sites:
+        # Partial match
+        sites = qs.filter(key__icontains=query).values(
+            'key','latitude','longitude','region','commercial_district',
+            'franchise','arm','technology','site_status','business_unit'
+        ).distinct()[:10]
+
+    results = []
+    seen = set()
+    for s in sites:
+        k = s['key']
+        if k in seen: continue
+        seen.add(k)
+        try:
+            lat = float(s['latitude']); lng = float(s['longitude'])
+        except (TypeError, ValueError):
+            continue
+        if not (20 <= lat <= 40 and 60 <= lng <= 80):
+            continue
+        results.append({
+            'key':           k,
+            'lat':           lat,
+            'lng':           lng,
+            'region':        s['region'] or '',
+            'district':      s['commercial_district'] or '',
+            'franchise':     s['franchise'] or '',
+            'arm':           s['arm'] or '',
+            'technology':    s['technology'] or '',
+            'site_status':   s['site_status'] or '',
+            'business_unit': s['business_unit'] or '',
+        })
+
+    return JsonResponse({'sites': results, 'count': len(results)})
 
 
 # ── KML Export (Google Earth) ─────────────────────────────────
@@ -1503,8 +1567,10 @@ def nearby_sites(request):
         longitude__lte=user_lng + lng_range,
     ).exclude(latitude__isnull=True).exclude(longitude__isnull=True).values(
         'key', 'latitude', 'longitude', 'region', 'commercial_district', 'franchise',
-        'business_unit', 'technology', 'site_status', 'tot_revn_amt',
-        'act_90d', 'act_90d_4g', 'net_add', 'gross_churn', 'hvc_base',
+        'arm', 'business_unit', 'technology', 'site_status', 'tot_revn_amt',
+        'act_90d', 'act_90d_4g', 'act_30d', 'net_add', 'gross_churn', 'hvc_base',
+        'evc_retailer', 'bvs_retailer', 'handset_4g', 'mnp_fca', 'fca',
+        'm0_revn', 'volume_gbs', 'data_ntwrk_vol_4g', 'avg_dly_act', 'tot_revival',
         'conventional_recharge', 'prepaid_dgtl_amount', 'postpaid_dgtl_amount',
         'year', 'month',
     )
@@ -1546,16 +1612,32 @@ def nearby_sites(request):
             'region':         s['region'] or '—',
             'pta_district':   s['commercial_district'] or '—',
             'franchise':      s['franchise'] or '—',
+            'arm':            s.get('arm') or '—',
             'business_unit':  s['business_unit'] or '—',
             'technology':     s['technology'] or '—',
             'site_status':    s['site_status'] or '—',
+            # ── flow metrics ─────────────────────────────────────────────
             'revenue':        safe(s['tot_revn_amt']),
-            'act_90d':        safe(s['act_90d']),
-            'act_90d_4g':     safe(s['act_90d_4g']),
+            'm0_revenue':     safe(s.get('m0_revn')),
+            'fca':            safe(s.get('fca')),
+            'mnp':            safe(s.get('mnp_fca')),
             'net_add':        safe(s['net_add']),
-            'gross_churn':    safe(s['gross_churn']),
-            'hvc_base':       safe(s['hvc_base']),
+            'churn':          safe(s['gross_churn']),
+            'revival':        safe(s.get('tot_revival')),
+            'avg_dly_act':    safe(s.get('avg_dly_act')),
+            'volume_gbs':     safe(s.get('volume_gbs')),
+            'data_4g_gbs':    safe(s.get('data_ntwrk_vol_4g')),
+            'conv_recharge':  _conv,
+            'digi_recharge':  _pre + _post,
             'total_recharge': _pre + _post + _conv,
+            # ── closing / stock metrics ───────────────────────────────────
+            'activations':    safe(s['act_90d']),
+            'base_4g':        safe(s['act_90d_4g']),
+            'base_30d':       safe(s.get('act_30d')),
+            'hvc':            safe(s['hvc_base']),
+            'evc_base':       safe(s.get('evc_retailer')),
+            'bvs_base':       safe(s.get('bvs_retailer')),
+            'handset_4g':     safe(s.get('handset_4g')),
             'period':         f"{s['month']}/{s['year']}" if s['year'] else '—',
         })
 

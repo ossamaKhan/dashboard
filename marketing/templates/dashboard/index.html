@@ -162,6 +162,9 @@ main{position:relative;z-index:5;padding:20px 24px;display:grid;grid-template-co
 .leaflet-container .leaflet-control-zoom a{background:var(--panel-bg)!important;color:var(--text)!important;border-color:var(--border)!important}
 .map-popup-title{font-size:13px;font-weight:800;color:#fff;margin-bottom:0;padding:10px 14px 8px;background:linear-gradient(135deg,var(--orange),#e06000);border-radius:13px 13px 0 0}
 .map-popup-body{padding:10px 14px 12px}
+.leaflet-popup-content{margin:0!important;padding:0!important;overflow:hidden!important;border-radius:13px}
+.leaflet-popup-content-wrapper{padding:0!important;border-radius:13px!important;overflow:hidden!important;box-shadow:0 4px 24px rgba(0,0,0,0.18)!important}
+.leaflet-popup-scrolled{border-top:none!important;border-bottom:none!important}
 .map-popup-row{display:flex;justify-content:space-between;gap:16px;font-size:11px;font-weight:600;color:var(--text2);padding:3px 0;border-bottom:1px solid var(--border)}
 .map-popup-row:last-child{border-bottom:none}
 .map-popup-label{color:var(--muted);font-weight:500}
@@ -471,6 +474,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
         <div class="map-stat-chip">Sites: <span id="map-count">&mdash;</span></div>
         <div class="map-stat-chip">BUs: <span id="map-bu-count">4</span></div>
         <button class="map-action-btn" id="nearby-btn" onclick="findNearbySites()">Nearby</button>
+        <button class="map-action-btn map-action-btn-alt" id="search-site-btn" onclick="openSiteSearch()" title="Search by Site ID">🔍 Site ID</button>
         <button class="map-action-btn map-action-btn-alt" id="coord-btn" onclick="openCoordPanel()">By Coords</button>
       </div>
     </div>
@@ -770,8 +774,11 @@ function fetchMapData(){
   const p=new URLSearchParams();
   Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});
   const BOUNDARY_STYLES={'MULTAN':{stroke:'#E65100',fill:'#FF6D00',label:'#E65100'},'DG KHAN':{stroke:'#4527A0',fill:'#7C4DFF',label:'#4527A0'},'SARGODHA':{stroke:'#00695C',fill:'#00BFA5',label:'#00695C'},'FAISALABAD':{stroke:'#1565C0',fill:'#448AFF',label:'#1565C0'}};
+  const _bndFetch = window._cachedBoundaries
+    ? Promise.resolve(window._cachedBoundaries)
+    : fetch('/api/bu-boundaries/').then(r=>r.json()).catch(()=>null).then(d=>{window._cachedBoundaries=d;return d;});
   Promise.all([
-    fetch('/api/bu-boundaries/').then(r=>r.json()).catch(()=>null),
+    _bndFetch,
     fetch('/api/map/?'+p).then(r=>r.json()),
   ]).then(([gj,data])=>{
     document.getElementById('map-count').textContent=data.total||0;
@@ -786,20 +793,14 @@ function fetchMapData(){
     }
     if(!data.markers||!data.markers.length){document.getElementById('bu-legend').style.display='none';return;}
     const bounds=[],buCounts={};
-    data.markers.forEach(m=>{
+    window.lastMapMarkers=data.markers||[];data.markers.forEach(m=>{
       bounds.push([m.lat,m.lng]);
       const bu=m.business_unit||'Unknown';buCounts[bu]=(buCounts[bu]||0)+1;
       const bStyle=BOUNDARY_STYLES[bu]||{stroke:'#607D8B',fill:'#90A4AE',label:'#607D8B'};
       const color=bStyle.stroke;
       const icon=L.divIcon({className:'',html:`<div style="width:9px;height:9px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.9);box-shadow:0 1px 5px rgba(0,0,0,0.45)"></div>`,iconSize:[9,9],iconAnchor:[4,4]});
-      const totalRech=m.total_recharge||(m.digi_recharge+m.conv_recharge);
-      const digiPct=totalRech?((m.digi_recharge/totalRech)*100).toFixed(0)+'%':'—';
-      const convPct=totalRech?((m.conv_recharge/totalRech)*100).toFixed(0)+'%':'—';
-      const statusColor=m.site_status==='Active'?'#00C853':'#FF3D00';
-      const popup=`<div style="min-width:260px;max-width:300px;font-family:'Poppins',sans-serif"><div class="map-popup-title" style="background:linear-gradient(135deg,${color},${bStyle.fill})"><div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:13px;font-weight:900">📡 ${m.key||'Unknown'}</span><span style="font-size:9px;padding:2px 8px;border-radius:20px;background:${statusColor}22;color:${statusColor};border:1px solid ${statusColor};font-weight:800">${m.site_status||'—'}</span></div><div style="font-size:10px;font-weight:600;opacity:.85;margin-top:4px">${bu} · ${m.district||'—'}</div>${m.franchise?`<div style="font-size:9px;opacity:.7;margin-top:1px">FR: ${m.franchise}${m.arm?' · ARM: '+m.arm:''}</div>`:''}</div><div class="map-popup-body"><div style="display:flex;gap:6px;margin-bottom:8px"><div style="flex:1;background:rgba(0,200,83,0.08);border:1px solid rgba(0,200,83,0.2);border-radius:8px;padding:6px 8px;text-align:center"><div style="font-size:9px;font-weight:700;color:#8a85a5;text-transform:uppercase;letter-spacing:1px">Revenue</div><div style="font-size:12px;font-weight:900;color:${color};margin-top:2px">PKR ${fmt(m.revenue)}</div></div><div style="flex:1;background:rgba(0,188,212,0.08);border:1px solid rgba(0,188,212,0.2);border-radius:8px;padding:6px 8px;text-align:center"><div style="font-size:9px;font-weight:700;color:#8a85a5;text-transform:uppercase;letter-spacing:1px">90D Base</div><div style="font-size:12px;font-weight:900;color:#00BCD4;margin-top:2px">${fmt(m.activations)}</div></div></div><div class="map-popup-row"><span class="map-popup-label">Technology</span><span style="font-weight:800;color:${color}">${m.technology||'—'}</span></div><div class="map-popup-row"><span class="map-popup-label">4G Base</span><span>${fmt(m.base_4g)}</span></div><div class="map-popup-row"><span class="map-popup-label">Net Additions</span><span style="color:${(m.net_add||0)>=0?'#00C853':'#FF3D00'};font-weight:800">${fmt(m.net_add)}</span></div><div class="map-popup-row"><span class="map-popup-label">Gross Churn</span><span style="color:#FF3D00;font-weight:700">${fmt(m.churn)}</span></div><div class="map-popup-row"><span class="map-popup-label">HVC Base</span><span>${fmt(m.hvc)}</span></div><div class="map-popup-divider"></div><div class="map-popup-row"><span class="map-popup-label">EVC Retailer</span><span>${fmt(m.evc_base)}</span></div><div class="map-popup-row"><span class="map-popup-label">BVS Retailer</span><span>${fmt(m.bvs_base)}</span></div><div class="map-popup-divider"></div><div class="map-popup-row"><span class="map-popup-label">Total Recharge</span><span style="color:${color};font-weight:800">PKR ${fmt(totalRech)}</span></div><div class="map-popup-row"><span class="map-popup-label">Digital</span><span>PKR ${fmt(m.digi_recharge)} <span style="color:#00BCD4;font-size:9px;font-weight:800">(${digiPct})</span></span></div><div class="map-popup-row"><span class="map-popup-label">Conventional</span><span>PKR ${fmt(m.conv_recharge)} <span style="color:#AB1DFE;font-size:9px;font-weight:800">(${convPct})</span></span></div></div></div>`;
-      const popupW=Math.min(260,window.innerWidth-40);
       const marker=L.marker([m.lat,m.lng],{icon});
-      marker.on('click',function(e){L.DomEvent.stopPropagation(e);L.popup({maxWidth:popupW,autoPan:true,autoPanPadding:[20,20],closeButton:true,autoClose:false,closeOnClick:false,closeOnEscapeKey:true}).setLatLng(e.latlng).setContent(popup).openOn(map);});
+      marker.on('click',function(e){L.DomEvent.stopPropagation(e);openSiteModal(m,color);});
       marker.addTo(markerLayer);
     });
     if(bounds.length)map.fitBounds(bounds,{padding:[30,30],maxZoom:12});
@@ -833,60 +834,95 @@ function findNearbySites(){
     fetch(`/api/nearby/?lat=${lat}&lng=${lng}`).then(r=>r.json()).then(data=>{
       btn.disabled=false;
       if(!data.sites||data.sites.length===0){body.innerHTML='<div class="nearby-empty">No sites found in your scope with valid coordinates.</div>';return;}
-      const cards=data.sites.map((s,i)=>`<div class="nearby-card rank-${i+1}"><span class="nearby-rank">#${i+1} Nearest</span><div class="nearby-key">${s.key}</div><div class="nearby-dist">📏 ${s.distance_km} km away</div><div class="nearby-row"><span class="lbl">Region</span><span class="val">${s.region}</span></div><div class="nearby-row"><span class="lbl">District</span><span class="val">${s.pta_district}</span></div><div class="nearby-row"><span class="lbl">Franchise</span><span class="val">${s.franchise}</span></div><div class="nearby-row"><span class="lbl">BU</span><span class="val">${s.business_unit}</span></div><div class="nearby-row"><span class="lbl">Tech</span><span class="val">${s.technology}</span></div><div class="nearby-row"><span class="lbl">Status</span><span class="val">${s.site_status}</span></div><div class="nearby-row"><span class="lbl">Revenue</span><span class="val">PKR ${fmt(s.revenue)}</span></div><div class="nearby-row"><span class="lbl">90D Base</span><span class="val">${fmt(s.act_90d)}</span></div><div class="nearby-row"><span class="lbl">4G Base</span><span class="val">${fmt(s.act_90d_4g)}</span></div><div class="nearby-row"><span class="lbl">Net Add</span><span class="val">${fmt(s.net_add)}</span></div><div class="nearby-row"><span class="lbl">HVC</span><span class="val">${fmt(s.hvc_base)}</span></div><div class="nearby-row"><span class="lbl">Period</span><span class="val">${s.period}</span></div></div>`).join('');
+      const nf=(v)=>{if(!v||Number(v)===0)return'—';const n=Number(v);if(n>=1e9)return(n/1e9).toFixed(2)+'B';if(n>=1e6)return(n/1e6).toFixed(2)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n.toFixed(0);};
+      const nr=(lbl,val,col)=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px"><span style="color:var(--muted)">${lbl}</span><span style="font-weight:700;color:${col||'var(--text2)'};">${val}</span></div>`;
+      const cards=data.sites.map((s,i)=>`<div style="background:var(--panel-bg);border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.15);margin-bottom:12px;font-family:var(--font)">
+  <div style="background:linear-gradient(135deg,${['#F58220','#AB1DFE','#00BCD4'][i]||'#F58220'},${['#e06000','#7B2FBE','#0097A7'][i]||'#e06000'});padding:12px 16px;display:flex;align-items:flex-start;justify-content:space-between">
+    <div>
+      <div style="font-size:14px;font-weight:900;color:#fff">📡 ${s.key}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.8);margin-top:3px">${s.business_unit} · ${s.pta_district} · ${s.technology||'—'}</div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);margin-top:2px">${s.franchise!=='—'?'FR: '+s.franchise+' · ':''} ARM: ${s.arm||'—'}</div>
+    </div>
+    <div style="text-align:right;flex-shrink:0">
+      <div style="font-size:10px;font-weight:900;color:#fff;background:rgba(255,255,255,0.2);border-radius:20px;padding:2px 10px">#${i+1} Nearest</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.75);margin-top:4px">📏 ${s.distance_km} km</div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.6);margin-top:2px">${s.site_status}</div>
+    </div>
+  </div>
+  <div style="padding:12px 16px">
+    <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:4px">Subscriber Base · Closing Month</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:8px">
+      <div style="background:rgba(0,188,212,0.08);border:1px solid rgba(0,188,212,0.2);border-radius:7px;padding:6px;text-align:center"><div style="font-size:7px;font-weight:700;color:var(--muted);text-transform:uppercase">90D Base</div><div style="font-size:13px;font-weight:900;color:#00BCD4;margin-top:2px">${nf(s.activations)}</div></div>
+      <div style="background:rgba(171,29,254,0.08);border:1px solid rgba(171,29,254,0.2);border-radius:7px;padding:6px;text-align:center"><div style="font-size:7px;font-weight:700;color:var(--muted);text-transform:uppercase">4G Base</div><div style="font-size:13px;font-weight:900;color:#AB1DFE;margin-top:2px">${nf(s.base_4g)}</div></div>
+      <div style="background:rgba(0,150,136,0.08);border:1px solid rgba(0,150,136,0.2);border-radius:7px;padding:6px;text-align:center"><div style="font-size:7px;font-weight:700;color:var(--muted);text-transform:uppercase">30D Base</div><div style="font-size:13px;font-weight:900;color:#009688;margin-top:2px">${nf(s.base_30d)}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px">
+      <div style="background:rgba(0,200,83,0.08);border:1px solid rgba(0,200,83,0.2);border-radius:7px;padding:6px;text-align:center"><div style="font-size:7px;font-weight:700;color:var(--muted);text-transform:uppercase">HVC Base</div><div style="font-size:13px;font-weight:900;color:#00C853;margin-top:2px">${nf(s.hvc)}</div></div>
+      <div style="background:rgba(245,130,32,0.08);border:1px solid rgba(245,130,32,0.2);border-radius:7px;padding:6px;text-align:center"><div style="font-size:7px;font-weight:700;color:var(--muted);text-transform:uppercase">Handset 4G</div><div style="font-size:13px;font-weight:900;color:#F58220;margin-top:2px">${nf(s.handset_4g)}</div></div>
+    </div>
+    <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:4px">Revenue</div>
+    ${nr('Total Revenue','PKR '+nf(s.revenue),'#F58220')}
+    ${nr('M0 Revenue','PKR '+nf(s.m0_revenue))}
+    ${nr('Total Recharge','PKR '+nf(s.total_recharge))}
+    ${nr('Digital','PKR '+nf(s.digi_recharge),'#00BCD4')}
+    ${nr('Conventional','PKR '+nf(s.conv_recharge),'#AB1DFE')}
+    <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:8px 0 4px;border-bottom:1px solid var(--border);padding-bottom:4px">Performance</div>
+    ${nr('FCA',nf(s.fca),'var(--orange)')}
+    ${nr('MNP',nf(s.mnp))}
+    ${nr('Net Additions',nf(s.net_add),(s.net_add||0)>=0?'#00C853':'#FF3D00')}
+    ${nr('Gross Churn',nf(s.churn),'#FF3D00')}
+    ${nr('Revival',nf(s.revival))}
+    <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:8px 0 4px;border-bottom:1px solid var(--border);padding-bottom:4px">Retailers · Closing Month</div>
+    ${nr('EVC Retailers',nf(s.evc_base),'#F58220')}
+    ${nr('BVS Retailers',nf(s.bvs_base),'#AB1DFE')}
+    <div style="font-size:9px;color:var(--muted);margin-top:8px;text-align:right">Period: ${s.period}</div>
+  </div>
+</div>`).join('');
       body.innerHTML=`<div class="nearby-grid">${cards}</div>`;
 
-      // ── Region users only: zoom the map to the 3 nearest sites ──────────
+      // ── Region users only: zoom map in background, modal stays open ────
       if(ROLE_CONFIG.category==='Region'){
         const sitesWithCoords=data.sites.filter(s=>s.latitude&&s.longitude);
         if(sitesWithCoords.length>0&&typeof map!=='undefined'&&map){
-          // Close the modal so the map is visible
-          setTimeout(()=>{
-            modal.classList.remove('open');
-            // Remove any previous nearby highlight markers
-            if(window._nearbyHighlights){window._nearbyHighlights.forEach(m=>m.remove());window._nearbyHighlights=[];}
-            window._nearbyHighlights=[];
+          // Clear previous nearby highlight markers
+          if(window._nearbyHighlights){window._nearbyHighlights.forEach(m=>m.remove());}
+          window._nearbyHighlights=[];
 
-            // Build bounds from the nearby sites + user location
-            const latlngs=sitesWithCoords.map(s=>[s.latitude,s.longitude]);
-            latlngs.push([lat,lng]); // include user's own position
-
-            // Add pulsing highlight markers for each nearby site
-            sitesWithCoords.forEach((s,i)=>{
-              const rankColors=['#F58220','#AB1DFE','#00BCD4'];
-              const col=rankColors[i]||'#F58220';
-              const icon=L.divIcon({
-                className:'',
-                html:`<div style="width:36px;height:36px;border-radius:50%;background:${col};border:3px solid #fff;box-shadow:0 0 0 3px ${col},0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#fff;font-family:Poppins,sans-serif;">${i+1}</div>`,
-                iconSize:[36,36],iconAnchor:[18,18]
-              });
-              const marker=L.marker([s.latitude,s.longitude],{icon}).addTo(map);
-              marker.bindPopup(`<b style="color:${col}">#${i+1} Nearest</b><br><b>${s.key}</b><br>${s.distance_km} km away<br>${s.business_unit}`);
-              if(i===0) marker.openPopup();
-              window._nearbyHighlights.push(marker);
-            });
-
-            // Add a small marker at user location
-            const userIcon=L.divIcon({
+          // Distinct small dot markers for each nearby site
+          const rankColors=['#F58220','#AB1DFE','#00BCD4'];
+          sitesWithCoords.forEach((s,i)=>{
+            const col=rankColors[i]||'#F58220';
+            const icon=L.divIcon({
               className:'',
-              html:`<div style="width:20px;height:20px;border-radius:50%;background:#00C853;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>`,
-              iconSize:[20,20],iconAnchor:[10,10]
+              html:`<div style="width:14px;height:14px;border-radius:50%;background:${col};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.5);"></div>`,
+              iconSize:[14,14],iconAnchor:[7,7]
             });
-            const userMarker=L.marker([lat,lng],{icon:userIcon}).addTo(map);
-            userMarker.bindTooltip('📍 Your Location',{permanent:false});
-            window._nearbyHighlights.push(userMarker);
+            const marker=L.marker([s.latitude,s.longitude],{icon}).addTo(map);
+            window._nearbyHighlights.push(marker);
+          });
 
-            // Fit map to show all nearby sites, zooming in tightly
-            const bounds=L.latLngBounds(latlngs);
-            map.fitBounds(bounds,{padding:[60,60],maxZoom:14,animate:true,duration:1.2});
+          // Simple default pin for user location — no tooltip, no label
+          const userIcon=L.divIcon({
+            className:'',
+            html:`<div style="position:relative;width:28px;height:36px">
+              <div style="width:28px;height:28px;border-radius:50%;background:#00C853;border:3px solid #fff;box-shadow:0 0 0 2px #00C853,0 4px 12px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center">
+                <div style="width:10px;height:10px;border-radius:50%;background:#fff"></div>
+              </div>
+              <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:10px solid #00C853"></div>
+            </div>`,
+            iconSize:[28,36],iconAnchor:[14,36]
+          });
+          const userMarker=L.marker([lat,lng],{icon:userIcon}).addTo(map);
+          window._nearbyHighlights.push(userMarker);
 
-            // Scroll map into view
-            const mapEl=document.getElementById('site-map');
-            if(mapEl) mapEl.scrollIntoView({behavior:'smooth',block:'center'});
-          },400);
+          // Zoom map in background to fit the sites
+          const latlngs=sitesWithCoords.map(s=>[s.latitude,s.longitude]);
+          latlngs.push([lat,lng]);
+          const bounds=L.latLngBounds(latlngs);
+          map.fitBounds(bounds,{padding:[60,60],maxZoom:14,animate:true});
         }
       }
-      // Non-region users: results stay in modal as-is (existing behaviour)
+      // Non-region users: modal stays as-is (existing behaviour)
 
     }).catch(err=>{btn.disabled=false;body.innerHTML=`<div class="nearby-empty">⚠️ Error: ${err.message}</div>`;});
   },err=>{
@@ -901,7 +937,48 @@ function findNearbySites(){
 }
 function openCoordPanel(){document.getElementById('coord-panel-bg').classList.add('open');document.getElementById('coord-error').classList.remove('show');setTimeout(()=>document.getElementById('coord-lat').focus(),100);}
 function closeCoordPanel(){document.getElementById('coord-panel-bg').classList.remove('open');}
-function searchByCoordinates(){const latStr=document.getElementById('coord-lat').value.trim(),lngStr=document.getElementById('coord-lng').value.trim(),radStr=document.getElementById('coord-radius').value.trim(),errBox=document.getElementById('coord-error');errBox.classList.remove('show');const lat=parseFloat(latStr),lng=parseFloat(lngStr);if(isNaN(lat)||isNaN(lng)){errBox.textContent='⚠️ Please enter valid latitude and longitude.';errBox.classList.add('show');return;}if(lat<-90||lat>90){errBox.textContent='⚠️ Latitude must be between -90 and 90.';errBox.classList.add('show');return;}if(lng<-180||lng>180){errBox.textContent='⚠️ Longitude must be between -180 and 180.';errBox.classList.add('show');return;}let url=`/api/nearby/?lat=${lat}&lng=${lng}`;if(radStr){const r=parseFloat(radStr);if(isNaN(r)||r<=0){errBox.textContent='⚠️ Radius must be a positive number.';errBox.classList.add('show');return;}url+=`&radius=${r}`;}closeCoordPanel();const modal=document.getElementById('nearby-modal-bg'),body=document.getElementById('nearby-body'),sub=document.getElementById('nearby-sub'),title=document.querySelector('.nearby-modal-title');modal.classList.add('open');if(title)title.textContent='🎯 Sites by Coordinates';sub.textContent=`Searching near ${lat.toFixed(4)}, ${lng.toFixed(4)}${radStr?` within ${radStr} km`:''}...`;body.innerHTML='<div class="nearby-loading">🔍 Searching…</div>';fetch(url).then(r=>r.json()).then(data=>{if(data.error){body.innerHTML=`<div class="nearby-empty">⚠️ ${data.error}</div>`;return;}if(!data.sites||data.sites.length===0){body.innerHTML=`<div class="nearby-empty">No sites found.</div>`;sub.textContent=`Searched ${lat.toFixed(4)}, ${lng.toFixed(4)}`;return;}sub.textContent=radStr?`Found ${data.count} sites within ${radStr} km`:`Showing ${data.count} nearest sites`;const cards=data.sites.map((s,i)=>`<div class="nearby-card rank-${(i%3)+1}"><span class="nearby-rank">#${i+1}</span><div class="nearby-key">${s.key}</div><div class="nearby-dist">📏 ${s.distance_km} km away</div><div class="nearby-row"><span class="lbl">Region</span><span class="val">${s.region}</span></div><div class="nearby-row"><span class="lbl">District</span><span class="val">${s.pta_district}</span></div><div class="nearby-row"><span class="lbl">BU</span><span class="val">${s.business_unit}</span></div><div class="nearby-row"><span class="lbl">Tech</span><span class="val">${s.technology}</span></div><div class="nearby-row"><span class="lbl">Status</span><span class="val">${s.site_status}</span></div><div class="nearby-row"><span class="lbl">Revenue</span><span class="val">PKR ${fmt(s.revenue)}</span></div><div class="nearby-row"><span class="lbl">90D Base</span><span class="val">${fmt(s.act_90d)}</span></div><div class="nearby-row"><span class="lbl">Net Add</span><span class="val">${fmt(s.net_add)}</span></div><div class="nearby-row"><span class="lbl">Period</span><span class="val">${s.period}</span></div></div>`).join('');body.innerHTML=`<div class="nearby-grid">${cards}</div>`;}).catch(err=>{body.innerHTML=`<div class="nearby-empty">⚠️ Error: ${err.message}</div>`;});}
+function searchByCoordinates(){const latStr=document.getElementById('coord-lat').value.trim(),lngStr=document.getElementById('coord-lng').value.trim(),radStr=document.getElementById('coord-radius').value.trim(),errBox=document.getElementById('coord-error');errBox.classList.remove('show');const lat=parseFloat(latStr),lng=parseFloat(lngStr);if(isNaN(lat)||isNaN(lng)){errBox.textContent='⚠️ Please enter valid latitude and longitude.';errBox.classList.add('show');return;}if(lat<-90||lat>90){errBox.textContent='⚠️ Latitude must be between -90 and 90.';errBox.classList.add('show');return;}if(lng<-180||lng>180){errBox.textContent='⚠️ Longitude must be between -180 and 180.';errBox.classList.add('show');return;}let url=`/api/nearby/?lat=${lat}&lng=${lng}`;if(radStr){const r=parseFloat(radStr);if(isNaN(r)||r<=0){errBox.textContent='⚠️ Radius must be a positive number.';errBox.classList.add('show');return;}url+=`&radius=${r}`;}closeCoordPanel();const modal=document.getElementById('nearby-modal-bg'),body=document.getElementById('nearby-body'),sub=document.getElementById('nearby-sub'),title=document.querySelector('.nearby-modal-title');modal.classList.add('open');if(title)title.textContent='🎯 Sites by Coordinates';sub.textContent=`Searching near ${lat.toFixed(4)}, ${lng.toFixed(4)}${radStr?` within ${radStr} km`:''}...`;body.innerHTML='<div class="nearby-loading">🔍 Searching…</div>';fetch(url).then(r=>r.json()).then(data=>{if(data.error){body.innerHTML=`<div class="nearby-empty">⚠️ ${data.error}</div>`;return;}if(!data.sites||data.sites.length===0){body.innerHTML=`<div class="nearby-empty">No sites found.</div>`;sub.textContent=`Searched ${lat.toFixed(4)}, ${lng.toFixed(4)}`;return;}sub.textContent=radStr?`Found ${data.count} sites within ${radStr} km`:`Showing ${data.count} nearest sites`;const cards=data.sites.map((s,i)=>`<div style="background:var(--panel-bg);border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.15);margin-bottom:12px;font-family:var(--font)">
+  <div style="background:linear-gradient(135deg,${['#F58220','#AB1DFE','#00BCD4'][i]||'#F58220'},${['#e06000','#7B2FBE','#0097A7'][i]||'#e06000'});padding:12px 16px;display:flex;align-items:flex-start;justify-content:space-between">
+    <div>
+      <div style="font-size:14px;font-weight:900;color:#fff">📡 ${s.key}</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.8);margin-top:3px">${s.business_unit} · ${s.pta_district} · ${s.technology||'—'}</div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.65);margin-top:2px">${s.franchise!=='—'?'FR: '+s.franchise+' · ':''} ARM: ${s.arm||'—'}</div>
+    </div>
+    <div style="text-align:right;flex-shrink:0">
+      <div style="font-size:10px;font-weight:900;color:#fff;background:rgba(255,255,255,0.2);border-radius:20px;padding:2px 10px">#${i+1} Nearest</div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.75);margin-top:4px">📏 ${s.distance_km} km</div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.6);margin-top:2px">${s.site_status}</div>
+    </div>
+  </div>
+  <div style="padding:12px 16px">
+    <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:4px">Subscriber Base · Closing Month</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:8px">
+      <div style="background:rgba(0,188,212,0.08);border:1px solid rgba(0,188,212,0.2);border-radius:7px;padding:6px;text-align:center"><div style="font-size:7px;font-weight:700;color:var(--muted);text-transform:uppercase">90D Base</div><div style="font-size:13px;font-weight:900;color:#00BCD4;margin-top:2px">${nf(s.activations)}</div></div>
+      <div style="background:rgba(171,29,254,0.08);border:1px solid rgba(171,29,254,0.2);border-radius:7px;padding:6px;text-align:center"><div style="font-size:7px;font-weight:700;color:var(--muted);text-transform:uppercase">4G Base</div><div style="font-size:13px;font-weight:900;color:#AB1DFE;margin-top:2px">${nf(s.base_4g)}</div></div>
+      <div style="background:rgba(0,150,136,0.08);border:1px solid rgba(0,150,136,0.2);border-radius:7px;padding:6px;text-align:center"><div style="font-size:7px;font-weight:700;color:var(--muted);text-transform:uppercase">30D Base</div><div style="font-size:13px;font-weight:900;color:#009688;margin-top:2px">${nf(s.base_30d)}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px">
+      <div style="background:rgba(0,200,83,0.08);border:1px solid rgba(0,200,83,0.2);border-radius:7px;padding:6px;text-align:center"><div style="font-size:7px;font-weight:700;color:var(--muted);text-transform:uppercase">HVC Base</div><div style="font-size:13px;font-weight:900;color:#00C853;margin-top:2px">${nf(s.hvc)}</div></div>
+      <div style="background:rgba(245,130,32,0.08);border:1px solid rgba(245,130,32,0.2);border-radius:7px;padding:6px;text-align:center"><div style="font-size:7px;font-weight:700;color:var(--muted);text-transform:uppercase">Handset 4G</div><div style="font-size:13px;font-weight:900;color:#F58220;margin-top:2px">${nf(s.handset_4g)}</div></div>
+    </div>
+    <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:4px">Revenue</div>
+    ${nr('Total Revenue','PKR '+nf(s.revenue),'#F58220')}
+    ${nr('M0 Revenue','PKR '+nf(s.m0_revenue))}
+    ${nr('Total Recharge','PKR '+nf(s.total_recharge))}
+    ${nr('Digital','PKR '+nf(s.digi_recharge),'#00BCD4')}
+    ${nr('Conventional','PKR '+nf(s.conv_recharge),'#AB1DFE')}
+    <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:8px 0 4px;border-bottom:1px solid var(--border);padding-bottom:4px">Performance</div>
+    ${nr('FCA',nf(s.fca),'var(--orange)')}
+    ${nr('MNP',nf(s.mnp))}
+    ${nr('Net Additions',nf(s.net_add),(s.net_add||0)>=0?'#00C853':'#FF3D00')}
+    ${nr('Gross Churn',nf(s.churn),'#FF3D00')}
+    ${nr('Revival',nf(s.revival))}
+    <div style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:8px 0 4px;border-bottom:1px solid var(--border);padding-bottom:4px">Retailers · Closing Month</div>
+    ${nr('EVC Retailers',nf(s.evc_base),'#F58220')}
+    ${nr('BVS Retailers',nf(s.bvs_base),'#AB1DFE')}
+    <div style="font-size:9px;color:var(--muted);margin-top:8px;text-align:right">Period: ${s.period}</div>
+  </div>
+</div>`).join('');body.innerHTML=`<div class="nearby-grid">${cards}</div>`;}).catch(err=>{body.innerHTML=`<div class="nearby-empty">⚠️ Error: ${err.message}</div>`;});}
 document.addEventListener('DOMContentLoaded',()=>{['coord-lat','coord-lng','coord-radius'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchByCoordinates();}});});});
 function toggleActMenu(){const d=document.getElementById('act-menu-drop');d.classList.toggle('open');}
 function closeActMenu(){const d=document.getElementById('act-menu-drop');if(d)d.classList.remove('open');}
@@ -974,6 +1051,199 @@ function openTrend(type,dataKey,title,sub){
   },50);
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTrendModal();});
+
+function openSiteModal(m, color){
+  const bg  = document.getElementById('site-detail-bg');
+  const hdr = document.getElementById('site-detail-header');
+  const key = document.getElementById('site-detail-key');
+  const sub = document.getElementById('site-detail-sub');
+  const arm = document.getElementById('site-detail-arm');
+  const body= document.getElementById('site-detail-body');
+
+  // Header colour from BU
+  hdr.style.background = `linear-gradient(135deg,${color},${color}99)`;
+
+  // Status badge colour
+  const sc = m.site_status === 'Active' ? '#00C853' : '#FF3D00';
+
+  key.innerHTML = `📡 ${m.key||'Unknown'} <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:${sc}33;color:${sc};border:1px solid ${sc};font-weight:800;vertical-align:middle">${m.site_status||'—'}</span>`;
+  sub.textContent = `${m.business_unit||''} · ${m.district||''} · ${m.technology||'—'}`;
+  arm.textContent = m.franchise ? `FR: ${m.franchise}${m.arm ? ' · ARM: '+m.arm : ''}` : '';
+
+  const pct = (a,b) => b ? ((a/b)*100).toFixed(0)+'%' : '—';
+  const totalRech = (m.conv_recharge||0) + (m.digi_recharge||0);
+  const digiPct   = pct(m.digi_recharge, totalRech);
+  const convPct   = pct(m.conv_recharge, totalRech);
+
+  const row = (label, val, valColor) =>
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+       <span style="color:var(--muted);font-weight:500">${label}</span>
+       <span style="font-weight:700;color:${valColor||'var(--text2)'};">${val}</span>
+     </div>`;
+
+  const sec = (title) =>
+    `<div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin:12px 0 6px;padding-bottom:3px;border-bottom:2px solid var(--orange)">${title}</div>`;
+
+  const card3 = (items) => {
+    const cols = items.map(([lbl,val,col]) =>
+      `<div style="background:var(--input-bg);border-radius:8px;padding:8px 6px;text-align:center;flex:1">
+         <div style="font-size:8px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">${lbl}</div>
+         <div style="font-size:14px;font-weight:900;color:${col};margin-top:3px">${val}</div>
+       </div>`).join('');
+    return `<div style="display:flex;gap:6px;margin-bottom:8px">${cols}</div>`;
+  };
+
+  const f = (v) => {
+    if(v==null||v===0||v==='0') return '—';
+    const n = Number(v);
+    if(isNaN(n)||n===0) return '—';
+    if(n>=1e9) return (n/1e9).toFixed(2)+'B';
+    if(n>=1e6) return (n/1e6).toFixed(2)+'M';
+    if(n>=1e3) return (n/1e3).toFixed(1)+'K';
+    return n.toFixed(n%1===0?0:1);
+  };
+  const fPKR = (v) => v&&Number(v)>0 ? 'PKR '+f(v) : '—';
+  const fGBs = (v) => v&&Number(v)>0 ? Number(v).toFixed(1)+' GBs' : '—';
+  const fRate = (v) => v&&Number(v)>0 ? Number(v).toFixed(0) : '—';
+
+  body.innerHTML =
+    sec('Subscriber Base (Closing Month)') +
+    card3([
+      ['90D Base',  f(m.activations), '#00BCD4'],
+      ['4G Base',   f(m.base_4g),     '#AB1DFE'],
+      ['30D Base',  f(m.base_30d),    '#009688'],
+    ]) +
+    card3([
+      ['HVC Base',   f(m.hvc),        '#00C853'],
+      ['Handset 4G', f(m.handset_4g), '#F58220'],
+    ]) +
+    sec('Revenue') +
+    row('Total Revenue',   fPKR(m.revenue),       '#F58220') +
+    row('M0 Revenue',      fPKR(m.m0_revenue)) +
+    row('Total Recharge',  fPKR(totalRech),        color) +
+    row('Digital Recharge',   `${fPKR(m.digi_recharge)} <span style="color:#00BCD4;font-size:10px">(${digiPct})</span>`) +
+    row('Conv. Recharge',     `${fPKR(m.conv_recharge)} <span style="color:#AB1DFE;font-size:10px">(${convPct})</span>`) +
+    sec('Activations & Movements') +
+    row('FCA',            f(m.fca),              color) +
+    row('MNP',            f(m.mnp)) +
+    row('Net Additions',  f(m.net_add),           (m.net_add||0)>=0?'#00C853':'#FF3D00') +
+    row('Gross Churn',    f(m.churn),             '#FF3D00') +
+    row('Revival',        f(m.revival)) +
+    row('Avg Daily Activations', fRate(m.avg_dly_act)) +
+    sec('Data') +
+    row('Data Volume',    fGBs(m.volume_gbs)) +
+    row('4G Data Volume', fGBs(m.data_4g_gbs)) +
+    sec('Retailers (Closing Month)') +
+    row('EVC Retailers',  f(m.evc_base),          '#F58220') +
+    row('BVS Retailers',  f(m.bvs_base),          '#AB1DFE');
+
+  bg.style.display = 'flex';
+  // Prevent body scroll
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSiteModal(){
+  document.getElementById('site-detail-bg').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// Close on backdrop click
+document.addEventListener('DOMContentLoaded', () => {
+  const bg = document.getElementById('site-detail-bg');
+  if(bg) bg.addEventListener('click', function(e){ if(e.target===this) closeSiteModal(); });
+  // ESC key
+  document.addEventListener('keydown', e => { if(e.key==='Escape') closeSiteModal(); });
+});
+
+// ── Site ID Search ───────────────────────────────────────────────────────────
+function openSiteSearch(){
+  document.getElementById('site-search-bg').style.display='flex';
+  document.getElementById('site-search-input').value='';
+  document.getElementById('site-search-result').textContent='';
+  setTimeout(()=>document.getElementById('site-search-input').focus(),80);
+  document.body.style.overflow='hidden';
+}
+function closeSiteSearch(){
+  document.getElementById('site-search-bg').style.display='none';
+  document.body.style.overflow='';
+}
+function doSiteSearch(){
+  const input = document.getElementById('site-search-input');
+  const result = document.getElementById('site-search-result');
+  const query = (input.value||'').trim();
+  if(!query){ result.textContent='Please enter a site ID.'; return; }
+
+  // Search loaded markers in memory
+  if(typeof lastMapMarkers !== 'undefined' && lastMapMarkers.length){
+    const found = lastMapMarkers.find(m => String(m.key||'').trim() === String(query).trim());
+    if(found){
+      zoomToSite(found, query, result);
+      return;
+    }
+    // Partial match
+    const partial = lastMapMarkers.filter(m=>String(m.key||'').trim().includes(String(query).trim()));
+    if(partial.length === 1){
+      zoomToSite(partial[0], query, result);
+      return;
+    }
+    if(partial.length > 1){
+      result.innerHTML = `<span style="color:var(--orange)">Found ${partial.length} sites containing "${query}". Showing multiple matches — refine your search.</span>`;
+      return;
+    }
+  }
+
+  // Fallback: dedicated site search API (ignores data filters, searches by key only)
+  result.innerHTML = '<span style="color:var(--muted)">Searching…</span>';
+  fetch('/api/site-search/?key='+encodeURIComponent(query))
+    .then(r=>r.json()).then(data=>{
+      if(!data.sites||!data.sites.length){
+        result.innerHTML = `<span style="color:#FF3D00">No site found for ID "${query}".</span>`;
+        return;
+      }
+      if(data.sites.length > 1){
+        result.innerHTML = `<span style="color:var(--orange)">${data.sites.length} sites match "${query}". Showing first result.</span>`;
+      }
+      zoomToSite(data.sites[0], query, result);
+    }).catch(()=>{ result.innerHTML='<span style="color:#FF3D00">Search failed.</span>'; });
+}
+
+function zoomToSite(m, query, resultEl){
+  if(!m.lat||!m.lng){ if(resultEl) resultEl.innerHTML='<span style="color:#FF3D00">Site found but has no co-ordinates.</span>'; return; }
+
+  // Zoom map to site
+  map.flyTo([m.lat, m.lng], 15, {animate:true, duration:1.0});
+
+  if(resultEl) resultEl.innerHTML = `<span style="color:#00C853">✓ Found: <b>${m.key}</b> — ${m.business_unit||''} · ${m.district||''}</span>`;
+
+  // Fetch full metrics from map API (with active filters so numbers match dashboard)
+  const p = new URLSearchParams();
+  Object.entries(S).forEach(([k,v])=>{ if(v) p.set(k,v); });
+  p.set('key', m.key);
+  fetch('/api/map/?'+p).then(r=>r.json()).then(data=>{
+    const full = (data.markers&&data.markers.length) ? data.markers[0] : null;
+    const merged = full ? Object.assign({}, m, full) : m;
+    setTimeout(()=>{
+      closeSiteSearch();
+      const BSTYLES = typeof BOUNDARY_STYLES !== 'undefined' ? BOUNDARY_STYLES : {};
+      const bStyle = BSTYLES[merged.business_unit||'']||{stroke:'#F58220'};
+      openSiteModal(merged, bStyle.stroke||'#F58220');
+    }, 900);
+  }).catch(()=>{
+    // Fallback: open with basic info
+    setTimeout(()=>{
+      closeSiteSearch();
+      const BSTYLES = typeof BOUNDARY_STYLES !== 'undefined' ? BOUNDARY_STYLES : {};
+      const bStyle = BSTYLES[m.business_unit||'']||{stroke:'#F58220'};
+      openSiteModal(m, bStyle.stroke||'#F58220');
+    }, 900);
+  });
+}
+
+// Close search on backdrop click + ESC
+document.addEventListener('DOMContentLoaded', ()=>{
+  const bg = document.getElementById('site-search-bg');
+  if(bg) bg.addEventListener('click', e=>{ if(e.target===bg) closeSiteSearch(); });
+});
 </script>
 <div class="nearby-modal-bg" id="nearby-modal-bg" onclick="if(event.target===this)closeNearby()">
   <div class="nearby-modal">
@@ -1002,6 +1272,43 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTrendModal();})
     <div class="coord-actions">
       <button class="coord-cancel" onclick="closeCoordPanel()">Cancel</button>
       <button class="coord-submit" onclick="searchByCoordinates()">🔍 Search</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Site Detail Modal ────────────────────────────────────────────── -->
+<div id="site-detail-bg" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);align-items:center;justify-content:center;">
+  <div id="site-detail-box" style="background:var(--panel-bg);border-radius:16px;width:min(520px,94vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.35);overflow:hidden;font-family:var(--font)">
+    <!-- Header -->
+    <div id="site-detail-header" style="padding:14px 18px 10px;background:linear-gradient(135deg,#F58220,#e06000);flex-shrink:0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      <div>
+        <div id="site-detail-key"  style="font-size:15px;font-weight:900;color:#fff"></div>
+        <div id="site-detail-sub"  style="font-size:11px;color:rgba(255,255,255,0.82);margin-top:3px"></div>
+        <div id="site-detail-arm"  style="font-size:10px;color:rgba(255,255,255,0.68);margin-top:2px"></div>
+      </div>
+      <button onclick="closeSiteModal()" style="background:rgba(220,30,30,0.92);border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;font-weight:900;color:#fff;flex-shrink:0;display:flex;align-items:center;justify-content:center;line-height:1">&times;</button>
+    </div>
+    <!-- Scrollable body -->
+    <div id="site-detail-body" style="overflow-y:auto;padding:16px 18px 20px;flex:1;"></div>
+  </div>
+</div>
+
+<!-- ── Site ID Search Modal ──────────────────────────────────────────── -->
+<div id="site-search-bg" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);align-items:center;justify-content:center;">
+  <div style="background:var(--panel-bg);border-radius:16px;width:min(420px,92vw);box-shadow:0 8px 40px rgba(0,0,0,0.3);overflow:hidden;font-family:var(--font)">
+    <div style="background:linear-gradient(135deg,var(--purple),#5E35B1);padding:14px 18px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:14px;font-weight:900;color:#fff">🔍 Search by Site ID</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:2px">Enter a site ID to zoom in</div>
+      </div>
+      <button onclick="closeSiteSearch()" style="background:rgba(220,30,30,0.92);border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;font-weight:900;color:#fff;display:flex;align-items:center;justify-content:center">&times;</button>
+    </div>
+    <div style="padding:20px 18px">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input id="site-search-input" type="text" placeholder="Enter site ID" autocomplete="off" autocapitalize="off" style="flex:1;background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font);font-size:13px;font-weight:600;padding:10px 14px;outline:none;transition:border .2s" onkeydown="if(event.key==='Enter')doSiteSearch()"/>
+        <button onclick="doSiteSearch()" style="background:var(--purple,#7B2FBE);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">Go</button>
+      </div>
+      <div id="site-search-result" style="font-size:12px;color:var(--muted);min-height:20px"></div>
     </div>
   </div>
 </div>
