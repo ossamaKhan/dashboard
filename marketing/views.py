@@ -258,6 +258,11 @@ def filter_options(request):
 
 # ── Map Data ──────────────────────────────────────────────────
 
+from django.db.models import Max, Sum, Count
+from collections import defaultdict
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+
 @login_required(login_url='login')
 def map_data(request):
     region        = request.GET.get('region')
@@ -271,34 +276,61 @@ def map_data(request):
     month         = request.GET.get('month')
     year          = request.GET.get('year')
 
-    qs = get_scoped_qs(request.user)
+    # Base Queryset with structural filters applied
+    base_qs = get_scoped_qs(request.user)
+    if region:        base_qs = base_qs.filter(region=region)
+    if pta:           base_qs = base_qs.filter(commercial_district=pta)
+    if arm:           base_qs = base_qs.filter(arm=arm)
+    if franchise:     base_qs = base_qs.filter(franchise=franchise)
+    if key:           base_qs = base_qs.filter(key=key)
+    if technology:    base_qs = base_qs.filter(technology=technology)
+    if business_unit: base_qs = base_qs.filter(business_unit=business_unit)
+    if site_status:   base_qs = base_qs.filter(site_status=site_status)
 
-    if region:        qs = qs.filter(region=region)
-    if pta:           qs = qs.filter(commercial_district=pta)
-    if arm:           qs = qs.filter(arm=arm)
-    if franchise:     qs = qs.filter(franchise=franchise)
-    if key:           qs = qs.filter(key=key)
-    if technology:    qs = qs.filter(technology=technology)
-    if business_unit: qs = qs.filter(business_unit=business_unit)
-    if site_status:   qs = qs.filter(site_status=site_status)
-    if month:         qs = qs.filter(month=month)
-    if year:          qs = qs.filter(year=year)
+    base_qs = base_qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
 
-    qs = qs.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
+    # 1. DETERMINE TIME PERIOD FOR CLOSING BALANCES
+    time_qs = base_qs
+    if year:        time_qs = time_qs.filter(year=year)
+    if month:       time_qs = time_qs.filter(month=month)
 
-    franchises = qs.values(
+    # Find the absolute latest year and month matching the active filters
+    latest_time = time_qs.aggregate(max_yr=Max('year'), max_mo=Max('month'))
+    target_year = latest_time['max_yr']
+    target_month = latest_time['max_mo']
+
+    # 2. EXTRACT CLOSING BALANCES (Using a clean, flat dictionary lookup)
+    closing_balances = {}
+    if target_year and target_month:
+        closing_qs = base_qs.filter(
+            year=target_year, 
+            month=target_month
+        ).order_by().values('key', 'act_90d_4g', 'hvc_base', 'evc_retailer', 'bvs_retailer')
+        
+        for item in closing_qs:
+            f_key = item['key']
+            if f_key:
+                closing_balances[f_key] = {
+                    'base_4g': item['act_90d_4g'],
+                    'hvc': item['hvc_base'],
+                    'evc': item['evc_retailer'],
+                    'bvs': item['bvs_retailer'],
+                }
+
+    # 3. RUN MAIN AGGREGATIONS (For running totals like revenue, activations, etc.)
+    sum_qs = base_qs
+    if year:        sum_qs = sum_qs.filter(year=year)
+    if month:       sum_qs = sum_qs.filter(month=month)
+
+    franchises = sum_qs.values(
         'key', 'latitude', 'longitude', 'region', 'commercial_district',
         'technology', 'site_status', 'business_unit', 'franchise', 'arm'
     ).annotate(
         total_revenue=Sum('tot_revn_amt'),
         site_count=Count('id'),
         total_activations=Sum('act_90d'),
-        total_base_4g=Sum('act_90d_4g'),
         total_net_add=Sum('net_add'),
         total_gross_churn=Sum('gross_churn'),
-        total_hvc=Sum('hvc_base'),
-        total_evc=Sum('evc_retailer'),
-        total_bvs=Sum('bvs_retailer'),
         total_conv_recharge=Sum('conventional_recharge'),
         total_prepaid_digi=Sum('prepaid_dgtl_amount'),
         total_postpaid_digi=Sum('postpaid_dgtl_amount'),
@@ -313,21 +345,23 @@ def map_data(request):
     bu_points = defaultdict(list)
     seen_keys = set()
 
+    # 4. MAP DATA IN LOOP
     for f in franchises:
         lat = f['latitude']; lng = f['longitude']
-        if lat is None or lng is None:
-            continue
-        try:
-            lat = float(lat); lng = float(lng)
-        except:
-            continue
-        if not (20 <= lat <= 40 and 60 <= lng <= 80):
-            continue
+        if lat is None or lng is None: continue
+        try: lat = float(lat); lng = float(lng)
+        except: continue
+        if not (20 <= lat <= 40 and 60 <= lng <= 80): continue
 
+        f_key = f['key'] or 'Unknown'
         bu = f['business_unit'] if f['business_unit'] else 'Unknown'
         digi = safe(f.get('total_prepaid_digi')) + safe(f.get('total_postpaid_digi'))
+        
+        # Pull the absolute un-summed closing row metrics from our lookup map
+        closing_data = closing_balances.get(f['key'], {'base_4g': 0, 'hvc': 0, 'evc': 0, 'bvs': 0})
+
         markers.append({
-            'key':           f['key'] or 'Unknown',
+            'key':           f_key,
             'lat':           lat,
             'lng':           lng,
             'region':        f['region'] or '',
@@ -339,15 +373,17 @@ def map_data(request):
             'business_unit': bu,
             'revenue':       safe(f['total_revenue']),
             'activations':   safe(f['total_activations']),
-            'base_4g':       safe(f.get('total_base_4g')),
             'net_add':       safe(f.get('total_net_add')),
             'churn':         safe(f.get('total_gross_churn')),
-            'hvc':           safe(f.get('total_hvc')),
-            'evc_base':      safe(f.get('total_evc')),
-            'bvs_base':      safe(f.get('total_bvs')),
             'conv_recharge': safe(f.get('total_conv_recharge')),
             'digi_recharge': digi,
             'total_recharge': safe(f.get('total_conv_recharge')) + digi,
+            
+            # Non-summed month-end closing snapshot values:
+            'base_4g':       safe(closing_data['base_4g']), 
+            'hvc':           safe(closing_data['hvc']),
+            'evc_base':      safe(closing_data['evc']),
+            'bvs_base':      safe(closing_data['bvs']),
         })
         bu_points[bu].append((lng, lat))
         if f['key']:
@@ -355,29 +391,24 @@ def map_data(request):
 
     def convex_hull(points):
         pts = sorted(set(points))
-        if len(pts) < 3:
-            return pts
+        if len(pts) < 3: return pts
         def cross(o, a, b):
             return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
         lower = []
         for p in pts:
-            while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
-                lower.pop()
+            while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0: lower.pop()
             lower.append(p)
         upper = []
         for p in reversed(pts):
-            while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
-                upper.pop()
+            while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0: upper.pop()
             upper.append(p)
         return lower[:-1] + upper[:-1]
 
     bu_boundaries = []
     for bu, pts in bu_points.items():
-        if len(set(pts)) < 3:
-            continue
+        if len(set(pts)) < 3: continue
         hull = convex_hull(pts)
-        if len(hull) < 3:
-            continue
+        if len(hull) < 3: continue
         bu_boundaries.append({
             'business_unit': bu,
             'polygon': [[lat, lng] for (lng, lat) in hull],
