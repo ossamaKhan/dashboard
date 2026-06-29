@@ -819,12 +819,38 @@ def channel_kpi_table(request):
     prev_m   = lm - 1 if lm > 1 else 12
     prev_m_y = ly if lm > 1 else prev_y
 
-    # ── Current period values (filtered qs) — 1 query ───────────────
-    curr_qs = (qs
+    # ── Current period values — mirrors prev_qs's period-aware logic so
+    # both sides of the % change comparison are computed the same way
+    # (cumulative Jan-through-lm for YTD, single month for GOLM/YOY).
+    # Previously this just Summed whatever qs.filter(date__year=...,
+    # date__month=...) happened to select — for YTD that meant comparing
+    # a single selected month's value against a 5-month CUMULATIVE prior
+    # value, and for GOLM/YOY with only a year chosen (no month), it
+    # summed the WHOLE YEAR as "current" against one month as "previous".
+    if period == 'ytd':
+        curr_annot = {
+            f: Sum(Case(When(date__year=ly, date__month__lte=lm, then=f),
+                        default=0, output_field=FloatField()))
+            for f in all_fields
+        }
+    elif period == 'golm':
+        curr_annot = {
+            f: Sum(Case(When(date__year=ly, date__month=lm, then=f),
+                        default=0, output_field=FloatField()))
+            for f in all_fields
+        }
+    else:  # yoy
+        curr_annot = {
+            f: Sum(Case(When(date__year=ly, date__month=lm, then=f),
+                        default=0, output_field=FloatField()))
+            for f in all_fields
+        }
+
+    curr_qs = (base_qs
                .exclude(**{f'{group_field}__isnull': True})
                .exclude(**{f'{group_field}': ''})
                .values(group_field)
-               .annotate(**{f: Sum(f) for f in all_fields}))
+               .annotate(**curr_annot))
     curr_map = {r[group_field]: r for r in curr_qs}
 
     # ── Previous period values — 1 query using Case/When ────────────
