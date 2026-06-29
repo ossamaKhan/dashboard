@@ -801,7 +801,15 @@ def channel_kpi_table(request):
     if arm:           base_qs = base_qs.filter(arm=arm)
     if franchise:     base_qs = base_qs.filter(franchise_id=franchise)
 
-    latest = base_qs.order_by('-date').values('date').first()
+    # ── Reference period: honor explicit year/month filters; otherwise
+    # fall back to the latest available date (previous behaviour). ──────
+    ref_qs = base_qs
+    if year_param:  ref_qs = ref_qs.filter(date__year=int(year_param))
+    if month_param: ref_qs = ref_qs.filter(date__month=int(month_param))
+
+    latest = ref_qs.order_by('-date').values('date').first()
+    if not latest:
+        latest = base_qs.order_by('-date').values('date').first()
     if not latest:
         return JsonResponse({'rows': [], 'group_label': group_label, 'kpi_defs': []})
 

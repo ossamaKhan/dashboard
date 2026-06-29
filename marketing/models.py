@@ -100,11 +100,10 @@ class SiteData(models.Model):
 
 class UserProfile(models.Model):
     DESIGNATION_CHOICES = [
-        ('VP', 'VP'),
         ('RD', 'RD'),
-        ('Manager', 'Manager'),
         ('ARM', 'ARM'),
-        ('Executive', 'Executive')
+        ('Manager', 'Manager'),
+        ('Executive', 'Executive'),
     ]
 
     CATEGORY_CHOICES = [
@@ -146,23 +145,66 @@ class UserProfile(models.Model):
         return None
 
 
+
+
+class ChatRoom(models.Model):
+    """Named chat channels — Region channel + per-RD ARM channels."""
+    ROOM_TYPES = [('region', 'Region'), ('rd', 'RD Group')]
+    name        = models.CharField(max_length=100)
+    slug        = models.SlugField(max_length=100, unique=True)
+    room_type   = models.CharField(max_length=10, choices=ROOM_TYPES, default='region')
+    rd_user     = models.ForeignKey(
+        User, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='rd_room',
+        help_text='The RD whose group this is (for rd-type rooms)')
+    members     = models.ManyToManyField(User, related_name='chat_rooms', blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'chat_room'
+
+    def __str__(self):
+        return self.name
+
+
 class ChatMessage(models.Model):
     sender         = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_messages')
+    room           = models.ForeignKey(ChatRoom, null=True, blank=True, on_delete=models.CASCADE, related_name='messages')
     text           = models.TextField(blank=True, default='')
     image          = models.ImageField(upload_to='chat_images/', blank=True, null=True)
     audio          = models.FileField(upload_to='chat_audio/', blank=True, null=True)
     audio_duration = models.PositiveIntegerField(null=True, blank=True)
+    edited         = models.BooleanField(default=False)
+    deleted        = models.BooleanField(default=False)
     created_at     = models.DateTimeField(auto_now_add=True)
+    updated_at     = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'chat_message'
         indexes = [
             models.Index(fields=['id'],         name='idx_chat_id'),
             models.Index(fields=['created_at'], name='idx_chat_created'),
+            models.Index(fields=['room'],       name='idx_chat_room'),
         ]
 
     def __str__(self):
         return f"{self.sender.username} @ {self.created_at}"
+
+
+class PushSubscription(models.Model):
+    """Web Push subscription endpoint per user per device."""
+    user       = models.ForeignKey(User, on_delete=models.CASCADE, related_name='push_subscriptions')
+    endpoint   = models.TextField(unique=True)
+    p256dh     = models.TextField()
+    auth       = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'push_subscription'
+
+    def __str__(self):
+        return f"{self.user.username} subscription"
+
 
 
 class UserLoginLog(models.Model):

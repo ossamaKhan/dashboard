@@ -382,6 +382,8 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <a href="/dashboard/" class="nv" onclick="closeSidebar()">Marketing Brief</a>
     <a href="/base/" class="nv" onclick="closeSidebar()">Base Analytics</a>
     <a href="/revenue/" class="nv" onclick="closeSidebar()">Revenue Analytics</a>
+    <a href="/performance-ranking/" class="nv" onclick="closeSidebar()">Performance Ranking</a>
+    <a href="/site-map/" class="nv" onclick="closeSidebar()">Site Map</a>
     <div class="sb-sec">Channel</div>
     <a href="/channel/" class="nv" onclick="closeSidebar()">Channel Brief</a>
     <a href="/channel/performance/" class="nv" onclick="closeSidebar()">Target Performance</a>
@@ -623,7 +625,10 @@ function loadOptions(isFirstLoad=false){
   if(S.arm)p.set('arm',S.arm);
   fetch('/channel/api/filters/?'+p).then(r=>r.json()).then(data=>{
     if(isFirstLoad){
-      if(data.latest_year&&(S.year==null||S.year==="")){S.year=String(data.latest_year);setVal('in-year',String(data.latest_year),'ac-p');}if(data.latest_month&&(S.month==null||S.month==="")){S.month=String(data.latest_month);setVal('in-month','Month '+data.latest_month,'ac-p');}
+      if((S.year==null||S.year==="")&&(S.month==null||S.month==="")){
+        if(data.latest_year){S.year=String(data.latest_year);setVal('in-year',String(data.latest_year),'ac-p');}
+        if(data.latest_month){S.month=String(data.latest_month);setVal('in-month','Month '+data.latest_month,'ac-p');}
+      }
       defaultYearSet=true;restoreFilterUI();renderTags();updateLogoSub();fetchData();fetchMapData();
     }
     if(!ROLE_CONFIG.regionLocked){

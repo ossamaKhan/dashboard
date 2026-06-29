@@ -3,7 +3,7 @@ exports/views.py  —  Rich Excel + PDF export with charts and styled KPI tables
 URL: /api/export/<excel|pdf>/?source=<marketing|channel>&<filters>
 """
 
-import io, datetime, re
+import io, datetime, re, struct
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -53,6 +53,34 @@ def _pct(a, b):
 
 def _att(a, t):
     return _pct(a, t)
+
+def _png_size(buf):
+    """Read (width, height) from a PNG buffer without needing PIL. Leaves
+    the buffer position reset to 0 so it can still be embedded normally."""
+    try:
+        buf.seek(0)
+        head = buf.read(33)
+        buf.seek(0)
+        w, h = struct.unpack('>II', head[16:24])
+        return w, h
+    except Exception:
+        buf.seek(0)
+        return None, None
+
+
+def _fit_box(buf, slot_w, slot_h):
+    """Return (w, h) that fits an image inside slot_w x slot_h while
+    preserving its true aspect ratio (so e.g. a square-ish donut chart
+    isn't stretched to fill a wide bar-chart-shaped slot)."""
+    iw, ih = _png_size(buf)
+    if not iw or not ih:
+        return slot_w, slot_h
+    aspect = iw / ih
+    w = slot_h * aspect
+    if w <= slot_w:
+        return w, slot_h
+    return slot_w, slot_w / aspect
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  FILENAME BUILDER
@@ -282,29 +310,29 @@ def _get_channel_kpis_and_charts(filters, request=None):
             'rows': [
                 ('FCA Achievement',        s(k.get('fca_ach')),        'fca_ach'),
                 ('FCA Target',             s(k.get('fca_target')),     None),
-                ('FCA Attainment %',       _att(k.get('fca_ach'), k.get('fca_target')), None),
+                ('FCA Achievement %',      _att(k.get('fca_ach'), k.get('fca_target')), None),
                 ('4G Achievement',         s(k.get('g4_ach')),         'g4_ach'),
                 ('4G Target',              s(k.get('g4_target')),      None),
-                ('4G Attainment %',        _att(k.get('g4_ach'), k.get('g4_target')), None),
+                ('4G Achievement %',       _att(k.get('g4_ach'), k.get('g4_target')), None),
                 ('4G Penetration % of FCA',_pct(s(k.get('g4_ach')), fca), None),
                 ('MNP Achievement',        s(k.get('mnp_ach')),        'mnp_ach'),
                 ('MNP Target',             s(k.get('mnp_target')),     None),
-                ('MNP Attainment %',       _att(k.get('mnp_ach'), k.get('mnp_target')), None),
+                ('MNP Achievement %',      _att(k.get('mnp_ach'), k.get('mnp_target')), None),
                 ('Recharge Achievement',   s(k.get('loading_ach')),    'loading_ach'),
                 ('Recharge Target',        s(k.get('loading_target')), None),
-                ('Recharge Attainment %',  _att(k.get('loading_ach'), k.get('loading_target')), None),
+                ('Recharge Achievement %', _att(k.get('loading_ach'), k.get('loading_target')), None),
                 ('M0 Revenue Achievement', s(k.get('m0_revenue_ach')), 'm0_revenue_ach'),
                 ('M0 Revenue Target',      s(k.get('m0_revenue_target')), None),
-                ('M0 Revenue Attainment %',_att(k.get('m0_revenue_ach'), k.get('m0_revenue_target')), None),
+                ('M0 Revenue Achievement %',_att(k.get('m0_revenue_ach'), k.get('m0_revenue_target')), None),
                 ('HVC Achievement',        s(k.get('hvc_ach')),        'hvc_ach'),
                 ('HVC Target',             s(k.get('hvc_target')),     None),
-                ('HVC Attainment %',       _att(k.get('hvc_ach'), k.get('hvc_target')), None),
+                ('HVC Achievement %',      _att(k.get('hvc_ach'), k.get('hvc_target')), None),
                 ('Bundle Achievement',     s(k.get('bundle_ach')),     'bundle_ach'),
                 ('Bundle Target',          s(k.get('bundle_target')),  None),
-                ('Bundle Attainment %',    _att(k.get('bundle_ach'), k.get('bundle_target')), None),
+                ('Bundle Achievement %',   _att(k.get('bundle_ach'), k.get('bundle_target')), None),
                 ('QOS Achievement',        s(k.get('qos_ach')),        None),
                 ('QOS Target',             s(k.get('qos_target')),     None),
-                ('QOS Attainment %',       _att(k.get('qos_ach'), k.get('qos_target')), None),
+                ('QOS Achievement %',      _att(k.get('qos_ach'), k.get('qos_target')), None),
             ],
         },
         {
@@ -461,10 +489,10 @@ def _get_channel_kpis_and_charts(filters, request=None):
 
     # Attainment gauges
     gauge_defs = [
-        ('FCA Attainment', _att(k.get('fca_ach'), k.get('fca_target')), ORANGE),
-        ('4G Attainment',  _att(k.get('g4_ach'),  k.get('g4_target')),  '#5E35B1'),
-        ('MNP Attainment', _att(k.get('mnp_ach'), k.get('mnp_target')), PURPLE),
-        ('HVC Attainment', _att(k.get('hvc_ach'), k.get('hvc_target')), GREEN),
+        ('FCA Achievement', _att(k.get('fca_ach'), k.get('fca_target')), ORANGE),
+        ('4G Achievement',  _att(k.get('g4_ach'),  k.get('g4_target')),  '#5E35B1'),
+        ('MNP Achievement', _att(k.get('mnp_ach'), k.get('mnp_target')), PURPLE),
+        ('HVC Achievement', _att(k.get('hvc_ach'), k.get('hvc_target')), GREEN),
     ]
     gauge_bufs = []
     for g_title, g_val, g_clr in gauge_defs:
@@ -818,8 +846,7 @@ def _build_excel(sections, charts, gauges, title, filters):
             row_i = ci // 2
             col_i = ci %  2
             img = XLImage(c_buf)
-            img.width  = CHART_W
-            img.height = CHART_H
+            img.width, img.height = _fit_box(c_buf, CHART_W, CHART_H)
             row_num  = start_row + row_i * rows_per_chart
             col_num  = 1 + col_i * 8
             col_letter = get_column_letter(col_num)
@@ -1001,7 +1028,8 @@ def _build_pdf(sections, charts, gauges, title, filters):
             row_imgs = []
             for ci in range(i, min(i+2, len(charts))):
                 c_title, c_buf = charts[ci]
-                img = RLImage(c_buf, width=CHART_W_PT, height=CHART_H_PT)
+                iw_pt, ih_pt = _fit_box(c_buf, CHART_W_PT, CHART_H_PT)
+                img = RLImage(c_buf, width=iw_pt, height=ih_pt)
                 row_imgs.append(img)
             if len(row_imgs) == 1:
                 row_imgs.append('')
@@ -1038,8 +1066,8 @@ def export_view(request, export_type, source=None):
     if not source:
         source = request.GET.get('source', '')
     if not source:
-        referer = request.META.get('HTTP_REFERER', '')
-        source = 'channel' if '/channel/' in referer else 'marketing'
+        referer = request.META.get('HTTP_REFERER', '').lower()
+        source = 'channel' if 'channel' in referer else 'marketing'
 
     filters = {
         'region':        request.GET.get('region', ''),
@@ -1097,8 +1125,8 @@ def export_view(request, export_type, source=None):
 @login_required(login_url='/')
 def export_view_legacy(request, export_type):
     """Legacy: /api/export/excel/ — infers source from Referer header."""
-    referer = request.META.get('HTTP_REFERER', '')
-    source  = 'channel' if '/channel/' in referer else 'marketing'
+    referer = request.META.get('HTTP_REFERER', '').lower()
+    source  = 'channel' if 'channel' in referer else 'marketing'
     return export_view(request, export_type, source=source)
 
 

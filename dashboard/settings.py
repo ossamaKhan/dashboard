@@ -1,6 +1,8 @@
 """
 Django settings for dashboard project.
 """
+from dotenv import load_dotenv
+load_dotenv()
 
 from pathlib import Path
 import os
@@ -46,6 +48,9 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'dashboard.urls'
+
+SESSION_COOKIE_AGE = 900
+SESSION_SAVE_EVERY_REQUEST = True
 
 TEMPLATES = [
     {
@@ -117,3 +122,9 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ── Web Push (VAPID) ──────────────────────────────────────────────────────────
+# Generate keys once: python -c "from py_vapid import Vapid; v=Vapid(); v.generate_keys(); print(v.public_key.decode(),v.private_key.decode())"
+VAPID_PUBLIC_KEY  = os.environ.get('VAPID_PUBLIC_KEY', '')
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
+VAPID_CLAIMS      = {'sub': f'mailto:{os.environ.get("ADMIN_EMAIL", "admin@example.com")}'}

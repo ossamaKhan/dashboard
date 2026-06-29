@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect
 from django.db.models import Sum, Avg, Count, Max, F, Value, DecimalField, Case, When, FloatField, Q
 from django.db.models.functions import Coalesce
 from django.contrib.auth.models import User
-from .models import SiteData, UserProfile, ChatMessage
+from .models import SiteData, UserProfile, ChatMessage, UserLoginLog, ChatRoom, PushSubscription
 from django.http import JsonResponse
 from collections import defaultdict
 from django.contrib import messages
@@ -50,7 +50,7 @@ def get_locked_filters(user):
     elif profile.category == 'ARM':
         arm_val = profile.user_arm or ''
         # Derive BU from SiteData based on ARM
-        from marketing.models import SiteData
+        from marketing.models import SiteData, UserProfile, ChatMessage, UserLoginLog, ChatRoom, PushSubscription
         bu_val = (SiteData.objects.filter(arm=arm_val)
                   .values_list('business_unit', flat=True).first()) or ''
         locked['region'] = {'locked': True,  'value': 'Central B'}
@@ -60,6 +60,130 @@ def get_locked_filters(user):
 
 
 # ── Auth ──────────────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Chat helper functions
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _get_or_create_region_room():
+    """Get or create the main region-wide channel."""
+    room, created = ChatRoom.objects.get_or_create(
+        slug='region',
+        defaults={'name': 'Central B — All Teams', 'room_type': 'region'}
+    )
+    if created:
+        # Add all users with Region or Admin category
+        from django.contrib.auth.models import User as _User
+        for u in _User.objects.filter(
+            profile__category__in=['Region']
+        ).select_related('profile'):
+            room.members.add(u)
+        # Also add all staff/admin users
+        for u in _User.objects.filter(is_staff=True):
+            room.members.add(u)
+    return room
+
+
+def _ensure_rooms_exist():
+    """
+    Create / sync:
+    1. One region-wide room  — all users
+    2. One room per BU       — all ARM/BU users in that BU + all Region users
+    """
+    from django.contrib.auth.models import User as _User
+    from django.utils.text import slugify
+
+    region_users = list(_User.objects.filter(
+        profile__category='Region'
+    ).select_related('profile'))
+    staff_users  = list(_User.objects.filter(is_staff=True))
+    arm_users    = list(_User.objects.filter(
+        profile__category='ARM'
+    ).select_related('profile'))
+    bu_users     = list(_User.objects.filter(
+        profile__category='BU'
+    ).select_related('profile'))
+
+    # ── 1. Region-wide room ───────────────────────────────────────────────
+    region_room = _get_or_create_region_room()
+    for u in region_users + staff_users + arm_users + bu_users:
+        region_room.members.add(u)
+
+    # ── 2. BU-level rooms (one per distinct BU in UserProfile) ───────────
+    from marketing.models import SiteData
+    bus = list(SiteData.objects.exclude(
+        business_unit__isnull=True
+    ).exclude(business_unit='').values_list(
+        'business_unit', flat=True
+    ).distinct())
+
+    for bu in bus:
+        slug = 'bu-' + slugify(bu)[:94]
+        room, _ = ChatRoom.objects.get_or_create(
+            slug=slug,
+            defaults={
+                'name':      f"{bu} — Team",
+                'room_type': 'rd',
+            }
+        )
+        # Add Region + staff users
+        for u in region_users + staff_users:
+            room.members.add(u)
+        # Add BU users whose BU matches
+        for u in bu_users:
+            if getattr(u.profile, 'user_business_unit', '') == bu:
+                room.members.add(u)
+        # Add ARM users whose ARM is in this BU
+        for u in arm_users:
+            arm_val = getattr(u.profile, 'user_arm', '')
+            if arm_val and SiteData.objects.filter(arm=arm_val, business_unit=bu).exists():
+                room.members.add(u)
+
+
+def _send_push_to_room(room, sender, text_preview):
+    """Fire-and-forget Web Push to all room members except sender."""
+    try:
+        from pywebpush import webpush, WebPushException
+        from django.conf import settings
+        import json, threading
+
+        vapid_private = getattr(settings, 'VAPID_PRIVATE_KEY', '')
+        vapid_claims  = getattr(settings, 'VAPID_CLAIMS', {})
+        if not vapid_private:
+            return  # Push not configured
+
+        subs = PushSubscription.objects.filter(
+            user__in=room.members.all()
+        ).exclude(user=sender)
+
+        preview = text_preview[:60] + ('…' if len(text_preview) > 60 else '')
+        sender_name = sender.get_full_name() or sender.username
+
+        def _send():
+            for sub in subs:
+                try:
+                    webpush(
+                        subscription_info={
+                            "endpoint": sub.endpoint,
+                            "keys": {"p256dh": sub.p256dh, "auth": sub.auth},
+                        },
+                        data=json.dumps({
+                            "title": f"💬 {sender_name}",
+                            "body":  preview,
+                            "room":  room.slug,
+                        }),
+                        vapid_private_key=vapid_private,
+                        vapid_claims=vapid_claims,
+                    )
+                except WebPushException:
+                    sub.delete()  # Subscription expired
+                except Exception:
+                    pass
+
+        threading.Thread(target=_send, daemon=True).start()
+    except ImportError:
+        pass  # pywebpush not installed — silent fail
+
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -218,6 +342,20 @@ def revenue_page(request):
     profile = get_or_create_profile(request.user)
     locked  = get_locked_filters(request.user)
     return render(request, 'dashboard/revenue_page.html', {'profile': profile, 'locked': locked})
+
+
+@login_required(login_url='login')
+def site_map_page(request):
+    profile = get_or_create_profile(request.user)
+    locked  = get_locked_filters(request.user)
+    return render(request, 'dashboard/site_map.html', {'profile': profile, 'locked': locked})
+
+
+@login_required(login_url='login')
+def performance_ranking_page(request):
+    profile = get_or_create_profile(request.user)
+    locked  = get_locked_filters(request.user)
+    return render(request, 'dashboard/performance_ranking.html', {'profile': profile, 'locked': locked})
 
 
 # ── Filters ───────────────────────────────────────────────────
@@ -828,6 +966,7 @@ def site_performance_table(request):
             base_ytd_c  = Sum(Case(When(year=ly, month=lm,      then='act_90d'),              default=0, output_field=FloatField())),
             churn_ytd_c = Sum(Case(When(year=ly, month__lte=lm, then='gross_churn'),          default=0, output_field=FloatField())),
             netadd_ytd_c= Sum(Case(When(year=ly, month__lte=lm, then='net_add'),              default=0, output_field=FloatField())),
+            fca_ytd_c   = Sum(Case(When(year=ly, month__lte=lm, then='fca'),                  default=0, output_field=FloatField())),
             rev_ytd_p   = Sum(Case(When(year=prev_y, month__lte=lm, then='tot_revn_amt'),     default=0, output_field=FloatField())),
             rech_ytd_p  = Sum(Case(When(year=prev_y, month__lte=lm, then='prepaid_dgtl_amount'), default=0, output_field=FloatField()))
                         + Sum(Case(When(year=prev_y, month__lte=lm, then='postpaid_dgtl_amount'),default=0, output_field=FloatField()))
@@ -835,6 +974,7 @@ def site_performance_table(request):
             base_ytd_p  = Sum(Case(When(year=prev_y, month=lm,  then='act_90d'),              default=0, output_field=FloatField())),
             churn_ytd_p = Sum(Case(When(year=prev_y, month__lte=lm, then='gross_churn'),      default=0, output_field=FloatField())),
             netadd_ytd_p= Sum(Case(When(year=prev_y, month__lte=lm, then='net_add'),          default=0, output_field=FloatField())),
+            fca_ytd_p   = Sum(Case(When(year=prev_y, month__lte=lm, then='fca'),              default=0, output_field=FloatField())),
             rev_cm      = Sum(Case(When(year=ly,     month=lm,   then='tot_revn_amt'),         default=0, output_field=FloatField())),
             rech_cm     = Sum(Case(When(year=ly,     month=lm,   then='prepaid_dgtl_amount'),  default=0, output_field=FloatField()))
                         + Sum(Case(When(year=ly,     month=lm,   then='postpaid_dgtl_amount'), default=0, output_field=FloatField()))
@@ -842,6 +982,7 @@ def site_performance_table(request):
             base_cm     = Sum(Case(When(year=ly,     month=lm,   then='act_90d'),              default=0, output_field=FloatField())),
             churn_cm    = Sum(Case(When(year=ly,     month=lm,   then='gross_churn'),          default=0, output_field=FloatField())),
             netadd_cm   = Sum(Case(When(year=ly,     month=lm,   then='net_add'),              default=0, output_field=FloatField())),
+            fca_cm      = Sum(Case(When(year=ly,     month=lm,   then='fca'),                  default=0, output_field=FloatField())),
             rev_yoy_p   = Sum(Case(When(year=prev_y, month=lm,   then='tot_revn_amt'),         default=0, output_field=FloatField())),
             rech_yoy_p  = Sum(Case(When(year=prev_y, month=lm,   then='prepaid_dgtl_amount'),  default=0, output_field=FloatField()))
                         + Sum(Case(When(year=prev_y, month=lm,   then='postpaid_dgtl_amount'), default=0, output_field=FloatField()))
@@ -849,6 +990,7 @@ def site_performance_table(request):
             base_yoy_p  = Sum(Case(When(year=prev_y, month=lm,   then='act_90d'),              default=0, output_field=FloatField())),
             churn_yoy_p = Sum(Case(When(year=prev_y, month=lm,   then='gross_churn'),          default=0, output_field=FloatField())),
             netadd_yoy_p= Sum(Case(When(year=prev_y, month=lm,   then='net_add'),              default=0, output_field=FloatField())),
+            fca_yoy_p   = Sum(Case(When(year=prev_y, month=lm,   then='fca'),                  default=0, output_field=FloatField())),
             rev_mp      = Sum(Case(When(year=mom_y,  month=mom_m, then='tot_revn_amt'),         default=0, output_field=FloatField())),
             rech_mp     = Sum(Case(When(year=mom_y,  month=mom_m, then='prepaid_dgtl_amount'),  default=0, output_field=FloatField()))
                         + Sum(Case(When(year=mom_y,  month=mom_m, then='postpaid_dgtl_amount'), default=0, output_field=FloatField()))
@@ -856,6 +998,7 @@ def site_performance_table(request):
             base_mp     = Sum(Case(When(year=mom_y,  month=mom_m, then='act_90d'),              default=0, output_field=FloatField())),
             churn_mp    = Sum(Case(When(year=mom_y,  month=mom_m, then='gross_churn'),          default=0, output_field=FloatField())),
             netadd_mp   = Sum(Case(When(year=mom_y,  month=mom_m, then='net_add'),              default=0, output_field=FloatField())),
+            fca_mp      = Sum(Case(When(year=mom_y,  month=mom_m, then='fca'),                  default=0, output_field=FloatField())),
         )
     )
 
@@ -879,6 +1022,9 @@ def site_performance_table(request):
         churn_cm   = safe(r['churn_cm']);    churn_yoy_p = safe(r['churn_yoy_p'])
         netadd_cm  = safe(r['netadd_cm']);   netadd_yoy_p= safe(r['netadd_yoy_p'])
         churn_mp   = safe(r['churn_mp']);    netadd_mp   = safe(r['netadd_mp'])
+        fca_ytd    = safe(r['fca_ytd_c']);   fca_ytd_p   = safe(r['fca_ytd_p'])
+        fca_cm     = safe(r['fca_cm']);      fca_yoy_p   = safe(r['fca_yoy_p'])
+        fca_mp     = safe(r['fca_mp'])
         rows.append({
             'group':          group_val,
             'group_label':    group_label,
@@ -898,6 +1044,9 @@ def site_performance_table(request):
             'netadd_ytd':     netadd_ytd,    'netadd_ytd_pct':pct(netadd_ytd,netadd_ytd_p),'netadd_ytd_prev':netadd_ytd_p,
             'netadd_yoy_curr':netadd_cm,     'netadd_yoy_pct':pct(netadd_cm,netadd_yoy_p),'netadd_yoy_prev':netadd_yoy_p,
             'netadd_mom_curr':netadd_cm,     'netadd_mom_pct':pct(netadd_cm,netadd_mp),   'netadd_mom_prev':netadd_mp,
+            'fca_ytd':        fca_ytd,       'fca_ytd_pct':   pct(fca_ytd,  fca_ytd_p),   'fca_ytd_prev':  fca_ytd_p,
+            'fca_yoy_curr':   fca_cm,        'fca_yoy_pct':   pct(fca_cm,   fca_yoy_p),   'fca_yoy_prev':  fca_yoy_p,
+            'fca_mom_curr':   fca_cm,        'fca_mom_pct':   pct(fca_cm,   fca_mp),       'fca_mom_prev':  fca_mp,
         })
 
     sort_key = {
@@ -906,16 +1055,19 @@ def site_performance_table(request):
         'base_ytd':      lambda r: r['base_ytd_pct'],
         'churn_ytd':     lambda r: r['churn_ytd_pct'],
         'netadd_ytd':    lambda r: r['netadd_ytd_pct'],
+        'fca_ytd':       lambda r: r['fca_ytd_pct'],
         'revenue_mom':   lambda r: r['rev_mom_pct'],
         'recharge_mom':  lambda r: r['rech_mom_pct'],
         'base_mom':      lambda r: r['base_mom_pct'],
         'churn_mom':     lambda r: r['churn_mom_pct'],
         'netadd_mom':    lambda r: r['netadd_mom_pct'],
+        'fca_mom':       lambda r: r['fca_mom_pct'],
         'revenue_yoy':   lambda r: r['rev_yoy_pct'],
         'recharge_yoy':  lambda r: r['rech_yoy_pct'],
         'base_yoy':      lambda r: r['base_yoy_pct'],
         'churn_yoy':     lambda r: r['churn_yoy_pct'],
         'netadd_yoy':    lambda r: r['netadd_yoy_pct'],
+        'fca_yoy':       lambda r: r['fca_yoy_pct'],
     }.get(sort_by, lambda r: r['rev_ytd_pct'])
 
     rows.sort(key=sort_key, reverse=(order == 'top'))
@@ -1657,17 +1809,61 @@ def chat_page(request):
     profile = get_or_create_profile(request.user)
     profile.last_seen = timezone.now()
     profile.save(update_fields=['last_seen'])
-    return render(request, 'dashboard/chat.html', {'profile': profile})
+    # Auto-create rooms on first visit if none exist
+    try:
+        if not ChatRoom.objects.exists():
+            _ensure_rooms_exist()
+        # Make sure this user is in at least the region room
+        region_room = ChatRoom.objects.filter(slug='region').first()
+        if region_room:
+            region_room.members.add(request.user)
+    except Exception:
+        pass  # Table may not exist yet before migration
+    rooms = list(ChatRoom.objects.filter(members=request.user).values('slug','name','room_type'))
+    return render(request, 'dashboard/chat.html', {'profile': profile, 'chat_rooms': rooms})
 
 
 @login_required(login_url='login')
 def chat_messages(request):
-    # Only update last_seen on POST or initial load (no ?since=), not on every poll
+    """Send/receive messages. Supports rooms, edit, delete."""
     is_poll = request.method == 'GET' and request.GET.get('since')
     if not is_poll:
         UserProfile.objects.filter(user=request.user).update(last_seen=timezone.now())
 
+    room_slug = request.GET.get('room') or request.POST.get('room') or 'region'
+    try:
+        room = ChatRoom.objects.get(slug=room_slug)
+    except ChatRoom.DoesNotExist:
+        room = _get_or_create_region_room()
+
     if request.method == 'POST':
+        action = request.POST.get('action', 'send')
+
+        # ── EDIT ──────────────────────────────────────────────────────────
+        if action == 'edit':
+            msg_id = request.POST.get('id')
+            new_text = request.POST.get('text', '').strip()
+            try:
+                msg = ChatMessage.objects.get(id=msg_id, sender=request.user, deleted=False)
+                msg.text = new_text[:2000]
+                msg.edited = True
+                msg.save(update_fields=['text', 'edited', 'updated_at'])
+                return JsonResponse({'ok': True, 'id': msg.id, 'text': msg.text})
+            except ChatMessage.DoesNotExist:
+                return JsonResponse({'error': 'Not found'}, status=404)
+
+        # ── DELETE ────────────────────────────────────────────────────────
+        if action == 'delete':
+            msg_id = request.POST.get('id')
+            try:
+                msg = ChatMessage.objects.get(id=msg_id, sender=request.user)
+                msg.deleted = True
+                msg.save(update_fields=['deleted', 'updated_at'])
+                return JsonResponse({'ok': True, 'id': msg.id})
+            except ChatMessage.DoesNotExist:
+                return JsonResponse({'error': 'Not found'}, status=404)
+
+        # ── SEND ──────────────────────────────────────────────────────────
         text  = request.POST.get('text', '').strip()
         image = request.FILES.get('image')
         audio = request.FILES.get('audio')
@@ -1690,45 +1886,145 @@ def chat_messages(request):
 
         msg = ChatMessage.objects.create(
             sender=request.user,
+            room=room,
             text=text[:2000] if text else '',
             image=image if image else None,
             audio=audio if audio else None,
             audio_duration=audio_duration,
         )
+
+        # Push notification to other room members
+        _send_push_to_room(room, request.user, text or '📎 Attachment')
+
         return JsonResponse({'ok': True, 'id': msg.id})
 
+    # ── GET ───────────────────────────────────────────────────────────────
     since = request.GET.get('since')
-    base_qs = ChatMessage.objects.select_related('sender', 'sender__profile')
+    base_qs = ChatMessage.objects.filter(room=room, deleted=False).select_related('sender', 'sender__profile')
 
     if since:
         try:
-            since_id = int(since)
-            messages_list = list(base_qs.filter(id__gt=since_id).order_by('id'))
+            messages_list = list(base_qs.filter(id__gt=int(since)).order_by('id'))
         except ValueError:
             messages_list = []
     else:
         messages_list = list(base_qs.order_by('-id')[:100])[::-1]
 
     def serialize(m):
-        sender_profile = getattr(m.sender, 'profile', None)
+        sp = getattr(m.sender, 'profile', None)
         return {
             'id':             m.id,
             'sender_id':      m.sender.id,
             'sender_name':    m.sender.get_full_name() or m.sender.username,
-            'designation':    sender_profile.designation if sender_profile else '',
-            'picture':        sender_profile.get_picture_url() if sender_profile else None,
+            'designation':    sp.designation if sp else '',
+            'picture':        sp.get_picture_url() if sp else None,
             'text':           m.text,
             'image':          m.image.url if m.image else None,
             'audio':          m.audio.url if m.audio else None,
             'audio_duration': m.audio_duration,
             'created_at':     m.created_at.isoformat(),
             'is_mine':        m.sender_id == request.user.id,
+            'edited':         m.edited,
+            'deleted':        m.deleted,
         }
 
-    return JsonResponse({
-        'messages': [serialize(m) for m in messages_list],
-        'count':    len(messages_list),
-    })
+    return JsonResponse({'messages': [serialize(m) for m in messages_list], 'count': len(messages_list)})
+
+
+@login_required(login_url='login')
+def chat_rooms(request):
+    """Return rooms the current user is a member of."""
+    _ensure_rooms_exist()
+    profile = getattr(request.user, 'profile', None)
+    rooms = request.user.chat_rooms.all().order_by('room_type', 'name')
+    return JsonResponse({'rooms': [
+        {'slug': r.slug, 'name': r.name, 'type': r.room_type}
+        for r in rooms
+    ]})
+
+
+@login_required(login_url='login')
+def push_subscribe(request):
+    """Save a Web Push subscription."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    import json
+    data = json.loads(request.body)
+    PushSubscription.objects.update_or_create(
+        endpoint=data['endpoint'],
+        defaults={
+            'user':   request.user,
+            'p256dh': data['keys']['p256dh'],
+            'auth':   data['keys']['auth'],
+        }
+    )
+    return JsonResponse({'ok': True})
+
+
+@login_required(login_url='login')
+def push_vapid_public(request):
+    """Return VAPID public key for the frontend."""
+    from django.conf import settings
+    return JsonResponse({'public_key': getattr(settings, 'VAPID_PUBLIC_KEY', '')})
+
+
+@login_required(login_url='login')
+def delete_chat_room(request, slug):
+    """One-time: delete a chat room by slug. Admin only."""
+    if not request.user.is_staff:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Admin only")
+    from django.http import HttpResponse
+    deleted = ChatRoom.objects.filter(slug=slug).delete()
+    return HttpResponse(f"Deleted room '{slug}': {deleted}")
+
+
+@login_required(login_url='login')
+def chat_room_members(request):
+    """Return member list for a room — visible only to members of that room."""
+    slug = request.GET.get('room')
+    try:
+        room = ChatRoom.objects.get(slug=slug)
+    except ChatRoom.DoesNotExist:
+        return JsonResponse({'error': 'Room not found'}, status=404)
+
+    if not room.members.filter(id=request.user.id).exists():
+        return JsonResponse({'error': 'Not a member of this room'}, status=403)
+
+    members = room.members.select_related('profile').order_by('first_name', 'username')
+    data = []
+    for u in members:
+        p = getattr(u, 'profile', None)
+        data.append({
+            'id':          u.id,
+            'name':        u.get_full_name() or u.username,
+            'designation': getattr(p, 'designation', '') or '',
+            'category':    getattr(p, 'category', '') or '',
+            'picture':     p.get_picture_url() if p else None,
+            'is_you':      u.id == request.user.id,
+        })
+    return JsonResponse({'room_name': room.name, 'count': len(data), 'members': data})
+
+
+@login_required(login_url='login')
+def setup_chat_rooms(request):
+    """One-time: create rooms and assign members. Admin only. Visit once then it's done."""
+    if not request.user.is_staff:
+        from django.http import HttpResponseForbidden
+        return HttpResponseForbidden("Admin only")
+    _ensure_rooms_exist()
+    from django.http import HttpResponse
+    from django.contrib.auth.models import User as _U
+    rooms = ChatRoom.objects.all().prefetch_related('members')
+    lines = ["<h2>✅ Chat rooms created / synced</h2>"]
+    lines.append(f"<p>Total users: {_U.objects.count()} | Region: {_U.objects.filter(profile__category='Region').count()} | BU: {_U.objects.filter(profile__category='BU').count()} | ARM: {_U.objects.filter(profile__category='ARM').count()} | RD (designation): {_U.objects.filter(profile__designation='RD').count()}</p>")
+    lines.append("<ul>")
+    for r in rooms:
+        members = r.members.count()
+        mnames = ", ".join(r.members.values_list('username', flat=True)[:10])
+        lines.append(f"<li><b>{r.name}</b> ({r.slug}) — {members} members: {mnames}</li>")
+    lines.append("</ul>")
+    return HttpResponse("\n".join(lines))
 
 
 @login_required(login_url='login')
