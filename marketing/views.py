@@ -412,7 +412,19 @@ def map_data(request):
     year          = request.GET.get('year')
 
     # ── Cache key ──────────────────────────────────────────────────────────
-    ck = f"mapdata_v3_{request.user.id}_{region}_{business_unit}_{arm}_{franchise}_{key}_{technology}_{site_status}_{month}_{year}"
+    # Hashed rather than built from raw values — region names like
+    # "Central B" contain spaces, which some cache backends (real
+    # memcached clients in particular) reject outright rather than just
+    # warning about, unlike Django's default local-dev cache. Matches the
+    # hashing style already used for dashboard_data()'s cache key below.
+    _map_cache_params = {
+        'uid': request.user.id, 'r': region, 'bu': business_unit, 'a': arm,
+        'f': franchise, 'k': key, 't': technology, 'ss': site_status,
+        'm': month, 'y': year,
+    }
+    ck = 'mapdata_v3_' + hashlib.md5(
+        _json.dumps(_map_cache_params, sort_keys=True).encode()
+    ).hexdigest()
     cached = cache.get(ck)
     if cached is not None:
         return JsonResponse(cached, safe=False)
@@ -1314,27 +1326,6 @@ def dashboard_data(request):
         yoy_prev_agg = aggregate_with_stock_fix(yoy_prev_qs)
         mom_prev_agg = aggregate_with_stock_fix(mom_prev_qs)
 
-        # ── Base-card YTD fix ────────────────────────────────────
-        # aggregate_with_stock_fix() always pulls stock fields from the
-        # LATEST month within whatever queryset it's handed. ytd_prev_qs
-        # is bounded by month__lte=latest_month, so its latest month is
-        # "latest_month of prev_year" — i.e. the stock baseline was
-        # silently just duplicating YOY instead of using December LY as
-        # the true start-of-year reference point for the base cards
-        # (90D/4G/30D/HVC Base).
-        #
-        # This override is kept in a SEPARATE dict (not applied in place
-        # to ytd_prev_agg) so it only affects those 4 metrics' own growth
-        # entries below — total_arpu's calc divides total_revenue_lm by
-        # total_base_90d from this same agg; overwriting base_90d in
-        # place would mix Dec-LY's base with last-May's revenue. Flow
-        # fields (revenue, churn, net adds, recharge, FCA) are untouched
-        # either way — Jan-through-latest-month is already correct for those.
-        ytd_prev_agg_bases = dict(ytd_prev_agg)
-        dec_ly_agg = aggregate_with_stock_fix(growth_base.filter(year=prev_year, month=12))
-        for _k in ('total_base_90d', 'total_base_4g', 'total_base_30d', 'total_hvc'):
-            ytd_prev_agg_bases[_k] = dec_ly_agg.get(_k, 0)
-
         for agg in [ytd_curr_agg, ytd_prev_agg, yoy_curr_agg, yoy_prev_agg, mom_prev_agg]:
             digi = safe(agg.get('_prepaid_digi')) + safe(agg.get('_postpaid_digi'))
             agg['total_digi_recharge'] = digi
@@ -1375,8 +1366,6 @@ def dashboard_data(request):
             'rev_rech_ratio', 'total_avg_daily_active', 'total_fca',
         ]
 
-        BASE_CARD_KEYS = ('total_base_90d', 'total_base_4g', 'total_base_30d', 'total_hvc')
-
         for k in growth_metric_keys:
             if k == 'total_arpu':
                 ytd_curr = arpu_from(ytd_curr_agg)
@@ -1392,10 +1381,7 @@ def dashboard_data(request):
                 mom_prev = pen_from(mom_prev_agg)
             else:
                 ytd_curr = safe(ytd_curr_agg.get(k))
-                # Base cards compare against December-of-last-year, not
-                # "same month last year" — see ytd_prev_agg_bases above.
-                ytd_prev = safe((ytd_prev_agg_bases if k in BASE_CARD_KEYS
-                                  else ytd_prev_agg).get(k))
+                ytd_prev = safe(ytd_prev_agg.get(k))
                 yoy_curr = safe(yoy_curr_agg.get(k))
                 yoy_prev = safe(yoy_prev_agg.get(k))
                 mom_prev = safe(mom_prev_agg.get(k))
