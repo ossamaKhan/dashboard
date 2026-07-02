@@ -866,7 +866,218 @@ def _build_excel(sections, charts, gauges, title, filters):
 #  PDF BUILDER
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _build_pdf(sections, charts, gauges, title, filters):
+def _build_pdf(sections, charts, gauges, title, filters, request=None):
+    """
+    Screenshot-based PDF export.
+
+    Uses Playwright (headless Chromium) to load the real dashboard page(s)
+    with the user's active session cookie and the current filter parameters,
+    then stitches the full-page screenshots into an A4-landscape PDF via
+    reportlab.  The result looks exactly like the live dashboard.
+
+    Falls back to the old table-based PDF if Playwright is unavailable or
+    if the browser launch fails for any reason (e.g. no display on some
+    server configs), so the export button never hard-errors.
+    """
+    # ── 1. Determine which dashboard URLs to screenshot ──────────────────────
+    # source is encoded in `title`; we also receive `request` so we can
+    # build an absolute URL and forward the session cookie.
+    if request is None:
+        return _build_pdf_tables(sections, charts, gauges, title, filters)
+
+    source = 'channel' if 'channel' in title.lower() else 'marketing'
+
+    # Map source → ordered list of page paths to screenshot
+    SOURCE_PAGES = {
+        'channel': [
+            '/channel/',
+            '/channel/performance/',
+            '/channel/enablers/',
+            '/channel/kpi-summary/',
+        ],
+        'marketing': [
+            '/dashboard/',
+            '/base/',
+            '/revenue/',
+            '/performance-ranking/',
+        ],
+    }
+    pages = SOURCE_PAGES.get(source, SOURCE_PAGES['marketing'])
+
+    # Build query string from active filters
+    qs_parts = [f"{k}={v}" for k, v in filters.items() if v]
+    qs = ('?' + '&'.join(qs_parts)) if qs_parts else ''
+
+    # Absolute base URL (works on both local dev and Render)
+    scheme = 'https' if request.is_secure() else 'http'
+    base   = f"{scheme}://{request.get_host()}"
+
+    # Grab the Django session cookie so Playwright is authenticated
+    session_cookie_name  = 'sessionid'   # default Django session cookie name
+    session_cookie_value = request.COOKIES.get(session_cookie_name, '')
+
+    # ── 2. Screenshot each page with Playwright ───────────────────────────────
+    screenshots = []   # list of raw PNG bytes
+    try:
+        from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+        import time
+
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch(
+                headless=True,
+                args=[
+                    '--no-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                    '--window-size=1600,900',
+                ],
+            )
+            context = browser.new_context(
+                viewport={'width': 1600, 'height': 900},
+                device_scale_factor=1.5,   # higher DPI for crisp screenshots
+            )
+
+            # Inject the session cookie so the page renders as the logged-in user
+            if session_cookie_value:
+                context.add_cookies([{
+                    'name':   session_cookie_name,
+                    'value':  session_cookie_value,
+                    'domain': request.get_host().split(':')[0],
+                    'path':   '/',
+                }])
+
+            page = context.new_page()
+
+            for path in pages:
+                url = base + path + qs
+                try:
+                    page.goto(url, wait_until='networkidle', timeout=45_000)
+                    # Wait for charts/loading spinners to disappear
+                    try:
+                        page.wait_for_selector('#loading.hidden',  timeout=20_000)
+                    except PWTimeout:
+                        pass   # loading indicator may not exist on all pages
+                    try:
+                        page.wait_for_selector('.chart-panel canvas', timeout=10_000)
+                    except PWTimeout:
+                        pass
+                    # Small extra pause for animations to finish
+                    page.wait_for_timeout(1500)
+
+                    # Hide sidebar + filter bar for cleaner screenshots
+                    page.evaluate("""
+                        () => {
+                            const sidebar = document.querySelector('.sidebar');
+                            if (sidebar) sidebar.style.display = 'none';
+                            const pageContent = document.querySelector('.page-content');
+                            if (pageContent) {
+                                pageContent.style.marginLeft = '0';
+                                pageContent.style.width = '100%';
+                            }
+                        }
+                    """)
+
+                    png = page.screenshot(full_page=True)
+                    if png:
+                        screenshots.append(png)
+                except Exception as page_err:
+                    # Skip failed pages gracefully; don't abort the whole export
+                    import logging
+                    logging.getLogger(__name__).warning(
+                        f"PDF screenshot failed for {url}: {page_err}"
+                    )
+
+            browser.close()
+
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Playwright PDF export failed: {e}")
+        # Fall back to the table-based PDF
+        return _build_pdf_tables(sections, charts, gauges, title, filters)
+
+    # ── 3. If we got no screenshots at all, fall back ─────────────────────────
+    if not screenshots:
+        return _build_pdf_tables(sections, charts, gauges, title, filters)
+
+    # ── 4. Assemble screenshots into a PDF via reportlab ─────────────────────
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.platypus import (SimpleDocTemplate, Image as RLImage,
+                                     Spacer, PageBreak, Paragraph)
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER
+    from reportlab.lib import colors as rl_colors
+    from reportlab.platypus import Table, TableStyle
+    from reportlab.lib.units import cm
+    from PIL import Image as PILImage
+
+    buf  = io.BytesIO()
+    PAGE = landscape(A4)
+    PAGE_W, PAGE_H = PAGE[0] - 2*cm, PAGE[1] - 2*cm
+
+    RL_DARK   = rl_colors.HexColor(DARK)
+    RL_ORANGE = rl_colors.HexColor(ORANGE)
+    RL_WHITE  = rl_colors.white
+
+    title_sty = ParagraphStyle('T', fontName='Helvetica-Bold',
+                                fontSize=16, textColor=RL_WHITE,
+                                alignment=TA_CENTER, spaceAfter=4)
+    filt_sty  = ParagraphStyle('F', fontName='Helvetica-Oblique',
+                                fontSize=8, textColor=rl_colors.HexColor(MUTED),
+                                alignment=TA_CENTER, spaceAfter=6)
+
+    doc   = SimpleDocTemplate(buf, pagesize=PAGE,
+                               leftMargin=cm, rightMargin=cm,
+                               topMargin=cm, bottomMargin=cm)
+    story = []
+
+    # Cover title
+    title_data = [[Paragraph(title.replace('_', ' '), title_sty)]]
+    title_tbl  = Table(title_data, colWidths=[PAGE_W + 2*cm])
+    title_tbl.setStyle(TableStyle([
+        ('BACKGROUND',    (0,0),(-1,-1), RL_DARK),
+        ('TOPPADDING',    (0,0),(-1,-1), 12),
+        ('BOTTOMPADDING', (0,0),(-1,-1), 12),
+    ]))
+    story.append(title_tbl)
+    story.append(Spacer(1, 0.3*cm))
+
+    filter_str = '  |  '.join(
+        f"{k.replace('_',' ').title()}: {v}" for k,v in filters.items() if v
+    ) or 'All Data'
+    story.append(Paragraph(
+        f"Filters: {filter_str}     Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        filt_sty
+    ))
+    story.append(Spacer(1, 0.3*cm))
+
+    # One page per screenshot
+    for i, png_bytes in enumerate(screenshots):
+        if i > 0:
+            story.append(PageBreak())
+
+        img_buf = io.BytesIO(png_bytes)
+        pil_img = PILImage.open(img_buf)
+        img_w, img_h = pil_img.size
+
+        # Scale to fit the page while preserving aspect ratio
+        scale = min(PAGE_W / img_w, PAGE_H / img_h)
+        draw_w = img_w * scale
+        draw_h = img_h * scale
+
+        img_buf.seek(0)
+        rl_img = RLImage(img_buf, width=draw_w, height=draw_h)
+        story.append(rl_img)
+
+    doc.build(story)
+    buf.seek(0)
+    return buf
+
+
+def _build_pdf_tables(sections, charts, gauges, title, filters):
+    """
+    Original table/chart-based PDF fallback — used when Playwright is
+    unavailable or the headless screenshot fails.
+    """
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib import colors as rl_colors
     from reportlab.lib.units import cm
@@ -1103,7 +1314,7 @@ def export_view(request, export_type, source=None):
                      '.spreadsheetml.sheet')
             fname = filename + '.xlsx'
         elif export_type == 'pdf':
-            data  = _build_pdf(sections, charts, gauges, title, filters)
+            data  = _build_pdf(sections, charts, gauges, title, filters, request=request)
             ct    = 'application/pdf'
             fname = filename + '.pdf'
         else:

@@ -10,7 +10,7 @@ from marketing.views import (
     push_subscribe, push_vapid_public,
     revenue_page, export_kml, bu_boundaries_json, site_performance_table,
     site_search, setup_chat_rooms, delete_chat_room, chat_room_members,
-    site_map_page, performance_ranking_page,
+    site_map_page, performance_ranking_page,download_stats,
 )
 
 urlpatterns = [
@@ -44,4 +44,6 @@ urlpatterns = [
     path('channel/',            include('channel.urls')),
     path('tools/setup-chat-rooms/', setup_chat_rooms, name='setup_chat_rooms'),
     path('tools/delete-room/<slug:slug>/', delete_chat_room, name='delete_chat_room'),
+    path('download-stats/', download_stats, name='download_stats'),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

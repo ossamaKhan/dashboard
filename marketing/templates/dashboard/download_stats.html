@@ -1,0 +1,493 @@
+{%load static%}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ufone 5G — Download Stats</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+:root{--orange:#f58220;--purple:#AB1DFE;--purple2:#5E35B1;--teal:#00BCD4;--green:#00C853;--red:#FF3D00;--font:'Poppins',sans-serif}
+[data-theme="light"]{--bg:#e8e9ed;--border:rgba(0,0,0,0.09);--border2:rgba(245,130,32,0.2);--text:#1a1235;--text2:#4a4570;--muted:#8a85a5;--shadow:0 2px 10px rgba(0,0,0,0.07);--shadow-lg:0 8px 30px rgba(0,0,0,0.12);--header-bg:#ffffff;--panel-bg:#ffffff;--input-bg:#e8e9ed}
+[data-theme="dark"]{--bg:#0b0720;--border:rgba(171,29,254,0.18);--border2:rgba(245,130,32,0.2);--text:#f0ecff;--text2:#b8b0e8;--muted:#6b6590;--shadow:0 4px 24px rgba(0,0,0,0.4);--shadow-lg:0 12px 48px rgba(0,0,0,0.6);--header-bg:rgba(15,11,40,0.97);--panel-bg:#150f35;--input-bg:#1c1645}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;font-weight:700;min-height:100vh;transition:background .35s,color .35s}
+.app-layout{display:block;min-height:100vh}
+.page-content{width:calc(100% - 200px);margin-left:200px;min-width:0;display:flex;flex-direction:column;min-height:100vh}
+.sidebar{width:200px;background:#ffffff;border-right:1px solid rgba(0,0,0,0.09);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;overflow:hidden;transition:transform .3s ease;z-index:200}
+.sb-nav-scroll{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
+.sb-sec{font-size:9px;font-weight:700;color:#8a85a5;text-transform:uppercase;letter-spacing:1.5px;padding:14px 18px 5px}
+.nv{display:flex;align-items:center;gap:9px;padding:9px 18px;font-size:12.5px;font-weight:700;color:#555577;cursor:pointer;border-left:3px solid transparent;transition:all .15s;user-select:none;text-decoration:none}
+.nv:hover{background:#fff5ee;color:#f58220}
+.nv.active{background:#fff5ee;color:#f58220;border-left-color:#f58220}
+.sb-footer{flex-shrink:0;padding:14px 18px;border-top:1px solid rgba(0,0,0,0.07);background:#ffffff}
+.sb-user{font-size:11.5px;font-weight:700;color:#4a4570;margin-bottom:3px}
+.sb-email{font-size:10px;font-weight:500;color:#8a85a5;margin-bottom:12px;word-break:break-all}
+.logout-btn{display:flex;align-items:center;gap:8px;width:100%;background:rgba(255,61,0,0.07);border:1.5px solid rgba(255,61,0,0.2);border-radius:8px;padding:8px 12px;font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;color:#FF3D00;cursor:pointer;transition:all .2s;text-decoration:none}
+.logout-btn:hover{background:rgba(255,61,0,0.14)}
+.mob-nav-btn{display:none;position:fixed;top:12px;left:12px;z-index:1000;background:var(--orange);border:none;border-radius:10px;width:40px;height:40px;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:#fff;box-shadow:0 4px 12px rgba(245,130,32,0.35)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:190}
+.sidebar-overlay.open{display:block}
+header{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--header-bg);border-bottom:1px solid var(--border);box-shadow:var(--shadow);transition:background .35s}
+.logo-wrap{display:flex;align-items:center;gap:14px}
+.logo-sub{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:1px}
+.theme-toggle{position:relative;width:56px;height:28px;background:var(--input-bg);border:1px solid var(--border);border-radius:28px;cursor:pointer;transition:border-color .2s;flex-shrink:0}
+.theme-toggle:hover{border-color:var(--orange)}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--orange);box-shadow:0 2px 8px rgba(245,130,32,0.4);transition:transform .3s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;justify-content:center;font-size:11px}
+[data-theme="dark"] .toggle-thumb{transform:translateX(28px)}
+.toggle-icons{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;padding:0 7px;font-size:11px;pointer-events:none}
+[data-theme="dark"] .sidebar{background:#1a1a2e;border-right-color:#252540}
+[data-theme="dark"] .nv{color:#9090b8}
+[data-theme="dark"] .nv:hover,[data-theme="dark"] .nv.active{background:rgba(245,130,32,0.1);color:#f58220}
+[data-theme="dark"] .sb-footer{border-top-color:#252540;background:#1a1a2e}
+[data-theme="dark"] .sb-user{color:#b8b0e8}
+[data-theme="dark"] .sb-email{color:#6b6590}
+
+/* ── Page body ────────────────────────────────────────────────────────────── */
+.dl-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;gap:48px}
+.dl-heading{text-align:center}
+.dl-heading h1{font-size:28px;font-weight:900;color:var(--text);letter-spacing:-.5px;margin-bottom:8px}
+.dl-heading p{font-size:13px;font-weight:500;color:var(--muted);max-width:420px;margin:0 auto;line-height:1.7}
+.dl-filter-row{display:flex;align-items:center;gap:10px;background:var(--panel-bg);border:1.5px solid var(--border);border-radius:14px;padding:12px 18px;font-size:12px;font-weight:600;color:var(--muted);flex-wrap:wrap;justify-content:center}
+.dl-filter-row span{color:var(--text2)}
+#dl-filter-summary{color:var(--orange);font-weight:700}
+
+.dl-cards{display:grid;grid-template-columns:1fr 1fr;gap:28px;width:100%;max-width:760px}
+.dl-card{background:var(--panel-bg);border:2px solid var(--border);border-radius:24px;padding:40px 36px;display:flex;flex-direction:column;align-items:center;gap:20px;box-shadow:var(--shadow);transition:transform .25s,box-shadow .25s,border-color .25s;cursor:pointer;position:relative;overflow:hidden}
+.dl-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;border-radius:24px 24px 0 0}
+.dl-card.card-excel::before{background:linear-gradient(90deg,#00897B,#00BCD4)}
+.dl-card.card-pdf::before{background:linear-gradient(90deg,#5E35B1,#AB1DFE)}
+.dl-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg)}
+.dl-card.card-excel:hover{border-color:rgba(0,137,123,0.4)}
+.dl-card.card-pdf:hover{border-color:rgba(94,53,177,0.4)}
+.dl-icon{width:80px;height:80px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0}
+.card-excel .dl-icon{background:rgba(0,137,123,0.12);border:2px solid rgba(0,137,123,0.2)}
+.card-pdf .dl-icon{background:rgba(94,53,177,0.12);border:2px solid rgba(94,53,177,0.2)}
+.dl-card-title{font-size:20px;font-weight:900;letter-spacing:-.3px}
+.card-excel .dl-card-title{color:#00897B}
+.card-pdf .dl-card-title{color:var(--purple2)}
+.dl-card-desc{font-size:12px;font-weight:500;color:var(--muted);text-align:center;line-height:1.7}
+.dl-btn{width:100%;padding:14px 24px;border:none;border-radius:14px;font-family:var(--font);font-size:13px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:transform .2s,box-shadow .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.card-excel .dl-btn{background:linear-gradient(135deg,#00897B,#00BCD4);color:#fff;box-shadow:0 6px 20px rgba(0,137,123,0.35)}
+.card-excel .dl-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,137,123,0.45)}
+.card-pdf .dl-btn{background:linear-gradient(135deg,#5E35B1,#AB1DFE);color:#fff;box-shadow:0 6px 20px rgba(94,53,177,0.35)}
+.card-pdf .dl-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(94,53,177,0.45)}
+.dl-btn:disabled{opacity:.6;cursor:wait;transform:none}
+.dl-scope-pills{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.dl-pill{font-size:10px;font-weight:700;letter-spacing:.5px;padding:3px 11px;border-radius:20px}
+.card-excel .dl-pill{background:rgba(0,137,123,0.1);color:#00897B;border:1px solid rgba(0,137,123,0.25)}
+.card-pdf .dl-pill{background:rgba(94,53,177,0.1);color:var(--purple2);border:1px solid rgba(94,53,177,0.25)}
+
+/* progress bar for PDF */
+.dl-progress{display:none;width:100%;flex-direction:column;gap:8px}
+.dl-progress.show{display:flex}
+.dl-progress-track{width:100%;height:6px;background:rgba(171,29,254,0.15);border-radius:6px;overflow:hidden}
+.dl-progress-fill{height:100%;background:linear-gradient(90deg,#5E35B1,#AB1DFE);border-radius:6px;transition:width .4s;width:0%}
+.dl-progress-lbl{font-size:10px;font-weight:600;color:var(--muted);text-align:center}
+
+.dl-note{font-size:11px;font-weight:500;color:var(--muted);text-align:center;max-width:500px;line-height:1.7;padding:16px 20px;background:var(--panel-bg);border:1.5px solid var(--border);border-radius:12px}
+.dl-note strong{color:var(--orange)}
+
+@media(max-width:1024px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.page-content{width:100%;margin-left:0}.mob-nav-btn{display:flex}header{padding-left:60px}}
+@media(max-width:600px){.dl-cards{grid-template-columns:1fr}.dl-main{padding:32px 16px}.dl-card{padding:28px 22px}}
+</style>
+</head>
+<body>
+<button class="mob-nav-btn" onclick="toggleSidebar()">☰</button>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+<div class="app-layout">
+<aside class="sidebar" id="sidebar">
+  <div class="sb-nav-scroll">
+    <div style="padding:14px 18px;border-bottom:1px solid rgba(0,0,0,0.07);display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <img src="{% static 'images/logo1.jpg' %}" style="height:34px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
+    </div>
+    <div class="sb-sec">Marketing</div>
+    <a href="/dashboard/"          class="nv" onclick="closeSidebar()">Marketing Brief</a>
+    <a href="/base/"               class="nv" onclick="closeSidebar()">Base Analytics</a>
+    <a href="/revenue/"            class="nv" onclick="closeSidebar()">Revenue Analytics</a>
+    <a href="/performance-ranking/" class="nv" onclick="closeSidebar()">Performance Ranking</a>
+    <a href="/site-map/"           class="nv" onclick="closeSidebar()">Site Map</a>
+    <div class="sb-sec">Channel</div>
+    <a href="/channel/"            class="nv" onclick="closeSidebar()">Channel Brief</a>
+    <a href="/channel/performance/" class="nv" onclick="closeSidebar()">Target Performance</a>
+    <a href="/channel/enablers/"   class="nv" onclick="closeSidebar()">Enablers</a>
+    <a href="/channel/quality/"    class="nv" onclick="closeSidebar()">Quality</a>
+    <a href="/channel/kpi-summary/" class="nv" onclick="closeSidebar()">KPI Summary</a>
+    <div class="sb-sec">Other</div>
+    <a href="/chat/"               class="nv" onclick="closeSidebar()">Team Chat</a>
+    <a href="/download-stats/"     class="nv active" onclick="closeSidebar()">Download Stats</a>
+    <div class="sb-sec">Account</div>
+    <a href="/profile/"            class="nv" onclick="closeSidebar()">Profile Settings</a>
+    <div style="flex:1"></div>
+  </div>
+  <div class="sb-footer">
+    <div class="sb-user">{{ request.user.get_full_name|default:request.user.username }}</div>
+    <div class="sb-email">{{ request.user.email }}</div>
+    <a href="{% url 'logout' %}" class="logout-btn"><span>🚪</span> Sign Out</a>
+  </div>
+</aside>
+
+<div class="page-content">
+<header>
+  <div class="logo-wrap">
+    <img src="{% static 'images/logo1.jpg' %}" style="height:40px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
+    <div>
+      <div class="logo-sub">Download Stats</div>
+    </div>
+  </div>
+  <div class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+    <div class="toggle-icons"><span>☀️</span><span>🌙</span></div>
+    <div class="toggle-thumb"><span id="toggle-icon">☀️</span></div>
+  </div>
+</header>
+
+<main class="dl-main">
+
+  <div class="dl-heading">
+    <h1>Download Stats</h1>
+    <p>Export marketing and channel data across all pages with your saved filters applied.</p>
+  </div>
+
+  <div class="dl-filter-row">
+    <span>Active filters:</span>
+    <span id="dl-filter-summary">Loading…</span>
+  </div>
+
+  <div class="dl-cards">
+
+    <!-- EXCEL ──────────────────────────────────────────────────────────────── -->
+    <div class="dl-card card-excel">
+      <div class="dl-icon">📊</div>
+      <div class="dl-card-title">Excel</div>
+      <div class="dl-scope-pills">
+        <span class="dl-pill">Marketing</span>
+        <span class="dl-pill">Channel</span>
+        <span class="dl-pill">All KPIs</span>
+      </div>
+      <div class="dl-card-desc">Downloads a full Excel workbook with all marketing and channel KPIs, charts data, and growth comparisons.</div>
+      <button class="dl-btn" id="btn-excel" onclick="downloadExcel()">⬇ Download Excel</button>
+    </div>
+
+    <!-- PDF ────────────────────────────────────────────────────────────────── -->
+    <div class="dl-card card-pdf">
+      <div class="dl-icon">📄</div>
+      <div class="dl-card-title">PDF</div>
+      <div class="dl-scope-pills">
+        <span class="dl-pill">8 Pages</span>
+        <span class="dl-pill">Full Dashboard</span>
+        <span class="dl-pill">Screenshots</span>
+      </div>
+      <div class="dl-card-desc">Captures screenshots of every dashboard page and compiles them into a single PDF report.</div>
+      <div class="dl-progress" id="pdf-progress">
+        <div class="dl-progress-track"><div class="dl-progress-fill" id="pdf-pbar"></div></div>
+        <div class="dl-progress-lbl" id="pdf-plbl">Starting…</div>
+      </div>
+      <button class="dl-btn" id="btn-pdf" onclick="downloadPDF()">⬇ Download PDF</button>
+    </div>
+
+  </div>
+
+  <div class="dl-note">
+    <strong>Tip:</strong> Set your filters on any dashboard page first — this page reads them automatically. Filters currently active are shown above.
+  </div>
+
+</main>
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// ── Theme ────────────────────────────────────────────────────────────────────
+const saved=localStorage.getItem('theme')||'light';
+document.documentElement.setAttribute('data-theme',saved);
+document.addEventListener('DOMContentLoaded',()=>{
+  const icon=document.getElementById('toggle-icon');
+  if(icon)icon.textContent=saved==='dark'?'🌙':'☀️';
+});
+function toggleTheme(){
+  const html=document.documentElement;
+  const isDark=html.getAttribute('data-theme')==='dark';
+  html.setAttribute('data-theme',isDark?'light':'dark');
+  document.getElementById('toggle-icon').textContent=isDark?'☀️':'🌙';
+  localStorage.setItem('theme',isDark?'light':'dark');
+}
+
+// ── Sidebar ──────────────────────────────────────────────────────────────────
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+
+// ── Read saved filters ───────────────────────────────────────────────────────
+function getFilters(){
+  try{
+    const raw=localStorage.getItem('ufone_filters_v2');
+    return raw?JSON.parse(raw):{};
+  }catch(e){return{};}
+}
+function buildQS(filters){
+  const p=new URLSearchParams();
+  Object.entries(filters).forEach(([k,v])=>{if(v)p.set(k,v);});
+  return p.toString();
+}
+function renderFilterSummary(){
+  const F=getFilters();
+  const labels={region:'Region',business_unit:'BU',arm:'ARM',franchise:'Franchise',month:'Month',year:'Year'};
+  const active=Object.entries(F).filter(([,v])=>v).map(([k,v])=>`${labels[k]||k}: ${v}`);
+  const el=document.getElementById('dl-filter-summary');
+  if(el)el.textContent=active.length?active.join(' · '):'None (all data)';
+}
+renderFilterSummary();
+
+// ── Excel — download BOTH marketing and channel via hidden iframes ───────────
+function downloadExcel(){
+  const qs=buildQS(getFilters());
+  const q=qs?'?'+qs:'';
+  const btn=document.getElementById('btn-excel');
+  const orig=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='Downloading…';}
+
+  const reset=()=>{if(btn){btn.disabled=false;btn.textContent=orig||'⬇ Download Excel';}};
+
+  const saveBlob=(blob,filename)=>{
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=filename;a.style.display='none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{try{document.body.removeChild(a);URL.revokeObjectURL(url);}catch(e){}},2000);
+  };
+
+  const fetchAndSave=(url,filename)=>fetch(url,{credentials:'same-origin'})
+    .then(r=>{if(!r.ok)throw new Error(url+' -> '+r.status);return r.blob();})
+    .then(blob=>saveBlob(blob,filename))
+    .catch(err=>console.error('Excel download failed:',err));
+
+  // Fetch both in parallel; each saved blob is an independent download,
+  // so neither cancels the other. Stagger the saves slightly.
+  fetchAndSave(`/api/export/marketing/excel/${q}`,'marketing_export.xlsx')
+    .then(()=>new Promise(res=>setTimeout(res,600)))
+    .then(()=>fetchAndSave(`/api/export/channel/excel/${q}`,'channel_export.xlsx'))
+    .finally(reset);
+}
+
+// ── PDF — sequential iframe screenshots, one page at a time ──────────────────
+const ALL_PAGES=[
+  {url:'/dashboard/',           label:'Marketing Brief'},
+  {url:'/base/',                label:'Base Analytics'},
+  {url:'/revenue/',             label:'Revenue Analytics'},
+  {url:'/performance-ranking/', label:'Performance Ranking'},
+  {url:'/channel/',             label:'Channel Brief'},
+  {url:'/channel/performance/', label:'Target Performance'},
+  {url:'/channel/enablers/',    label:'Enablers'},
+  {url:'/channel/kpi-summary/', label:'KPI Summary'},
+];
+
+// Fixed wait after each page loads before capturing (ms). Increase if charts
+// aren't fully drawn in the output.
+const RENDER_WAIT = 6000;
+// Absolute cap per page — if capture hasn't finished by now, skip to next page.
+const PAGE_TIMEOUT = 35000;
+
+function downloadPDF(){
+  const btn=document.getElementById('btn-pdf');
+  const progress=document.getElementById('pdf-progress');
+  const pbar=document.getElementById('pdf-pbar');
+  const plbl=document.getElementById('pdf-plbl');
+  btn.disabled=true;
+  btn.textContent='Capturing…';
+  progress.classList.add('show');
+
+  const setProgress=(i,lbl)=>{
+    const pct=Math.round((i/ALL_PAGES.length)*100);
+    if(pbar)pbar.style.width=pct+'%';
+    if(plbl)plbl.textContent=`(${i}/${ALL_PAGES.length}) ${lbl}`;
+  };
+  const reset=()=>{
+    btn.disabled=false;
+    btn.textContent='⬇ Download PDF';
+    progress.classList.remove('show');
+    if(pbar)pbar.style.width='0%';
+  };
+
+  const qs=buildQS(getFilters());
+  const qsStr=qs?'?'+qs:'';
+
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+  const PW=pdf.internal.pageSize.getWidth();
+  const PH=pdf.internal.pageSize.getHeight();
+  let firstPage=true;
+
+  // Iframe: on-screen but nearly transparent so the browser fully paints it.
+  const iframe=document.createElement('iframe');
+  iframe.style.cssText='position:fixed;left:0;top:0;width:1440px;height:900px;border:none;z-index:99997;opacity:0.01;pointer-events:none;';
+  document.body.appendChild(iframe);
+
+  // The capture script runs INSIDE the iframe and posts the image back.
+  const CAPTURE_SCRIPT=`
+(function(){
+  function report(obj){ try{ window.parent.postMessage(Object.assign({type:'_ufone_capture'},obj),'*'); }catch(e){} }
+  try{
+    var target = document.querySelector('.page-content') || document.body;
+    var W = Math.max(target.scrollWidth, target.offsetWidth, 1200);
+    var H = Math.max(target.scrollHeight, target.offsetHeight, 200);
+    var bg = getComputedStyle(document.body).backgroundColor || '#ffffff';
+    html2canvas(target,{
+      scale:1.3,
+      useCORS:true,
+      allowTaint:false,
+      backgroundColor:bg,
+      logging:false,
+      width:W,
+      height:H,
+      windowWidth:W,
+      windowHeight:H,
+      scrollX:0,scrollY:0,
+      imageTimeout:20000,
+      ignoreElements:function(el){
+        if(!el)return false;
+        if(el.id==='site-map')return true;
+        var cl=el.classList;
+        if(cl&&(cl.contains('leaflet-container')||cl.contains('map-panel')||cl.contains('leaflet-pane')||cl.contains('mob-action-bar')||cl.contains('mob-nav-btn')))return true;
+        return false;
+      },
+      onclone:function(doc){
+        try{
+          var sb=doc.querySelector('.sidebar'); if(sb)sb.remove();
+          var pc=doc.querySelector('.page-content'); if(pc){pc.style.marginLeft='0';pc.style.width='100%';}
+          doc.querySelectorAll('#site-map,.leaflet-container,.map-panel,.mob-action-bar,.mob-nav-btn,.sidebar-overlay').forEach(function(n){n.remove();});
+        }catch(e){}
+      }
+    }).then(function(c){
+      if(!c||!c.width||!c.height){ report({error:'empty canvas w='+(c&&c.width)+' h='+(c&&c.height)}); return; }
+      var dataUrl;
+      try{ dataUrl=c.toDataURL('image/jpeg',0.85); }
+      catch(secErr){ report({error:'toDataURL/tainted: '+secErr}); return; }
+      report({dataUrl:dataUrl,w:c.width,h:c.height});
+    }).catch(function(err){ report({error:'html2canvas: '+err}); });
+  }catch(e){ report({error:'exception: '+e}); }
+})();`;
+
+  const addToPDF=(dataUrl,w,h,cb)=>{
+    const SCALE=1.3;
+    const iW=w/SCALE,iH=h/SCALE;
+    const sc=Math.min(PW/iW,1);
+    const dW=iW*sc,sliceH=Math.floor(PH/sc);
+    const pages=Math.ceil(iH/sliceH);
+    const img=new Image();
+    img.onload=()=>{
+      for(let pg=0;pg<pages;pg++){
+        if(!firstPage)pdf.addPage();
+        firstPage=false;
+        const offY=pg*sliceH,actualH=Math.min(sliceH,iH-offY);
+        const tmp=document.createElement('canvas');
+        tmp.width=w;tmp.height=Math.round(actualH*SCALE);
+        tmp.getContext('2d').drawImage(img,0,Math.round(offY*SCALE),w,Math.round(actualH*SCALE),0,0,w,Math.round(actualH*SCALE));
+        pdf.addImage(tmp.toDataURL('image/jpeg',0.85),'JPEG',0,0,dW,actualH*sc);
+      }
+      cb&&cb();
+    };
+    img.onerror=()=>{console.warn('image load failed');cb&&cb();};
+    img.src=dataUrl;
+  };
+
+  // Per-page state
+  let done=false;                 // whether current page has been resolved
+  let pageTimer=null;             // absolute timeout for current page
+
+  const msgHandler=(e)=>{
+    if(!e.data||e.data.type!=='_ufone_capture')return;
+    if(done)return;               // ignore stray/duplicate messages
+    done=true;
+    clearTimeout(pageTimer);
+    const {dataUrl,w,h,error}=e.data;
+    const pg=ALL_PAGES[currentIndex];
+    if(!error&&dataUrl){
+      console.log('[PDF] captured',pg&&pg.url,'('+w+'x'+h+')');
+      addToPDF(dataUrl,w,h,advance);   // wait for image, then advance
+    }else{
+      console.warn('[PDF] FAILED',pg&&pg.url,'-',error);
+      advance();
+    }
+  };
+  window.addEventListener('message',msgHandler);
+
+  let currentIndex=0;
+  const advance=()=>{
+    currentIndex++;
+    capturePage(currentIndex);
+  };
+
+  const finish=()=>{
+    setProgress(ALL_PAGES.length,'Saving…');
+    setTimeout(()=>{
+      try{pdf.save('ufone_5g_central_b_full.pdf');}catch(e){console.error(e);}
+      window.removeEventListener('message',msgHandler);
+      try{document.body.removeChild(iframe);}catch(e){}
+      reset();
+    },400);
+  };
+
+  const capturePage=(index)=>{
+    if(index>=ALL_PAGES.length){finish();return;}
+
+    const {url,label}=ALL_PAGES[index];
+    setProgress(index,label);
+    done=false;
+
+    // Absolute per-page timeout — guarantees we never hang.
+    clearTimeout(pageTimer);
+    pageTimer=setTimeout(()=>{
+      if(done)return;
+      done=true;
+      console.warn('page timeout, skipping',url);
+      advance();
+    },PAGE_TIMEOUT);
+
+    iframe.onload=()=>{
+      // After the page fires load, wait a fixed period for data + charts,
+      // then inject html2canvas (if needed) and run the capture script.
+      setTimeout(()=>{
+        if(done)return;
+        let iDoc,iWin;
+        try{
+          iDoc=iframe.contentDocument||iframe.contentWindow.document;
+          iWin=iframe.contentWindow;
+        }catch(err){
+          console.warn('cannot access iframe doc for',url,err);
+          return; // pageTimer will advance
+        }
+        const runCapture=()=>{
+          try{
+            const s=iDoc.createElement('script');
+            s.textContent=CAPTURE_SCRIPT;
+            iDoc.body.appendChild(s);
+          }catch(err){console.warn('run capture failed',url,err);}
+        };
+        if(typeof iWin.html2canvas==='function'){
+          runCapture();
+        }else{
+          const sc=iDoc.createElement('script');
+          sc.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+          sc.onload=runCapture;
+          sc.onerror=()=>console.warn('html2canvas inject failed',url);
+          iDoc.head.appendChild(sc);
+        }
+      },RENDER_WAIT);
+    };
+
+    // Kick off the load
+    iframe.src=url+qsStr;
+  };
+
+  capturePage(0);
+}
+</script>
+</body>
+</html>

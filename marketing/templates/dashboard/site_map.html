@@ -272,7 +272,6 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
   <div class="sb-nav-scroll">
     <div class="sb-logo" style="padding:14px 18px;border-bottom:1px solid rgba(0,0,0,0.07);display:flex;align-items:center;gap:10px;flex-shrink:0">
       <img src="{% static 'images/logo1.jpg' %}" style="height:34px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
-      <div><div style="font-size:12px;font-weight:800;color:var(--orange)">Ufone 5G</div></div>
     </div>
    <div class="sb-sec">Marketing</div>
     <a href="/dashboard/" class="nv" onclick="closeSidebar()">Marketing Brief</a>
@@ -288,6 +287,8 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     <a href="/channel/kpi-summary/" class="nv" onclick="closeSidebar()">KPI Summary</a>
     <div class="sb-sec">Other</div>
     <a href="/chat/" class="nv" onclick="closeSidebar()">Team Chat</a>
+    <a href="/download-stats/" class="nv" onclick="closeSidebar()">Download Stats</a>  <!-- add this -->
+
     <div class="sb-sec">Account</div>
     <a href="/profile/" class="nv" onclick="closeSidebar()">Profile Settings</a>
     <div style="flex:1"></div>
@@ -582,10 +583,22 @@ function fetchMapData(){
         const p=new URLSearchParams();
         Object.entries(S).forEach(([k,v])=>{if(v)p.set(k,v);});
         p.set('key',m.key);
-        fetch('/api/map/?'+p).then(r=>r.json()).then(data=>{
+        fetch('/api/map/?'+p).then(r=>{
+          if(!r.ok){
+            return r.text().then(body=>{
+              console.error('[site-modal] /api/map/ returned', r.status, body.slice(0,500));
+              throw new Error('HTTP '+r.status);
+            });
+          }
+          return r.json();
+        }).then(data=>{
           const full=(data.markers&&data.markers.length)?data.markers[0]:null;
+          if(!full) console.warn('[site-modal] no marker returned for key', m.key, '— filters may be excluding this site:', Object.fromEntries(p));
           openSiteModal(full?Object.assign({},m,full):m,color);
-        }).catch(()=>openSiteModal(m,color));
+        }).catch(err=>{
+          console.error('[site-modal] per-site refetch failed, falling back to stale marker data:', err);
+          openSiteModal(m,color);
+        });
       });
       marker.addTo(markerLayer);
     });
