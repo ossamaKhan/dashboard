@@ -266,7 +266,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 .tbl-tab{background:var(--input-bg);border:none;color:var(--text2);font-family:var(--font);font-size:11px;font-weight:700;padding:6px 12px;cursor:pointer;transition:all .15s}
 .tbl-tab.active{background:var(--orange);color:#fff}
 .tbl-tab:hover:not(.active){background:rgba(245,130,32,0.1);color:var(--orange)}
-.tbl-name{font-weight:800;color:var(--text);font-size:12px}
+.tbl-name{font-weight:800;color:var(--text);font-size:14px}
 .tbl-rank{font-size:10px;font-weight:700;color:var(--muted);text-align:center}
 .tbl-rank.r1{color:#FFD700;font-weight:900}.tbl-rank.r2{color:#C0C0C0;font-weight:900}.tbl-rank.r3{color:#CD7F32;font-weight:900}
 .tbl-main-val{font-size:13px;font-weight:900;color:var(--text)}
@@ -274,7 +274,8 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 .tbl-page-btn:hover{border-color:var(--orange);color:var(--orange)}
 .tbl-page-btn.active{background:var(--orange);border-color:var(--orange);color:#fff}
 .tbl-page-btn:disabled{opacity:.4;cursor:default}
-#site-perf-table-header,#site-table-body>div{grid-template-columns:36px minmax(160px,1.5fr) repeat(3,110px)}
+#site-perf-table-header,#site-table-body>div{grid-template-columns:32px 250px repeat(3,1fr)}
+#site-table-body .spark-wrap{width:240px;max-width:240px}
 @media(max-width:600px){.tbl-main-val{font-size:11px}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -462,7 +463,7 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
     </div>
 
     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-     <div style="min-width:520px">
+     <div style="min-width:482px">
       <div id="site-perf-table-header" style="display:grid;gap:0;background:var(--input-bg);border-radius:8px 8px 0 0;border:1.5px solid var(--border2);border-bottom:none;padding:8px 12px;align-items:center">
         <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;text-align:center">#</div>
         <div id="tbl-group-header" style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Site</div>
@@ -1144,7 +1145,7 @@ function sparkline(spark){
 
   return `<div class="spark-wrap" style="margin-top:5px">
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:2px">${legend}</div>
-    <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:34px;display:block;overflow:visible">${paths}${hit}</svg>
+    <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:30px;display:block;overflow:visible">${paths}${hit}</svg>
     <div style="display:flex;width:100%;margin-top:1px">${months}</div>
   </div>`;
 }
