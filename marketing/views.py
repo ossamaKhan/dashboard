@@ -922,6 +922,9 @@ def site_performance_table(request):
     order         = request.GET.get('order', 'top')
     page          = int(request.GET.get('page', 1))
     page_size     = int(request.GET.get('page_size', 10))
+    # When set, always group by individual site regardless of active filters
+    # (used by the Site Map page table).
+    force_site    = request.GET.get('force_site') in ('1', 'true', 'yes')
 
     qs_base = get_scoped_qs(request.user)
     if region:        qs_base = qs_base.filter(region=region)
@@ -940,7 +943,10 @@ def site_performance_table(request):
         except: return 0
 
     # ── Determine grouping level ──────────────────────────────
-    if franchise:
+    if force_site:
+        group_field = 'key'
+        group_label = 'Site'
+    elif franchise:
         group_field = 'key'
         group_label = 'Site'
     elif arm:
