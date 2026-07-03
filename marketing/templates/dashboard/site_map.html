@@ -274,10 +274,8 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
 .tbl-page-btn:hover{border-color:var(--orange);color:var(--orange)}
 .tbl-page-btn.active{background:var(--orange);border-color:var(--orange);color:#fff}
 .tbl-page-btn:disabled{opacity:.4;cursor:default}
-#site-perf-table-header,#site-table-body>div{grid-template-columns:36px 1fr repeat(3,120px)}
-@media(max-width:768px){#site-perf-table-header,#site-table-body>div{grid-template-columns:30px 1fr repeat(3,96px)!important}.tbl-main-val{font-size:12px}}
-@media(max-width:600px){#site-perf-table-header,#site-table-body>div{grid-template-columns:26px 1fr repeat(3,80px)!important}.tbl-main-val{font-size:11px}}
-@media(max-width:480px){#site-perf-table-header,#site-table-body>div{grid-template-columns:24px 1fr repeat(3,64px)!important}.tbl-tab{padding:5px 8px;font-size:10px}.tbl-main-val{font-size:10px}}
+#site-perf-table-header,#site-table-body>div{grid-template-columns:36px minmax(160px,1.5fr) repeat(3,110px)}
+@media(max-width:600px){.tbl-main-val{font-size:11px}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
@@ -463,15 +461,19 @@ footer{position:relative;z-index:5;background:var(--panel-bg);border-top:2px sol
       </div>
     </div>
 
-    <div id="site-perf-table-header" style="display:grid;gap:0;background:var(--input-bg);border-radius:8px 8px 0 0;border:1.5px solid var(--border2);border-bottom:none;padding:8px 12px;align-items:center">
-      <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;text-align:center">#</div>
-      <div id="tbl-group-header" style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Site</div>
-      <div style="font-size:9px;font-weight:800;color:var(--orange);text-transform:uppercase;letter-spacing:1px;text-align:right">YTD</div>
-      <div style="font-size:9px;font-weight:800;color:var(--orange);text-transform:uppercase;letter-spacing:1px;text-align:right">YOY</div>
-      <div style="font-size:9px;font-weight:800;color:var(--orange);text-transform:uppercase;letter-spacing:1px;text-align:right">GOLM</div>
-    </div>
-    <div id="site-table-body" style="border:1.5px solid var(--border2);border-top:none;border-radius:0 0 8px 8px;overflow:hidden">
-      <div style="text-align:center;padding:30px;color:var(--muted)">Loading…</div>
+    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+     <div style="min-width:520px">
+      <div id="site-perf-table-header" style="display:grid;gap:0;background:var(--input-bg);border-radius:8px 8px 0 0;border:1.5px solid var(--border2);border-bottom:none;padding:8px 12px;align-items:center">
+        <div style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;text-align:center">#</div>
+        <div id="tbl-group-header" style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Site</div>
+        <div style="font-size:9px;font-weight:800;color:var(--orange);text-transform:uppercase;letter-spacing:1px;text-align:right">YTD</div>
+        <div style="font-size:9px;font-weight:800;color:var(--orange);text-transform:uppercase;letter-spacing:1px;text-align:right">YOY</div>
+        <div style="font-size:9px;font-weight:800;color:var(--orange);text-transform:uppercase;letter-spacing:1px;text-align:right">GOLM</div>
+      </div>
+      <div id="site-table-body" style="border:1.5px solid var(--border2);border-top:none;border-radius:0 0 8px 8px;overflow:hidden">
+        <div style="text-align:center;padding:30px;color:var(--muted)">Loading…</div>
+      </div>
+     </div>
     </div>
 
     <div id="site-table-pagination" style="display:flex;align-items:center;justify-content:space-between;padding:12px 4px 4px;flex-wrap:wrap;gap:8px">
@@ -1077,7 +1079,104 @@ function setTableOrder(order){
   loadSiteTable(1);
 }
 
+function sparkline(spark){
+  // spark = { years:[...], series:[{year, vals:[12 monthly values]}] }
+  // Draws one distinct line per year on a shared Jan–Dec axis, with a
+  // month-initial row underneath, a small year legend on top, and per-month
+  // hover tooltips showing each year's value.
+  const MI=['J','F','M','A','M','J','J','A','S','O','N','D'];
+  const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const YEAR_COLORS=['#AB1DFE','#f58220','#00BCD4','#00C853'];  // prev, latest, ...
+  if(!spark||!spark.series||!spark.series.length){
+    return '<div style="height:20px;margin-top:4px;font-size:9px;color:var(--muted);font-weight:600">—</div>';
+  }
+  const series=spark.series.filter(s=>s.vals.some(v=>v!=null));
+  if(!series.length){
+    return '<div style="height:20px;margin-top:4px;font-size:9px;color:var(--muted);font-weight:600">—</div>';
+  }
+
+  // Shared y-scale across all years
+  let allVals=[];
+  series.forEach(s=>s.vals.forEach(v=>{if(v!=null)allVals.push(v);}));
+  const min=Math.min(...allVals), max=Math.max(...allVals);
+  const range=(max-min)||1;
+
+  const W=240, H=40, padY=4;
+  const stepX=W/11;   // 12 points, first at x=0, last at x=W
+  const yOf=v=>H-padY-((v-min)/range)*(H-padY*2);
+
+  // Build one path (+ point dots) per year, spanning gaps
+  const paths=series.map((s,si)=>{
+    const color=YEAR_COLORS[si % YEAR_COLORS.length];
+    let d='', started=false, lastPt=null, dots='';
+    s.vals.forEach((v,i)=>{
+      if(v==null)return;
+      const x=i*stepX, y=yOf(v);
+      d+=(started?'L':'M')+x.toFixed(1)+' '+y.toFixed(1)+' ';
+      started=true; lastPt=[x,y];
+      dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.6" fill="${color}"/>`;
+    });
+    const lastDot=lastPt?`<circle cx="${lastPt[0].toFixed(1)}" cy="${lastPt[1].toFixed(1)}" r="2.5" fill="${color}"/>`:'';
+    return `<path d="${d.trim()}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>${dots}${lastDot}`;
+  }).join('');
+
+  // Per-month invisible hover zones carrying the tooltip text
+  let hit='';
+  for(let i=0;i<12;i++){
+    const parts=[];
+    series.forEach((s,si)=>{const v=s.vals[i];if(v!=null)parts.push(`${s.year}: ${fmt(v)}`);});
+    if(!parts.length)continue;
+    const tip=`${MN[i]} — ${parts.join('  ·  ')}`.replace(/"/g,'&quot;');
+    let x=i*stepX-stepX/2;
+    if(x<0)x=0;
+    const w=Math.min(stepX,W-x);
+    hit+=`<rect x="${x.toFixed(1)}" y="0" width="${w.toFixed(1)}" height="${H}" fill="transparent" data-tip="${tip}" style="cursor:pointer"/>`;
+  }
+
+  // Legend (year → colour)
+  const legend=series.map((s,si)=>{
+    const color=YEAR_COLORS[si % YEAR_COLORS.length];
+    return `<span style="display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;color:var(--text2)"><span style="width:8px;height:2.5px;background:${color};border-radius:2px;display:inline-block"></span>${s.year}</span>`;
+  }).join('');
+
+  // Month-initial row (evenly spaced to match the 12 points)
+  const months=MI.map(m=>`<span style="flex:1;text-align:center;font-size:7px;font-weight:700;color:var(--muted)">${m}</span>`).join('');
+
+  return `<div class="spark-wrap" style="margin-top:5px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:2px">${legend}</div>
+    <svg width="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:34px;display:block;overflow:visible">${paths}${hit}</svg>
+    <div style="display:flex;width:100%;margin-top:1px">${months}</div>
+  </div>`;
+}
+
+// Shared floating tooltip for sparkline hover (set up once, survives re-renders)
+let _sparkTip=null;
+function ensureSparkTip(){
+  if(_sparkTip)return;
+  _sparkTip=document.createElement('div');
+  _sparkTip.style.cssText='position:fixed;z-index:99999;pointer-events:none;background:var(--panel-bg);border:1.5px solid var(--orange);border-radius:8px;padding:5px 10px;font-family:var(--font);font-size:11px;font-weight:700;color:var(--text);box-shadow:0 6px 20px rgba(0,0,0,0.25);display:none;white-space:nowrap';
+  document.body.appendChild(_sparkTip);
+  const panel=document.getElementById('site-table-panel')||document.body;
+  panel.addEventListener('mousemove',e=>{
+    const t=e.target;
+    const tip=(t&&t.getAttribute)?t.getAttribute('data-tip'):null;
+    if(tip){
+      _sparkTip.textContent=tip;
+      _sparkTip.style.display='block';
+      let x=e.clientX+12,y=e.clientY+14;
+      const tw=_sparkTip.offsetWidth,th=_sparkTip.offsetHeight;
+      if(x+tw>window.innerWidth-8)x=e.clientX-tw-12;
+      if(y+th>window.innerHeight-8)y=e.clientY-th-12;
+      _sparkTip.style.left=x+'px';_sparkTip.style.top=y+'px';
+    }else{
+      _sparkTip.style.display='none';
+    }
+  });
+  panel.addEventListener('mouseleave',()=>{_sparkTip.style.display='none';});
+}
+
 function renderSiteTable(data){
+  ensureSparkTip();
   const tbody=document.getElementById('site-table-body');
   const hdr=document.getElementById('site-perf-table-header');
   const pageSize=parseInt(document.getElementById('tbl-page-size').value);
@@ -1087,7 +1186,9 @@ function renderSiteTable(data){
   const sub=document.getElementById('site-table-sub');
   const periodLabel=tblPeriod==='ytd'?'YTD':tblPeriod==='yoy'?'YOY':'GOLM';
   const metricLabel={'revenue':'Revenue','recharge':'Recharge','base':'90D Base','churn':'Churn','netadd':'Net Adds','fca':'Gross Adds (FCA)'}[tblMetric]||tblMetric;
-  if(sub) sub.textContent=`Site ranking · ${metricLabel} · sorted by ${periodLabel}`;
+  const sparkYears=(data.spark_years||[]);
+  const trendNote=sparkYears.length>1?`${sparkYears[0]}–${sparkYears[sparkYears.length-1]} monthly trend`:(sparkYears.length===1?`${sparkYears[0]} monthly trend`:'monthly trend');
+  if(sub) sub.textContent=`Site ranking · ${metricLabel} · sorted by ${periodLabel} · line shows ${trendNote}`;
   const gh=document.getElementById('tbl-group-header');
   if(gh) gh.textContent=gl;
 
@@ -1144,7 +1245,8 @@ function renderSiteTable(data){
     const rank=startRank+i;
     const rankCls=rank===1?'r1':rank===2?'r2':rank===3?'r3':'';
     const {ytd_v,ytd_p,ytd_pct,yoy_v,yoy_p,yoy_pct,mom_v,mom_p,mom_pct,ytd_base,yoy_base,mom_base}=getVals(r);
-    const nameCell=`<div class="tbl-name">${r.group||'—'}</div>`;
+    const spark=sparkline(r.spark||[]);
+    const nameCell=`<div class="tbl-name">${r.group||'—'}</div>${spark}`;
     return `<div style="display:grid;gap:0;border-top:1px solid var(--border);align-items:center;transition:background .12s" onmouseover="this.style.background='rgba(245,130,32,0.04)'" onmouseout="this.style.background=''">
       <div class="tbl-rank ${rankCls}" style="text-align:center;padding:8px 4px">${rank}</div>
       <div style="padding:8px 12px">${nameCell}</div>

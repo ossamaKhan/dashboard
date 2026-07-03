@@ -1096,6 +1096,64 @@ def site_performance_table(request):
     start  = (page - 1) * page_size
     paged  = rows[start:start + page_size]
 
+    # ── Sparkline trend series (only for the paged rows, for efficiency) ──────
+    # Metric family from sort_by, e.g. "revenue_ytd" -> "revenue"
+    metric_name = sort_by.rsplit('_', 1)[0] if '_' in sort_by else 'revenue'
+    METRIC_FIELDS = {
+        'revenue':  ['tot_revn_amt'],
+        'recharge': ['prepaid_dgtl_amount', 'postpaid_dgtl_amount', 'conventional_recharge'],
+        'base':     ['act_90d'],
+        'churn':    ['gross_churn'],
+        'netadd':   ['net_add'],
+        'fca':      ['fca'],
+    }
+    spark_fields = METRIC_FIELDS.get(metric_name, ['tot_revn_amt'])
+
+    # Which years to include in the trend:
+    #   - a specific year selected  -> just that year (12 months)
+    #   - no year (all years)       -> the latest year and the one before it (2 years)
+    if year:
+        spark_years = [int(year)]
+    else:
+        spark_years = [prev_y, ly]
+
+    paged_groups = [row['group'] for row in paged]
+    spark_map = {}
+    if paged_groups:
+        # Build the summed monthly expression for the chosen metric
+        month_expr = None
+        for f in spark_fields:
+            term = Sum(f)
+            month_expr = term if month_expr is None else (month_expr + term)
+
+        trend_qs = (
+            qs.filter(**{f'{group_field}__in': paged_groups}, year__in=spark_years)
+              .values(group_field, 'year', 'month')
+              .annotate(val=month_expr)
+              .order_by(group_field, 'year', 'month')
+        )
+        for t in trend_qs:
+            g = t.get(group_field) or '—'
+            spark_map.setdefault(g, []).append({
+                'year':  t['year'],
+                'month': t['month'],
+                'val':   safe(t['val']),
+            })
+
+    # Attach a per-year, 12-month-aligned series to each paged row so the
+    # frontend can draw one distinct line per year on a shared Jan–Dec axis.
+    for row in paged:
+        pts = spark_map.get(row['group'], [])
+        by_year = {}
+        for p in pts:
+            by_year.setdefault(p['year'], [None] * 12)
+            if 1 <= p['month'] <= 12:
+                by_year[p['year']][p['month'] - 1] = round(p['val'], 2)
+        row['spark'] = {
+            'years':  spark_years,
+            'series': [{'year': y, 'vals': by_year.get(y, [None] * 12)} for y in spark_years],
+        }
+
     return JsonResponse({
         'rows':        paged,
         'total':       total,
@@ -1104,6 +1162,8 @@ def site_performance_table(request):
         'page_size':   page_size,
         'period':      {'year': ly, 'month': lm},
         'group_label': group_label,
+        'spark_metric': metric_name,
+        'spark_years':  spark_years,
     })
 
 # ── Dashboard Data ────────────────────────────────────────────
