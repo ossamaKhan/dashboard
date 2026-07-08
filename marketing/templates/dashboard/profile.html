@@ -172,14 +172,14 @@ select.form-input{appearance:none;cursor:pointer;background-image:url("data:imag
 </style>
 </head>
 <body>
-<div id="loading"><div class="loader-track"></div><div class="loader-label">Loading Intelligence</div></div>
 <button class="mob-nav-btn" id="mob-nav-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
-<div class="app-layout">
+<div class="layout">
 <aside class="sidebar" id="sidebar">
   <div class="sb-nav-scroll">
     <div class="sb-logo" style="padding:14px 18px;border-bottom:1px solid rgba(0,0,0,0.07);display:flex;align-items:center;gap:10px;flex-shrink:0">
       <img src="{% static 'images/logo1.jpg' %}" style="height:34px;width:auto;object-fit:contain;border-radius:8px;" alt="Ufone 5G"/>
+      <div><div style="font-size:12px;font-weight:800;color:var(--orange)">Ufone 5G</div></div>
     </div>
     <div class="sb-sec">Marketing</div>
     <a href="/dashboard/" class="nv" onclick="closeSidebar()">Marketing Brief</a>
