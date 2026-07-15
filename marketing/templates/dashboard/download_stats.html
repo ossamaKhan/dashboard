@@ -52,31 +52,38 @@ header{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify
 .dl-filter-row span{color:var(--text2)}
 #dl-filter-summary{color:var(--orange);font-weight:700}
 
-.dl-cards{display:grid;grid-template-columns:1fr 1fr;gap:28px;width:100%;max-width:760px}
+.dl-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;width:100%;max-width:1080px}
 .dl-card{background:var(--panel-bg);border:2px solid var(--border);border-radius:24px;padding:40px 36px;display:flex;flex-direction:column;align-items:center;gap:20px;box-shadow:var(--shadow);transition:transform .25s,box-shadow .25s,border-color .25s;cursor:pointer;position:relative;overflow:hidden}
 .dl-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;border-radius:24px 24px 0 0}
 .dl-card.card-excel::before{background:linear-gradient(90deg,#00897B,#00BCD4)}
 .dl-card.card-pdf::before{background:linear-gradient(90deg,#5E35B1,#AB1DFE)}
+.dl-card.card-site::before{background:linear-gradient(90deg,#f58220,#fd9745)}
 .dl-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg)}
 .dl-card.card-excel:hover{border-color:rgba(0,137,123,0.4)}
 .dl-card.card-pdf:hover{border-color:rgba(94,53,177,0.4)}
+.dl-card.card-site:hover{border-color:rgba(245,130,32,0.4)}
 .dl-icon{width:80px;height:80px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0}
 .card-excel .dl-icon{background:rgba(0,137,123,0.12);border:2px solid rgba(0,137,123,0.2)}
 .card-pdf .dl-icon{background:rgba(94,53,177,0.12);border:2px solid rgba(94,53,177,0.2)}
+.card-site .dl-icon{background:rgba(245,130,32,0.12);border:2px solid rgba(245,130,32,0.2)}
 .dl-card-title{font-size:20px;font-weight:900;letter-spacing:-.3px}
 .card-excel .dl-card-title{color:#00897B}
 .card-pdf .dl-card-title{color:var(--purple2)}
+.card-site .dl-card-title{color:var(--orange)}
 .dl-card-desc{font-size:12px;font-weight:500;color:var(--muted);text-align:center;line-height:1.7}
 .dl-btn{width:100%;padding:14px 24px;border:none;border-radius:14px;font-family:var(--font);font-size:13px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:transform .2s,box-shadow .2s;display:flex;align-items:center;justify-content:center;gap:8px}
 .card-excel .dl-btn{background:linear-gradient(135deg,#00897B,#00BCD4);color:#fff;box-shadow:0 6px 20px rgba(0,137,123,0.35)}
 .card-excel .dl-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(0,137,123,0.45)}
 .card-pdf .dl-btn{background:linear-gradient(135deg,#5E35B1,#AB1DFE);color:#fff;box-shadow:0 6px 20px rgba(94,53,177,0.35)}
 .card-pdf .dl-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(94,53,177,0.45)}
+.card-site .dl-btn{background:linear-gradient(135deg,#f58220,#fd9745);color:#fff;box-shadow:0 6px 20px rgba(245,130,32,0.35)}
+.card-site .dl-btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(245,130,32,0.45)}
 .dl-btn:disabled{opacity:.6;cursor:wait;transform:none}
 .dl-scope-pills{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .dl-pill{font-size:10px;font-weight:700;letter-spacing:.5px;padding:3px 11px;border-radius:20px}
 .card-excel .dl-pill{background:rgba(0,137,123,0.1);color:#00897B;border:1px solid rgba(0,137,123,0.25)}
 .card-pdf .dl-pill{background:rgba(94,53,177,0.1);color:var(--purple2);border:1px solid rgba(94,53,177,0.25)}
+.card-site .dl-pill{background:rgba(245,130,32,0.1);color:var(--orange);border:1px solid rgba(245,130,32,0.25)}
 
 /* progress bar for PDF */
 .dl-progress{display:none;width:100%;flex-direction:column;gap:8px}
@@ -89,6 +96,7 @@ header{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify
 .dl-note strong{color:var(--orange)}
 
 @media(max-width:1024px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.page-content{width:100%;margin-left:0}.mob-nav-btn{display:flex}header{padding-left:60px}}
+@media(max-width:900px){.dl-cards{grid-template-columns:1fr;max-width:520px}}
 @media(max-width:600px){.dl-cards{grid-template-columns:1fr}.dl-main{padding:32px 16px}.dl-card{padding:28px 22px}}
 </style>
 </head>
@@ -185,6 +193,19 @@ header{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify
       <button class="dl-btn" id="btn-pdf" onclick="downloadPDF()">⬇ Download PDF</button>
     </div>
 
+    <!-- SITE-WISE DATA ─────────────────────────────────────────────────────── -->
+    <div class="dl-card card-site">
+      <div class="dl-icon">🗂️</div>
+      <div class="dl-card-title">Site-wise Data</div>
+      <div class="dl-scope-pills">
+        <span class="dl-pill">Raw SiteData</span>
+        <span class="dl-pill">All Columns</span>
+        <span class="dl-pill">Filter-aware</span>
+      </div>
+      <div class="dl-card-desc">Downloads the complete site-level dataset (every SiteData column) as an Excel file, matching your active filters.</div>
+      <button class="dl-btn" id="btn-site" onclick="downloadSiteData()">⬇ Download Site Data</button>
+    </div>
+
   </div>
 
   <div class="dl-note">
@@ -273,6 +294,35 @@ function downloadExcel(){
   fetchAndSave(`/api/export/marketing/excel/${q}`,'marketing_export.xlsx')
     .then(()=>new Promise(res=>setTimeout(res,600)))
     .then(()=>fetchAndSave(`/api/export/channel/excel/${q}`,'channel_export.xlsx'))
+    .finally(reset);
+}
+
+// ── Site-wise Data — full SiteData model → Excel, filter-aware ───────────────
+function downloadSiteData(){
+  const qs=buildQS(getFilters());
+  const q=qs?'?'+qs:'';
+  const btn=document.getElementById('btn-site');
+  const orig=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='Preparing…';}
+  const reset=()=>{if(btn){btn.disabled=false;btn.textContent=orig||'⬇ Download Site Data';}};
+
+  fetch(`/api/site-data-export/${q}`,{credentials:'same-origin'})
+    .then(r=>{if(!r.ok)throw new Error('site-data -> '+r.status);
+      // Pull the filename the server chose (based on the deepest filter)
+      const cd=r.headers.get('Content-Disposition')||'';
+      const m=cd.match(/filename="?([^"]+)"?/);
+      const fname=m?m[1]:'site_data.xlsx';
+      return r.blob().then(blob=>({blob,fname}));
+    })
+    .then(({blob,fname})=>{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download=fname;a.style.display='none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{try{document.body.removeChild(a);URL.revokeObjectURL(url);}catch(e){}},2000);
+    })
+    .catch(err=>{console.error('Site data download failed:',err);alert('Site data download failed. Please try again.');})
     .finally(reset);
 }
 

@@ -2157,3 +2157,125 @@ def chat_users(request):
 @login_required(login_url='/')
 def download_stats(request):
     return render(request, 'dashboard/download_stats.html')
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  SITE-WISE DATA EXPORT  (full SiteData model → Excel, filter-aware)
+#  Add this to marketing/views.py
+# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+#  SITE-WISE DATA EXPORT  (full SiteData model → Excel, filter-aware)
+#  Add this to marketing/views.py
+# ─────────────────────────────────────────────────────────────────────────────
+@login_required(login_url='login')
+def export_sitedata(request):
+    """
+    Streams the complete SiteData model to an .xlsx file, honouring the same
+    filters the dashboard uses (region / business_unit / arm / franchise /
+    key / technology / site_status / month / year) and the user's role scope.
+
+    Every column on the SiteData model is exported dynamically, so new model
+    fields appear in the download automatically without changing this view.
+    """
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.utils import get_column_letter
+    from django.http import HttpResponse
+
+    # ── Apply the same filters as map_data() ──────────────────────────────────
+    region        = request.GET.get('region')
+    franchise     = request.GET.get('franchise')
+    arm           = request.GET.get('arm')
+    key           = request.GET.get('key')
+    technology    = request.GET.get('technology')
+    business_unit = request.GET.get('business_unit')
+    site_status   = request.GET.get('site_status')
+    month         = request.GET.get('month')
+    year          = request.GET.get('year')
+
+    qs = get_scoped_qs(request.user)
+    if region:        qs = qs.filter(region=region)
+    if arm:           qs = qs.filter(arm=arm)
+    if franchise:     qs = qs.filter(franchise=franchise)
+    if key:           qs = qs.filter(key=key)
+    if technology:    qs = qs.filter(technology=technology)
+    if business_unit: qs = qs.filter(business_unit=business_unit)
+    if site_status:   qs = qs.filter(site_status=site_status)
+    if month:         qs = qs.filter(month=int(month))
+    if year:          qs = qs.filter(year=int(year))
+
+    qs = qs.order_by('year', 'month', 'region', 'business_unit', 'arm', 'franchise', 'key')
+
+    # ── All model fields except the auto primary key (id) ─────────────────────
+    _fields = [f for f in SiteData._meta.fields if f.name != 'id' and not f.primary_key]
+    field_names = [f.name for f in _fields]
+    headers = [f.verbose_name.title() if f.verbose_name else f.name for f in _fields]
+
+    # ── Build workbook ────────────────────────────────────────────────────────
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = 'Site Data'
+
+    header_font = Font(name='Arial', bold=True, color='FFFFFF', size=10)
+    header_fill = PatternFill(start_color='F58220', end_color='F58220', fill_type='solid')
+    header_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    body_font = Font(name='Arial', size=10)
+
+    # Header row
+    for col_idx, title in enumerate(headers, start=1):
+        c = ws.cell(row=1, column=col_idx, value=title)
+        c.font = header_font
+        c.fill = header_fill
+        c.alignment = header_align
+    ws.freeze_panes = 'A2'
+
+    # Data rows — iterate lazily so large querysets don't blow memory
+    row_idx = 2
+    for obj in qs.iterator(chunk_size=2000):
+        for col_idx, fname in enumerate(field_names, start=1):
+            val = getattr(obj, fname, None)
+            # Foreign keys / objects → string; None stays blank
+            if val is not None and not isinstance(val, (int, float, str)):
+                val = str(val)
+            c = ws.cell(row=row_idx, column=col_idx, value=val)
+            c.font = body_font
+        row_idx += 1
+
+    # ── Column widths (based on header length, capped) ────────────────────────
+    for col_idx, title in enumerate(headers, start=1):
+        width = min(max(len(str(title)) + 3, 10), 32)
+        ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+    # ── Filename = the most specific (deepest) filter applied ─────────────────
+    # Cascade order broadest → narrowest; the last non-empty one wins.
+    def _clean(v):
+        return str(v).replace(' ', '_').replace('/', '-')
+
+    cascade = [
+        ('site',      key),
+        ('franchise', franchise),
+        ('arm',       arm),
+        ('bu',        business_unit),
+        ('region',    region),
+    ]
+    label = None
+    for _name, _val in cascade:          # first match is the narrowest
+        if _val:
+            label = _clean(_val)
+            break
+    if not label:
+        label = 'all_sites'
+
+    # Prepend the time filter if present, so downloads stay distinguishable
+    time_bits = []
+    if year:  time_bits.append(str(year))
+    if month: time_bits.append(f'm{month}')
+    time_prefix = ('_'.join(time_bits) + '_') if time_bits else ''
+
+    filename = f'{time_prefix}{label}_sitedata.xlsx'
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    wb.save(response)
+    return response
