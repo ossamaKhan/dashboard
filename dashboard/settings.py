@@ -36,7 +36,6 @@ INSTALLED_APPS = [
     'admin_panel',
     'exports',
     'channel',
-    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
