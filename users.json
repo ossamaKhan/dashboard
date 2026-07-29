@@ -1,0 +1,1952 @@
+[
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$3Pp6QBWmSEdURJDyO8MoBD$xJvf3FELmftv5A+YHP3MagppS1uB0OLtF8sHycT7cF0=",
+    "last_login": "2026-07-27T07:16:31.806Z",
+    "is_superuser": true,
+    "username": "mossamakhan1",
+    "first_name": "Muhamamd",
+    "last_name": "Ossama Khan",
+    "email": "mossamakhan1@ptclgroup.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-05-17T18:09:18.607Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$Hm9Rdwf0DOcGfgigiLrFKy$rV8G7w2SwPmmr92o79wYKAzkclx5zb/n2Mcqcb/v4EY=",
+    "last_login": "2026-05-22T10:37:54.310Z",
+    "is_superuser": false,
+    "username": "rabia",
+    "first_name": "Rabia Ali",
+    "last_name": "Khan",
+    "email": "rabia.ali@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-05-22T10:37:24.589Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$uA1nf4y7keF4Sr1tMDDzjA$Br3r9Vvzkgy8zl0xeCmsphfq4MHQ5WCFSA0kgBjSDT0=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "shahzad",
+    "first_name": "Shahzad",
+    "last_name": "Abbasi",
+    "email": "shahzad.abbasi@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-08T06:43:11.921Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$1omZiLe7YRUKBlKYtWaZeV$FSzV8QoQcRv+FCjluFtOdlIzblQllpjIIGnwpgV+Jjc=",
+    "last_login": "2026-06-08T10:54:01.022Z",
+    "is_superuser": false,
+    "username": "salman",
+    "first_name": "Syed Salman",
+    "last_name": "Ali",
+    "email": "salman.ali1@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-08T07:03:50.896Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$GztkwbxzBdNxXJbeOEYqUE$qnStlX1pO2vfHtmvGMffR0q/j6NH460BOx2uMUTl0Rc=",
+    "last_login": "2026-06-08T11:51:00.538Z",
+    "is_superuser": false,
+    "username": "zubair",
+    "first_name": "Zubair",
+    "last_name": "Chishti",
+    "email": "zubair@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-08T10:42:57.249Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$nHmgAwjciuCnqJ3IgDMGJI$MLF4aD3mJx+iMPyBFFrKvvWJ4/ml9SmuJNp1/iltMeA=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "atif",
+    "first_name": "Atif",
+    "last_name": "Hayat",
+    "email": "atif.hayat@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-09T09:33:24.917Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$Y7qxjtpQlonOf4Whi8hWMI$3o4Mpg23zM/Cmhh6CSK/BHzU/kjkvM+bsg1s+4CJMyM=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "shahid",
+    "first_name": "Shahid",
+    "last_name": "Liaqat",
+    "email": "shahid.liaqat@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-09T09:34:33.550Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$4nj5uDhHUxZoi3XU9gVWEA$VoPCsN+vO7b0VtjnlKIdzZBlfEfIZyc+MwEW6Zfo+s0=",
+    "last_login": "2026-06-18T13:23:05.060Z",
+    "is_superuser": false,
+    "username": "abdul_haleem",
+    "first_name": "Abdul",
+    "last_name": "Haleem",
+    "email": "abdul.haleem1@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:12:43.917Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$PO95xi1u19JGFScB0hWpxX$Qy6N4qIkFbMYaoVlhMxcTq+MQoxjxBwzDXPJPSR0s50=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "ali_riaz",
+    "first_name": "Ali",
+    "last_name": "Riaz",
+    "email": "ali.riaz@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:16:58.420Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$6Q2dax8acPBGtT1bQKnDDA$II33knT6MOmf/89D+UEkDewdNdhgyjjRSlbQ8HSRVwk=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "aqeel_mumtaz",
+    "first_name": "Aqeel",
+    "last_name": "Mumtaz",
+    "email": "aqeel.mumtaz@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:20:02.822Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$V2IywqIycB1DhcUI8NsuC9$obrmw1NrpxZhJmFz75G+AElGqpbG7wBY59/JkD1+u60=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "asif_bashir",
+    "first_name": "Asif",
+    "last_name": "Bashir",
+    "email": "asif.bashir@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:22:51.472Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$N6FhaoTOBcIh1RqHdJ5sqn$Z3Pg1U2uO4+s+VrtxxEyDU5ySOjiKB9qHoEGYK2tkew=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "attaullah",
+    "first_name": "Attaullah",
+    "last_name": "",
+    "email": "atta.ullah1@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:24:56.877Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$QSX4zaxwl1XnNMLnnoht5X$+nJVDc6zXuPeeMHwEzGOHOAuNzNjcWdgapCsP/a7zHQ=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "azhar_qasim",
+    "first_name": "Azhar",
+    "last_name": "Qasim",
+    "email": "qasim.azhar@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:26:50.236Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$xtaODAdcWQK5CjZYjdYa6d$P80uD6zIb21bXgGL0BXl8jsGzqd9X1B14yizO5UWamA=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "babar_amin",
+    "first_name": "Babar",
+    "last_name": "Amin",
+    "email": "babar.amin1@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:28:43.396Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$AgRi4mSD2dsLGucfAcIoFv$1Vb0FnEqrBNjqZQenxGbvzlEs7oT4xQxP51FZAkQW5o=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "faizan_rashid",
+    "first_name": "Faizan",
+    "last_name": "Rashid",
+    "email": "faizan.rashid@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:29:56.159Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$BCFiugyN47uGPNjhjcpgkY$BMJTJk3L31TaB2+2ZHrNMflpL5OYyuVryB9S2fVf44M=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "fakhar_abbas",
+    "first_name": "Fakhar",
+    "last_name": "Abbas",
+    "email": "abbas.fakhar2@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:31:22.652Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$3IdLrs6CxSXxA40CurPf6j$g/RCSlX6sCO+Fx8RRgaJi4sqRYngLw1YxXkhW+jOk/k=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "faysal_ayaz",
+    "first_name": "Faysal",
+    "last_name": "Ayaz",
+    "email": "faysal.ayaz@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:33:10.386Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$5MWHcrhVV9aZpwWyobMSxV$TupxaofJp2o2xU/RuF4HORyNpDFMTFR6aypEf/teEzk=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "ghulam_muhammad_suleman",
+    "first_name": "Ghulam Muhammad",
+    "last_name": "Suleman",
+    "email": "ghulam.muhammad5@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:35:01.785Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$FNCoDuj6zm00wLf3IXwLTz$0YW0ijzNg9NdyDsmq9EU2cdWzhAlEQ2cHFwDB7zRFwA=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "hammad_rasheed",
+    "first_name": "Hammad",
+    "last_name": "Rasheed",
+    "email": "hammad.rasheed@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:36:33.900Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$hzQvvjDRwRjHh39ihmxaRP$kel8qSAoDLEFNfnDc0/U3G4D8yR6i93RyZBfKfMiFhk=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "imran_hussain_shah",
+    "first_name": "Imran Hussain",
+    "last_name": "Shah",
+    "email": "imran.hussain3@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:37:20.398Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$qNe5aL7YffJ3jrYbgWOkx5$Z7uKaaD03oWl6hdu85tu73AD4vEXYrNutRKMeEbC8xA=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "jahanzaib_aziz",
+    "first_name": "Jahanzaib",
+    "last_name": "Aziz",
+    "email": "jahanzaib.aziz@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:40:03.601Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$IAdJuwJuqb4BtGSVFIvS26$Q2mssfzGvTWC/+9+CylVKAVvmfwqCSrpEOAMarJIRCM=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "kashif_shahid",
+    "first_name": "Kashif",
+    "last_name": "Shahid",
+    "email": "kashif.shahid1@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:41:33.722Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$VYxicyCC38PMEa8HyyLU5j$3GM8ni7rtZpFlwA27olu1z3fGpSjK2nKuc6GoZnSYRc=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "khizar_hayat",
+    "first_name": "Khizar",
+    "last_name": "Hayat",
+    "email": "khizar.hayat2@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:42:50.053Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$xxWYqC1NlO1Q1FkErcpdTv$r7ab94bPGarXDzW55F8ER8yUL9fB0los3Pdb2LQ2QA8=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "mahr_naseer_iqbal",
+    "first_name": "Mahr Naseer",
+    "last_name": "Iqbal",
+    "email": "mehr.iqbal@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:44:44.023Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$AJDrIL87M30Kz2jzm5Yf9J$60gCwtFIKsD0S+qTuz2f3090hFtvZONDVU07VzTtgtQ=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "malik_zaheer_arif",
+    "first_name": "Malik Zaheer",
+    "last_name": "Arif",
+    "email": "zaheer.awan@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:47:04.669Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$e1is3xNC9T3hOLygSv7pR2$I34cHTC6PM6okE6caBuGpm8NCYVA9KSaWq0a7fIRH6w=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "muhammad_amjad",
+    "first_name": "Muhammad",
+    "last_name": "Amjad",
+    "email": "amjad.pervez@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:48:40.641Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$ar3Fkr1XFWiuVdU1ZIzvWg$sPnSg0YSpXH9Ma/lqH2LqMLclfRptTLjD/1faW+xAco=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "muhammad_arif",
+    "first_name": "Muhammad",
+    "last_name": "Arif",
+    "email": "muhammad.arif6@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:51:31.601Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$XZfm13y62XeM1v989tcPup$Jnos1gJ1ZGk8uoGkYdFeUEnEugf2d6JI45FhbadOxtA=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "muhammad_ehsan",
+    "first_name": "Muhammad",
+    "last_name": "Ehsan",
+    "email": "muhammad.ehsan1@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:54:08.319Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$G4IA7vdu1IweSJV6bL24Fi$tQAs2AqgaFFC4hm9yCgowsxgtyGeNEi38SejYAgMTSU=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "muhammad_faisal",
+    "first_name": "Muhammad",
+    "last_name": "Faisal",
+    "email": "muhammad.faisal3@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:56:16.636Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$Ax0tUmtbe7Cx738hhwRZj4$t4KuwUyrVoj7dbW1r3It5UPFhKRPMfl+cxQfxKYdAMc=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "muhammad_irfan",
+    "first_name": "Muhammad",
+    "last_name": "Irfan",
+    "email": "muhammad.irfan14@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T05:58:29.117Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$avQ7KMg3q6lHZsNPETQres$BE+PL3DSKOwoCXEY2MRNk/59FV0rK01Uhk8hVOt3sFk=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "muhammad_mehran",
+    "first_name": "Muhammad",
+    "last_name": "Mehran",
+    "email": "muhammad.mehran1@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:00:16.220Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$pn5YOzp6wWraHiowJGXgPb$MIgjsu+asB9lDudzCZcOHj+ZjsKYLwLjSUR4Ka+2X0o=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "muhammad_qasim_khan",
+    "first_name": "Muhammad Qasim",
+    "last_name": "Khan",
+    "email": "muhammad.qasim10@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:01:20.551Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$a2gyq0ULU3Cs8YHdVZ92tl$FyaCBvwqLHkzxCmwoo5/wd7Tr/TTuDX8mmDFdb1ev9E=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "muhammad_shahid_akhtar",
+    "first_name": "Muhammad Shahid",
+    "last_name": "Akhtar",
+    "email": "shahid.akhtar1@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:03:19.745Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$4isL9p06u1rw66oRHaS1wP$C6bg92990A1XpyIIfTbchDIdvovB4iaeJi8Xbabugi0=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "muhammad_yousaf",
+    "first_name": "Muhammad",
+    "last_name": "Yousaf",
+    "email": "muhammad.yousaf5@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:05:42.967Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$WYvFKEt0We92zVMkL9A9CJ$Wf5CRTHXceXVd0V3Ys9uo9JRfCq8RcxGGxQDaMJpU4A=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "mujahid_hussain",
+    "first_name": "Mujahid",
+    "last_name": "Hussain",
+    "email": "mujahid.hussain1@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:07:18.099Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$MJPIXFNYVbPTbLJv7EOBlt$+o7OaJILHBS/+652U/eXocHXXpWFMrsJDwwik3PexlY=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "mumtaz_rafique",
+    "first_name": "Mumtaz",
+    "last_name": "Rafique",
+    "email": "mumtaz.rafique1@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:08:41.784Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$iLMAobgCJfp09o3lJFcuP8$m142Fke3Vs00oEVMLjxuXtkI6b71SW0+eo1j81ewwO8=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "naveed_sabir",
+    "first_name": "Naveed",
+    "last_name": "Sabir",
+    "email": "naveed.sabir@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:10:21.616Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$uaes5vy1zz1aOAQK3PPcMG$Q/tgFGHoR9pGgbeS1cWuhp+CxgUpMsS/zgEXB7u/Lr0=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "rana_muhammad_asif",
+    "first_name": "Rana Muhammad",
+    "last_name": "Asif",
+    "email": "muhammad.asif6@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:11:44.266Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$DvLd81B9sjxzrG7r0O9Ngs$deZ0tM3kK9YifnF41fYS0EZ3JvI09cfigLxfac/bk1k=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "rasul_bakhsh",
+    "first_name": "Rasul",
+    "last_name": "Bakhsh",
+    "email": "rasul.bakhsh@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:13:22.001Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$74uJNIbqdkWQuCU7wYseKp$Q3XLYFRgnXAjbRrPHsqIsnH7PmS+f3UC1M3NhLRWiQE=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "shahzad_manzoor",
+    "first_name": "Shahzad",
+    "last_name": "Manzoor",
+    "email": "shahzad.manzoor@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:17:03.032Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$Srpzi1uCuhr6pruGVRSF9U$osfM6qicekrtRmt8nE4BYRi3R8Lm94+6ELVFyVAN/fQ=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "syed_muhammad_saifullah",
+    "first_name": "Syed Muhammad",
+    "last_name": "Saifullah",
+    "email": "muhammad.saifullah@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:18:39.049Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$QQAT17thBSaT3aSKBFGHSL$R1qgVojIEpbMartn1dV0qdTEl3c/eBV7dTY6oUdOmpo=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "muhammad_usman_sajjad",
+    "first_name": "Muhammad Usman",
+    "last_name": "Sajjad",
+    "email": "usman.sajjad1@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:20:12.219Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$VmhnSuaMftwBlQTbazy8Wu$SiYoshsut7xfBTj8GGO8zEeh090YKuG5Sfth3E6cGj8=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "waqar_aziz",
+    "first_name": "Waqar",
+    "last_name": "Aziz",
+    "email": "waqar.aziz3@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:21:48.853Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$0tWhOfnkFLRlpu8KfpwHy0$eSpVEJWiCqHcIaiyjiEYYDBhWPsL7Riv/xQyoDjSt5w=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "waseem_ahmad_qaisrani",
+    "first_name": "Waseem Ahmad",
+    "last_name": "Qaisrani",
+    "email": "waseem.qaisrani@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:23:39.717Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$PFWn6op28kPsD1fNiVtLAg$rbi87eN9cwFFtynuXhbGqpZVTId9Om/vHXMSOZVu6i0=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "zmaeer_ul_hassan",
+    "first_name": "Zameer ul",
+    "last_name": "Hassan",
+    "email": "zameerul.hassan@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-16T06:24:59.584Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$FMBZ9jRUNl1ixYNFTKi6Fj$jcIIM50aqhV115mFaX8eZHaa1M6482p/eOyU8VsUxn8=",
+    "last_login": "2026-06-24T06:40:40.378Z",
+    "is_superuser": false,
+    "username": "faisal_saleem",
+    "first_name": "Faisal",
+    "last_name": "Saleem",
+    "email": "saleem.faisal@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-24T06:40:08.374Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$957sDf5Izqvo38ERIval4G$5ZrOVHobvPqCt0AO4cSgachnEk45s96YRdueIziTyVM=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "awais_musaddiq",
+    "first_name": "Awais",
+    "last_name": "Musaddiq",
+    "email": "awais.musaddiq@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-29T10:04:37.954Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$k7yw2dnJAklOSYVEfBZB2I$dTzJiCgWI3AGqlAiJK4Q7L4iUNNk4hRIdU91eOPuqLk=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "hassan_ali",
+    "first_name": "Ali",
+    "last_name": "Hassan",
+    "email": "hassan.ali9@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-29T10:05:59.602Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$O75GAruTUUkfhkV0cM1llS$cRCw1mJHqgWREJRhvlVxzZFvMvIcpMKtbS7aUnIp7iM=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "haroon_tariq",
+    "first_name": "Haroon",
+    "last_name": "Tariq",
+    "email": "haroon.tariq@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-06-29T10:07:05.567Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$Hc4YjEG5sm6Nra5a6Gd01I$Sm60W5UpVqYSUY8+qdELa5wGl6CQxYlVNCPgNUwh9eY=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "usman_shaukat",
+    "first_name": "Usman",
+    "last_name": "Shaukat",
+    "email": "usman.shaukat@ptclgroup.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-07-01T10:44:38.249Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 1,
+  "fields": {
+    "category": "Region",
+    "user_business_unit": "",
+    "user_arm": "",
+    "user": [
+      "mossamakhan1"
+    ],
+    "phone": "03303800448",
+    "designation": "executive",
+    "department": "",
+    "region": "Central B",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-05-17T18:09:19.488Z",
+    "updated_at": "2026-06-17T09:17:52.643Z",
+    "last_seen": "2026-07-27T07:17:22.819Z"
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 2,
+  "fields": {
+    "category": "Region",
+    "user_business_unit": "",
+    "user_arm": "",
+    "user": [
+      "rabia"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-05-22T10:37:25.345Z",
+    "updated_at": "2026-06-08T06:41:38.215Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 4,
+  "fields": {
+    "category": "Region",
+    "user_business_unit": "",
+    "user_arm": "",
+    "user": [
+      "shahzad"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-08T06:43:12.624Z",
+    "updated_at": "2026-06-08T06:43:12.634Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 5,
+  "fields": {
+    "category": "Region",
+    "user_business_unit": "",
+    "user_arm": "",
+    "user": [
+      "salman"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-08T07:03:51.639Z",
+    "updated_at": "2026-06-08T07:03:51.655Z",
+    "last_seen": "2026-06-08T10:54:24.700Z"
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 7,
+  "fields": {
+    "category": "BU",
+    "user_business_unit": "DG KHAN",
+    "user_arm": "",
+    "user": [
+      "zubair"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-08T10:42:58.080Z",
+    "updated_at": "2026-06-18T15:42:54.834Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 8,
+  "fields": {
+    "category": "BU",
+    "user_business_unit": "SARGODHA",
+    "user_arm": "",
+    "user": [
+      "atif"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-09T09:33:25.647Z",
+    "updated_at": "2026-06-09T09:33:36.045Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 9,
+  "fields": {
+    "category": "BU",
+    "user_business_unit": "FAISALABAD",
+    "user_arm": "",
+    "user": [
+      "shahid"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-09T09:34:34.280Z",
+    "updated_at": "2026-06-09T09:34:34.294Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 10,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Abdul Haleem",
+    "user": [
+      "abdul_haleem"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:12:44.683Z",
+    "updated_at": "2026-06-16T05:12:44.692Z",
+    "last_seen": "2026-06-18T13:23:08.890Z"
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 11,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Ali Riaz",
+    "user": [
+      "ali_riaz"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:16:59.140Z",
+    "updated_at": "2026-06-16T05:16:59.152Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 12,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Aqeel Mumtaz",
+    "user": [
+      "aqeel_mumtaz"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:20:03.613Z",
+    "updated_at": "2026-06-16T05:20:03.620Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 13,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Asif Bashir",
+    "user": [
+      "asif_bashir"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:22:52.185Z",
+    "updated_at": "2026-06-16T05:22:52.193Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 14,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Atta Ullah",
+    "user": [
+      "attaullah"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:24:57.685Z",
+    "updated_at": "2026-06-16T05:24:57.694Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 15,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Azhar Qasim",
+    "user": [
+      "azhar_qasim"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:26:50.882Z",
+    "updated_at": "2026-06-16T05:26:50.890Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 16,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Babar Amin",
+    "user": [
+      "babar_amin"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:28:44.179Z",
+    "updated_at": "2026-06-16T05:28:44.189Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 17,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Faizan Rashid",
+    "user": [
+      "faizan_rashid"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:29:56.891Z",
+    "updated_at": "2026-06-16T05:29:56.898Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 18,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Fakhar Abbas",
+    "user": [
+      "fakhar_abbas"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:31:23.405Z",
+    "updated_at": "2026-06-16T05:31:23.416Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 19,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Faysal Ayaz",
+    "user": [
+      "faysal_ayaz"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:33:11.032Z",
+    "updated_at": "2026-06-16T05:33:11.040Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 20,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Ghulam Muhammad Suleman",
+    "user": [
+      "ghulam_muhammad_suleman"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:35:02.523Z",
+    "updated_at": "2026-06-16T05:35:02.533Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 21,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Hammad Rasheed",
+    "user": [
+      "hammad_rasheed"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:36:34.592Z",
+    "updated_at": "2026-06-16T05:36:34.600Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 22,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Imran Hussain Shah",
+    "user": [
+      "imran_hussain_shah"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:37:21.101Z",
+    "updated_at": "2026-06-16T05:38:16.495Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 23,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Jahanzaib Aziz",
+    "user": [
+      "jahanzaib_aziz"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:40:04.339Z",
+    "updated_at": "2026-06-16T05:40:04.353Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 24,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Kashif Shahid",
+    "user": [
+      "kashif_shahid"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:41:34.424Z",
+    "updated_at": "2026-06-16T05:41:34.432Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 25,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Khizar Hayat",
+    "user": [
+      "khizar_hayat"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:42:50.784Z",
+    "updated_at": "2026-06-16T05:42:50.795Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 26,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Mahr Naseer Iqbal",
+    "user": [
+      "mahr_naseer_iqbal"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:44:44.742Z",
+    "updated_at": "2026-07-15T07:15:26.208Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 27,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Malik Zaheer Arif",
+    "user": [
+      "malik_zaheer_arif"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:47:05.357Z",
+    "updated_at": "2026-06-16T05:47:05.367Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 28,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Muhammad Amjad",
+    "user": [
+      "muhammad_amjad"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:48:41.380Z",
+    "updated_at": "2026-06-16T05:48:41.388Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 29,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Muhammad Arif",
+    "user": [
+      "muhammad_arif"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:51:32.346Z",
+    "updated_at": "2026-06-16T05:51:32.354Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 30,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Muhammad Ehsan",
+    "user": [
+      "muhammad_ehsan"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:54:09.026Z",
+    "updated_at": "2026-07-15T07:17:03.681Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 31,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Muhammad Faisal",
+    "user": [
+      "muhammad_faisal"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:56:17.335Z",
+    "updated_at": "2026-06-16T05:56:17.344Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 32,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Muhammad Irfan",
+    "user": [
+      "muhammad_irfan"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T05:58:29.841Z",
+    "updated_at": "2026-06-16T05:58:29.850Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 33,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Muhammad Mehran",
+    "user": [
+      "muhammad_mehran"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:00:16.945Z",
+    "updated_at": "2026-06-16T06:00:16.952Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 34,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Muhammad Qasim Khan",
+    "user": [
+      "muhammad_qasim_khan"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:01:21.346Z",
+    "updated_at": "2026-06-16T06:01:21.354Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 35,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Muhammad Shahid Akhtar",
+    "user": [
+      "muhammad_shahid_akhtar"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:03:20.472Z",
+    "updated_at": "2026-06-16T06:04:28.950Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 36,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Muhammad Yousaf",
+    "user": [
+      "muhammad_yousaf"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:05:43.738Z",
+    "updated_at": "2026-06-16T06:05:43.745Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 37,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Mujahid Hussain",
+    "user": [
+      "mujahid_hussain"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:07:18.829Z",
+    "updated_at": "2026-06-16T06:07:18.837Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 38,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Mumtaz Rafique",
+    "user": [
+      "mumtaz_rafique"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:08:42.541Z",
+    "updated_at": "2026-06-16T06:08:42.548Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 39,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Naveed Sabir",
+    "user": [
+      "naveed_sabir"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:10:22.323Z",
+    "updated_at": "2026-06-16T06:10:22.330Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 40,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Rana Muhammad Asif",
+    "user": [
+      "rana_muhammad_asif"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:11:45.049Z",
+    "updated_at": "2026-06-16T06:11:45.058Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 41,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Rasul Bakhsh",
+    "user": [
+      "rasul_bakhsh"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:13:22.734Z",
+    "updated_at": "2026-06-16T06:13:22.744Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 42,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Shahzad Manzoor",
+    "user": [
+      "shahzad_manzoor"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:17:03.761Z",
+    "updated_at": "2026-06-16T06:17:03.770Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 43,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Syed Muhammad Saifullah",
+    "user": [
+      "syed_muhammad_saifullah"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:18:39.686Z",
+    "updated_at": "2026-07-15T07:15:07.706Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 44,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Usman Sajjad",
+    "user": [
+      "muhammad_usman_sajjad"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:20:12.963Z",
+    "updated_at": "2026-06-16T06:20:12.971Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 45,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Waqar Aziz",
+    "user": [
+      "waqar_aziz"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:21:49.583Z",
+    "updated_at": "2026-06-16T06:21:49.594Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 46,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Waseem Ahmad Qaisrani",
+    "user": [
+      "waseem_ahmad_qaisrani"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:23:40.424Z",
+    "updated_at": "2026-06-16T06:23:40.432Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 47,
+  "fields": {
+    "category": "ARM",
+    "user_business_unit": "",
+    "user_arm": "Zameer Ul Hasan Shahid",
+    "user": [
+      "zmaeer_ul_hassan"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-16T06:25:00.273Z",
+    "updated_at": "2026-06-16T06:25:00.281Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 48,
+  "fields": {
+    "category": "Region",
+    "user_business_unit": "",
+    "user_arm": "",
+    "user": [
+      "faisal_saleem"
+    ],
+    "phone": "03336500056",
+    "designation": "manager",
+    "department": "Operations",
+    "region": "Central B",
+    "employee_id": "1301",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-24T06:40:09.102Z",
+    "updated_at": "2026-06-24T06:40:53.593Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 49,
+  "fields": {
+    "category": "Region",
+    "user_business_unit": "",
+    "user_arm": "",
+    "user": [
+      "awais_musaddiq"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-29T10:04:38.759Z",
+    "updated_at": "2026-06-29T10:04:38.772Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 50,
+  "fields": {
+    "category": "Region",
+    "user_business_unit": "",
+    "user_arm": "",
+    "user": [
+      "hassan_ali"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-29T10:06:00.351Z",
+    "updated_at": "2026-06-29T10:06:00.363Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 51,
+  "fields": {
+    "category": "Region",
+    "user_business_unit": "",
+    "user_arm": "",
+    "user": [
+      "haroon_tariq"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-06-29T10:07:06.297Z",
+    "updated_at": "2026-06-29T10:07:06.316Z",
+    "last_seen": null
+  }
+},
+{
+  "model": "marketing.userprofile",
+  "pk": 52,
+  "fields": {
+    "category": "Region",
+    "user_business_unit": "",
+    "user_arm": "",
+    "user": [
+      "usman_shaukat"
+    ],
+    "phone": "",
+    "designation": "",
+    "department": "",
+    "region": "",
+    "employee_id": "",
+    "bio": "",
+    "picture": "",
+    "created_at": "2026-07-01T10:44:38.913Z",
+    "updated_at": "2026-07-01T10:44:38.926Z",
+    "last_seen": null
+  }
+}
+]

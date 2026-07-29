@@ -5,7 +5,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from pathlib import Path
+from urllib.parse import quote_plus
 import os
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -34,6 +36,7 @@ INSTALLED_APPS = [
     'admin_panel',
     'exports',
     'channel',
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
@@ -72,26 +75,60 @@ TEMPLATES = [
 WSGI_APPLICATION = 'dashboard.wsgi.application'
 
 # ── Database ──────────────────────────────────────────────────────────────────
+# Supabase Postgres, connected via the SESSION POOLER (port 5432) — the right
+# choice for Django's persistent connections. No local Postgres install needed:
+# psycopg2-binary is a self-contained client library, not a database server.
+#
+# Password is kept in an env var and URL-encoded automatically, so special
+# characters (@ $ # : / etc.) never break the connection string. In .env put
+# the password RAW (no encoding) as DB_PASSWORD — quote_plus() encodes it here.
+#
+# Priority:
+#   1. DATABASE_URL env var, if set (paste the full string on Render)
+#   2. Otherwise, build the Supabase URL from DB_PASSWORD
+#   3. If neither is available, fall back to local SQLite (keeps local dev
+#      working even with no .env configured)
+
+DB_PASSWORD = os.environ.get('DB_PASSWORD', '')
+
+SUPABASE_DATABASE_URL = (
+    f"postgresql://postgres.qrdegkvnalvmbbwsbyto:{quote_plus(DB_PASSWORD)}"
+    f"@aws-1-us-west-2.pooler.supabase.com:5432/postgres"
+) if DB_PASSWORD else None
+
+_default_db_url = os.environ.get(
+    'DATABASE_URL',
+    SUPABASE_DATABASE_URL or f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+)
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=_default_db_url,
+        conn_max_age=600,          # reuse connections instead of reopening each request
+        conn_health_checks=True,   # drop dead connections automatically
+    )
 }
 
 # ── Cache ─────────────────────────────────────────────────────────────────────
+# Redis when REDIS_URL is set — fast, shared across worker processes, survives
+# restarts. A free web-signup option with no local install is Upstash
+# (upstash.com) or Render's own Key Value add-on; either gives you a REDIS_URL
+# to paste into your environment variables. Falls back to per-process
+# in-memory cache if REDIS_URL isn't set, so local dev still works untouched.
 REDIS_URL = os.environ.get('REDIS_URL', '')
 if REDIS_URL:
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.redis.RedisCache',
             'LOCATION': REDIS_URL,
+            'TIMEOUT': 300,   # default 5-minute cache lifetime
         }
     }
 else:
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'TIMEOUT': 300,
         }
     }
 
