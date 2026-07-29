@@ -11,3 +11,4 @@ psycopg2-binary
 numpy>=1.26.0
 pillow==12.1.1
 pywebpush>=2.0.0
+redis>=5.0
