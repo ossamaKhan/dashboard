@@ -4,15 +4,22 @@ URL: /api/export/<excel|pdf>/?source=<marketing|channel>&<filters>
 """
 
 import io, datetime, re, struct
+import logging
+logger = logging.getLogger(__name__)
 try:
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     import matplotlib.ticker as mticker
     HAS_MATPLOTLIB = True
-except ImportError:
+except ImportError as e:
     HAS_MATPLOTLIB = False
     plt = None
+    logger.error(
+        "matplotlib failed to import — all charts/gauges in exports will be "
+        "silently skipped. Check that 'matplotlib' is in requirements.txt "
+        "and installed in this environment. Original error: %s", e
+    )
 from collections import defaultdict
 
 from django.http import HttpResponse
@@ -827,12 +834,17 @@ def _build_excel(sections, charts, gauges, title, filters):
 
             col_offset = 1
             for g_title, g_buf in gauges:
-                img = XLImage(g_buf)
-                img.width  = 200
-                img.height = 175
-                col_letter = get_column_letter(col_offset)
-                ws2.add_image(img, f'{col_letter}3')
-                col_offset += 3
+                if g_buf is None:
+                    continue  # chart failed to render upstream — skip, don't crash the file
+                try:
+                    img = XLImage(g_buf)
+                    img.width  = 200
+                    img.height = 175
+                    col_letter = get_column_letter(col_offset)
+                    ws2.add_image(img, f'{col_letter}3')
+                    col_offset += 3
+                except Exception:
+                    continue  # never let one bad image corrupt the whole export
 
         # Charts in 2-column grid
         CHART_W  = 540   # px
@@ -843,14 +855,19 @@ def _build_excel(sections, charts, gauges, title, filters):
         start_row  = 3 + gauge_rows
 
         for ci, (c_title, c_buf) in enumerate(charts):
-            row_i = ci // 2
-            col_i = ci %  2
-            img = XLImage(c_buf)
-            img.width, img.height = _fit_box(c_buf, CHART_W, CHART_H)
-            row_num  = start_row + row_i * rows_per_chart
-            col_num  = 1 + col_i * 8
-            col_letter = get_column_letter(col_num)
-            ws2.add_image(img, f'{col_letter}{row_num}')
+            if c_buf is None:
+                continue  # chart failed to render upstream — skip, don't crash the file
+            try:
+                row_i = ci // 2
+                col_i = ci %  2
+                img = XLImage(c_buf)
+                img.width, img.height = _fit_box(c_buf, CHART_W, CHART_H)
+                row_num  = start_row + row_i * rows_per_chart
+                col_num  = 1 + col_i * 8
+                col_letter = get_column_letter(col_num)
+                ws2.add_image(img, f'{col_letter}{row_num}')
+            except Exception:
+                continue  # never let one bad image corrupt the whole export
 
         # Column widths for chart sheet
         for ci in range(1, 17):
@@ -1216,18 +1233,24 @@ def _build_pdf_tables(sections, charts, gauges, title, filters):
 
         # Gauges row
         if gauges:
-            story.append(Paragraph("Attainment Gauges", styles['Heading3']))
             gauge_imgs = []
             gw = PAGE_W / max(len(gauges), 1) - 0.3*cm
             gh = gw * 0.88
             for g_title, g_buf in gauges:
-                gauge_imgs.append(RLImage(g_buf, width=gw, height=gh))
-            g_row  = [gauge_imgs]
-            g_tbl  = Table(g_row, colWidths=[gw+0.3*cm]*len(gauges))
-            g_tbl.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'MIDDLE'),
-                                        ('ALIGN', (0,0),(-1,-1),'CENTER')]))
-            story.append(g_tbl)
-            story.append(Spacer(1, 0.5*cm))
+                if g_buf is None:
+                    continue  # chart failed to render upstream — skip, don't crash the file
+                try:
+                    gauge_imgs.append(RLImage(g_buf, width=gw, height=gh))
+                except Exception:
+                    continue  # never let one bad image corrupt the whole export
+            if gauge_imgs:
+                story.append(Paragraph("Attainment Gauges", styles['Heading3']))
+                g_row  = [gauge_imgs]
+                g_tbl  = Table(g_row, colWidths=[gw+0.3*cm]*len(gauge_imgs))
+                g_tbl.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+                                            ('ALIGN', (0,0),(-1,-1),'CENTER')]))
+                story.append(g_tbl)
+                story.append(Spacer(1, 0.5*cm))
             story.append(HRFlowable(width=PAGE_W, thickness=1, color=RL_ORANGE))
             story.append(Spacer(1, 0.3*cm))
 
